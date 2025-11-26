@@ -2194,6 +2194,555 @@ const getStyles = (isDark) => `
   .spin {
     animation: spin 1s linear infinite;
   }
+  
+  /* ============================================
+     RESPONSIVE MOBILE - OPTIMISATION COMPLÈTE
+     ============================================ */
+  
+  /* Tablette (768px - 1024px) */
+  @media (max-width: 1024px) {
+    .content {
+      padding: 1rem;
+    }
+    
+    .stats-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+    }
+    
+    .search-bar {
+      width: 200px;
+    }
+    
+    .card {
+      padding: 1rem;
+    }
+  }
+  
+  /* Mobile (< 768px) */
+  @media (max-width: 768px) {
+    /* Sidebar mobile */
+    .sidebar {
+      width: 280px;
+      transform: translateX(-100%);
+      box-shadow: 4px 0 20px rgba(0,0,0,0.3);
+    }
+    
+    .sidebar.open {
+      transform: translateX(0);
+    }
+    
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 99;
+    }
+    
+    .sidebar-overlay.visible {
+      display: block;
+    }
+    
+    /* Main content */
+    .main-content {
+      margin-left: 0 !important;
+      width: 100%;
+    }
+    
+    /* Header mobile */
+    .header {
+      padding: 0.75rem 1rem;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    
+    .header-left {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .page-title {
+      font-size: 1.1rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .header-right {
+      gap: 0.5rem;
+    }
+    
+    .search-bar {
+      display: none;
+    }
+    
+    .menu-toggle {
+      display: flex !important;
+      padding: 8px;
+    }
+    
+    .icon-btn {
+      padding: 8px;
+    }
+    
+    /* Content */
+    .content {
+      padding: 0.75rem;
+    }
+    
+    /* Stats grid mobile */
+    .stats-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+    }
+    
+    .stat-card {
+      padding: 0.75rem;
+    }
+    
+    .stat-value {
+      font-size: 1.5rem;
+    }
+    
+    .stat-label {
+      font-size: 0.7rem;
+    }
+    
+    /* Cards mobile */
+    .card {
+      padding: 0.75rem;
+      border-radius: 12px;
+    }
+    
+    .card-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+    
+    .card-header h3 {
+      font-size: 1rem;
+    }
+    
+    /* RDV items mobile */
+    .rdv-item {
+      flex-wrap: wrap;
+      padding: 0.75rem;
+      gap: 0.5rem;
+    }
+    
+    .rdv-time {
+      min-width: 55px;
+    }
+    
+    .rdv-time-value {
+      font-size: 0.95rem;
+    }
+    
+    .rdv-details {
+      flex: 1;
+      min-width: 120px;
+    }
+    
+    .rdv-details h4 {
+      font-size: 0.85rem;
+    }
+    
+    .rdv-details span {
+      font-size: 0.7rem;
+    }
+    
+    /* Boutons tactiles */
+    .btn {
+      min-height: 44px;
+      padding: 10px 16px;
+      font-size: 0.85rem;
+    }
+    
+    .btn-sm {
+      min-height: 36px;
+      padding: 8px 12px;
+    }
+    
+    /* Tableaux responsive */
+    .table-container {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin: 0 -0.75rem;
+      padding: 0 0.75rem;
+    }
+    
+    table {
+      min-width: 600px;
+      font-size: 0.8rem;
+    }
+    
+    th, td {
+      padding: 0.5rem 0.75rem;
+      white-space: nowrap;
+    }
+    
+    /* Cacher certaines colonnes sur mobile */
+    .hide-mobile {
+      display: none !important;
+    }
+    
+    /* Grids responsive */
+    .grid-2, .grid-3, .grid-4 {
+      grid-template-columns: 1fr !important;
+      gap: 0.75rem;
+    }
+    
+    /* Formulaires mobile */
+    .form-row {
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    
+    .form-group {
+      width: 100%;
+    }
+    
+    input, select, textarea {
+      font-size: 16px !important; /* Empêche le zoom iOS */
+      min-height: 44px;
+    }
+    
+    /* Modals mobile */
+    .modal-content {
+      width: 95% !important;
+      max-width: 95% !important;
+      max-height: 90vh;
+      margin: 5vh auto;
+      border-radius: 16px;
+    }
+    
+    .modal-header {
+      padding: 1rem;
+      position: sticky;
+      top: 0;
+      background: inherit;
+      z-index: 10;
+    }
+    
+    .modal-header h2, .modal-header h3 {
+      font-size: 1.1rem;
+    }
+    
+    .modal-body {
+      padding: 1rem;
+      max-height: calc(90vh - 140px);
+      overflow-y: auto;
+    }
+    
+    .modal-footer {
+      padding: 1rem;
+      position: sticky;
+      bottom: 0;
+      background: inherit;
+      border-top: 1px solid var(--border);
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    
+    .modal-footer .btn {
+      flex: 1;
+      min-width: 120px;
+    }
+    
+    /* Planning mobile */
+    .planning-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    
+    .planning-header {
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      padding: 0.5rem;
+    }
+    
+    .planning-day {
+      min-height: auto;
+      padding: 0.5rem;
+    }
+    
+    .planning-slot {
+      padding: 0.5rem;
+      font-size: 0.75rem;
+    }
+    
+    /* Tabs mobile */
+    .tabs {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 0.5rem;
+      gap: 0.25rem;
+    }
+    
+    .tab {
+      padding: 8px 12px;
+      font-size: 0.8rem;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    
+    /* Badges */
+    .badge {
+      font-size: 0.65rem;
+      padding: 3px 8px;
+    }
+    
+    /* Avatar */
+    .avatar {
+      width: 32px !important;
+      height: 32px !important;
+      font-size: 0.75rem !important;
+    }
+    
+    /* Liste clients mobile */
+    .client-list-item {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+      padding: 0.75rem;
+    }
+    
+    .client-info {
+      width: 100%;
+    }
+    
+    .client-actions {
+      width: 100%;
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+    }
+    
+    /* Progress bars */
+    .progress-bar {
+      height: 6px;
+    }
+    
+    /* Notifications panel mobile */
+    .notifications-panel {
+      width: 100% !important;
+      max-width: 100% !important;
+      right: 0;
+      left: 0;
+      top: 60px;
+      border-radius: 0 0 16px 16px;
+    }
+    
+    /* Charts responsive */
+    .chart-container {
+      height: 200px !important;
+    }
+    
+    /* Objectifs mobile */
+    .objective-card {
+      padding: 0.75rem;
+    }
+    
+    .objective-value {
+      font-size: 1.25rem;
+    }
+    
+    /* Messages mobile */
+    .messages-container {
+      flex-direction: column;
+      height: auto;
+    }
+    
+    .contacts-list {
+      max-height: 200px;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .chat-area {
+      min-height: 300px;
+    }
+    
+    /* Fiche client mobile */
+    .client-detail-header {
+      flex-direction: column;
+      text-align: center;
+      gap: 1rem;
+    }
+    
+    .client-detail-avatar {
+      width: 60px !important;
+      height: 60px !important;
+    }
+    
+    .client-detail-stats {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.5rem;
+    }
+    
+    /* Calendrier mobile */
+    .calendar-header {
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    
+    .calendar-grid {
+      font-size: 0.75rem;
+    }
+    
+    .calendar-day {
+      min-height: 60px;
+      padding: 0.25rem;
+    }
+    
+    /* Actions flottantes */
+    .floating-action {
+      bottom: 20px;
+      right: 20px;
+      width: 56px;
+      height: 56px;
+    }
+    
+    /* Sidebar nav mobile */
+    .nav-item {
+      padding: 12px 16px;
+    }
+    
+    .nav-item span {
+      font-size: 0.9rem;
+    }
+    
+    /* Login page mobile */
+    .login-card {
+      width: 95%;
+      padding: 1.5rem;
+      margin: 1rem;
+    }
+    
+    .login-card h1 {
+      font-size: 2rem;
+    }
+    
+    /* Scroll horizontal pour les listes */
+    .horizontal-scroll {
+      display: flex;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      gap: 0.75rem;
+      padding: 0.5rem 0;
+    }
+    
+    .horizontal-scroll > * {
+      flex-shrink: 0;
+    }
+    
+    /* Quick actions mobile */
+    .quick-actions {
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    
+    .quick-action-btn {
+      flex: 1;
+      min-width: calc(50% - 0.25rem);
+    }
+    
+    /* Bottom safe area pour iPhone X+ */
+    .main-content {
+      padding-bottom: env(safe-area-inset-bottom, 0);
+    }
+  }
+  
+  /* Très petit écran (< 480px) */
+  @media (max-width: 480px) {
+    .stats-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .stat-card {
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .stat-icon {
+      order: -1;
+    }
+    
+    .modal-footer .btn {
+      width: 100%;
+    }
+    
+    .header-right > *:not(.menu-toggle):not(.icon-btn:first-child) {
+      display: none;
+    }
+    
+    .page-title {
+      font-size: 1rem;
+    }
+    
+    .tabs {
+      justify-content: flex-start;
+    }
+    
+    .tab {
+      padding: 6px 10px;
+      font-size: 0.75rem;
+    }
+    
+    .calendar-day {
+      min-height: 50px;
+    }
+    
+    .calendar-day-number {
+      font-size: 0.7rem;
+    }
+  }
+  
+  /* Utilitaires responsive */
+  @media (max-width: 768px) {
+    .desktop-only {
+      display: none !important;
+    }
+  }
+  
+  @media (min-width: 769px) {
+    .mobile-only {
+      display: none !important;
+    }
+  }
+  
+  /* Touch-friendly improvements */
+  @media (hover: none) and (pointer: coarse) {
+    .btn:active {
+      transform: scale(0.98);
+    }
+    
+    .nav-item:active {
+      background: var(--bg-hover);
+    }
+    
+    .card:active {
+      transform: scale(0.99);
+    }
+    
+    /* Larger touch targets */
+    .icon-btn {
+      min-width: 44px;
+      min-height: 44px;
+    }
+    
+    /* Remove hover effects on touch */
+    .btn:hover {
+      transform: none;
+    }
+  }
 `;
 
 // ============================================
@@ -4869,6 +5418,12 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
     <div className="app-container">
       <style>{getStyles(isDark)}</style>
       
+      {/* Overlay pour fermer sidebar mobile */}
+      <div 
+        className={`sidebar-overlay ${sidebarOpen ? 'visible' : ''}`} 
+        onClick={() => setSidebarOpen(false)}
+      />
+      
       {/* Sidebar */}
       <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-header">
@@ -4965,12 +5520,12 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
               <RefreshCw size={20} style={{ animation: isLoading ? 'spin 1s linear infinite' : 'none' }} />
             </button>
             
-            <div className="search-bar">
+            <div className="search-bar desktop-only">
               <Search />
               <input type="text" placeholder="Rechercher une cliente..." />
             </div>
             
-            <button className="icon-btn" onClick={toggleTheme} title={isDark ? 'Mode clair' : 'Mode sombre'}>
+            <button className="icon-btn desktop-only" onClick={toggleTheme} title={isDark ? 'Mode clair' : 'Mode sombre'}>
               {isDark ? <Sun size={20} /> : <Moon size={20} />}
             </button>
             
@@ -5108,7 +5663,7 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
               
               {/* Graphiques Dashboard Directrice */}
               {currentUser.isDirector && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
                   {/* Graphique CA mensuel */}
                   <div className="card">
                     <div className="card-header">
@@ -5205,7 +5760,7 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                 </div>
               )}
               
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
                 {/* Prochains RDV */}
                 <div className="card">
                   <div className="card-header">
@@ -5366,36 +5921,39 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
           {/* ============================================ */}
           {currentView === 'clients' && !selectedClient && (
             <div className="animate-in">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <div className="tabs">
-                  <div 
-                    className={`tab ${clientFilter === 'all' ? 'active' : ''}`}
-                    onClick={() => setClientFilter('all')}
-                  >
-                    Toutes ({visibleClients.length})
-                  </div>
-                  <div 
-                    className={`tab ${clientFilter === 'active' ? 'active' : ''}`}
-                    onClick={() => setClientFilter('active')}
-                  >
-                    Actives ({visibleClients.filter(c => c.statut === 'active').length})
-                  </div>
-                  <div 
-                    className={`tab ${clientFilter === 'prospect' ? 'active' : ''}`}
-                    onClick={() => setClientFilter('prospect')}
-                  >
-                    Prospects ({visibleClients.filter(c => c.statut === 'prospect').length})
-                  </div>
-                  <div 
-                    className={`tab ${clientFilter === 'terminé' ? 'active' : ''}`}
-                    onClick={() => setClientFilter('terminé')}
-                  >
-                    Terminées ({visibleClients.filter(c => c.statut === 'terminé').length})
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1rem' }}>
+                {/* Tabs scrollables */}
+                <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', margin: '0 -0.5rem', padding: '0 0.5rem' }}>
+                  <div className="tabs" style={{ minWidth: 'max-content' }}>
+                    <div 
+                      className={`tab ${clientFilter === 'all' ? 'active' : ''}`}
+                      onClick={() => setClientFilter('all')}
+                    >
+                      Toutes ({visibleClients.length})
+                    </div>
+                    <div 
+                      className={`tab ${clientFilter === 'active' ? 'active' : ''}`}
+                      onClick={() => setClientFilter('active')}
+                    >
+                      Actives ({visibleClients.filter(c => c.statut === 'active').length})
+                    </div>
+                    <div 
+                      className={`tab ${clientFilter === 'prospect' ? 'active' : ''}`}
+                      onClick={() => setClientFilter('prospect')}
+                    >
+                      Prospects ({visibleClients.filter(c => c.statut === 'prospect').length})
+                    </div>
+                    <div 
+                      className={`tab ${clientFilter === 'terminé' ? 'active' : ''}`}
+                      onClick={() => setClientFilter('terminé')}
+                    >
+                      Terminées ({visibleClients.filter(c => c.statut === 'terminé').length})
+                    </div>
                   </div>
                 </div>
                 {currentUser.isDirector && (
-                  <button className="btn btn-primary" onClick={() => setShowModal('newClient')}>
-                    <Plus size={18} /> Nouvelle cliente
+                  <button className="btn btn-primary" onClick={() => setShowModal('newClient')} style={{ alignSelf: 'flex-start' }}>
+                    <Plus size={18} /> <span className="desktop-only">Nouvelle cliente</span><span className="mobile-only">Ajouter</span>
                   </button>
                 )}
               </div>
@@ -5406,10 +5964,10 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                     <thead>
                       <tr>
                         <th>Cliente</th>
-                        <th>Forfait</th>
+                        <th className="hide-mobile">Forfait</th>
                         <th>Progression</th>
-                        <th>Séances</th>
-                        {currentUser.isDirector && <th>Praticienne</th>}
+                        <th className="hide-mobile">Séances</th>
+                        {currentUser.isDirector && <th className="hide-mobile">Praticienne</th>}
                         <th>Statut</th>
                         <th>Actions</th>
                       </tr>
@@ -5432,16 +5990,16 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                                 </div>
                               </div>
                             </td>
-                            <td>{client.forfait}</td>
+                            <td className="hide-mobile">{client.forfait}</td>
                             <td>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <span style={{ color: 'var(--success)', fontWeight: '600' }}>-{client.poidsInitial - client.poidsActuel}kg</span>
                                 <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>/ -{client.poidsInitial - client.objectif}kg</span>
                               </div>
                             </td>
-                            <td>{client.seancesRestantes}/{client.seancesTotal}</td>
+                            <td className="hide-mobile">{client.seancesRestantes}/{client.seancesTotal}</td>
                             {currentUser.isDirector && (
-                              <td>
+                              <td className="hide-mobile">
                                 <span className="badge badge-info">{assignedEmployee?.nom.split(' ')[0]}</span>
                               </td>
                             )}
@@ -5507,35 +6065,36 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
           {/* Client Detail View */}
           {selectedClient && (
             <div className="animate-in">
-              <button className="btn btn-secondary" onClick={() => setSelectedClient(null)} style={{ marginBottom: '1.5rem' }}>
-                ← Retour aux clientes
+              <button className="btn btn-secondary" onClick={() => setSelectedClient(null)} style={{ marginBottom: '1rem' }}>
+                ← Retour
               </button>
               
-              <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start', marginBottom: '2rem', flexWrap: 'wrap' }}>
-                <div className="client-avatar" style={{ width: '90px', height: '90px', fontSize: '2.5rem', borderRadius: '20px' }}>
-                  {selectedClient.nom.charAt(0)}
-                </div>
-                <div style={{ flex: 1, minWidth: '300px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
-                    <h2 style={{ fontFamily: 'Playfair Display, serif', fontSize: '1.8rem' }}>{selectedClient.nom}</h2>
-                    <span className={`badge ${selectedClient.statut === 'active' ? 'badge-success' : selectedClient.statut === 'prospect' ? 'badge-info' : 'badge-gold'}`}>
-                      {selectedClient.statut}
-                    </span>
+              {/* Header cliente - responsive */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div className="client-avatar" style={{ width: '60px', height: '60px', fontSize: '1.5rem', borderRadius: '16px', flexShrink: 0 }}>
+                    {selectedClient.nom.charAt(0)}
                   </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', color: 'var(--text-muted)' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Phone size={16} style={{ color: 'var(--accent)' }} /> {selectedClient.telephone}</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Mail size={16} style={{ color: 'var(--accent)' }} /> {selectedClient.email}</span>
-                    <span 
-                      style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', textDecoration: 'underline' }}
-                      onClick={() => openGoogleMapsItinerary(selectedClient.adresse)}
-                      title="Ouvrir l'itinéraire dans Google Maps"
-                    >
-                      <MapPin size={16} style={{ color: 'var(--accent)' }} /> {selectedClient.adresse} 🗺️
-                    </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
+                      <h2 style={{ fontFamily: 'Playfair Display, serif', fontSize: '1.3rem', margin: 0 }}>{selectedClient.nom}</h2>
+                      <span className={`badge ${selectedClient.statut === 'active' ? 'badge-success' : selectedClient.statut === 'prospect' ? 'badge-info' : 'badge-gold'}`}>
+                        {selectedClient.statut}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                      <a href={`tel:${selectedClient.telephone}`} style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'inherit' }}><Phone size={14} style={{ color: 'var(--accent)' }} /> {selectedClient.telephone}</a>
+                      <span 
+                        style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
+                        onClick={() => openGoogleMapsItinerary(selectedClient.adresse)}
+                      >
+                        <MapPin size={14} style={{ color: 'var(--accent)' }} /> GPS
+                      </span>
+                    </div>
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                  <button className="btn btn-secondary" onClick={() => {
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <button className="btn btn-secondary" style={{ flex: 1, minWidth: '100px' }} onClick={() => {
                     setEditingClient(selectedClient);
                     setNewClientForm({
                       nom: selectedClient.nom,
@@ -5549,10 +6108,10 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                       notes: selectedClient.notes
                     });
                     setShowModal('editClient');
-                  }}><Edit size={18} /> Modifier</button>
-                  <button className="btn btn-primary" onClick={() => setShowRdvModal(true)}><Calendar size={18} /> Nouveau RDV</button>
+                  }}><Edit size={16} /> Modifier</button>
+                  <button className="btn btn-primary" style={{ flex: 1, minWidth: '100px' }} onClick={() => setShowRdvModal(true)}><Calendar size={16} /> + RDV</button>
                   <button className="btn btn-secondary" onClick={() => setShowExportModal(selectedClient)} style={{ background: 'rgba(34, 197, 94, 0.1)', border: '1px solid var(--success)' }}>
-                    <Share2 size={18} style={{ color: 'var(--success)' }} /> Exporter
+                    <Share2 size={16} style={{ color: 'var(--success)' }} />
                   </button>
                 </div>
               </div>
@@ -5578,7 +6137,7 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
               </div>
               
               {/* Graphiques de progression cliente */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
                 {/* Courbe de poids */}
                 <div className="card">
                   <div className="card-header">
@@ -5700,7 +6259,7 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                 </div>
               </div>
               
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '1.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
                 {/* Suivis */}
                 <div className="card">
                   <div className="card-header">
@@ -6005,77 +6564,81 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
           {/* ============================================ */}
           {currentView === 'planning' && (
             <div className="animate-in">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1rem' }}>
                 {currentUser.isDirector && (
-                  <div className="tabs">
-                    <div 
-                      className={`tab ${planningFilter === 'all' ? 'active' : ''}`}
-                      onClick={() => setPlanningFilter('all')}
-                    >
-                      Tous
-                    </div>
-                    {employees.filter(e => !e.isDirector).map(emp => (
+                  <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', margin: '0 -0.5rem', padding: '0 0.5rem' }}>
+                    <div className="tabs" style={{ minWidth: 'max-content' }}>
                       <div 
-                        key={emp.id} 
-                        className={`tab ${planningFilter === emp.id.toString() ? 'active' : ''}`}
-                        onClick={() => setPlanningFilter(emp.id.toString())}
-                        style={{ 
-                          borderColor: planningFilter === emp.id.toString() ? EMPLOYEE_COLORS[emp.id]?.border : undefined,
-                          color: planningFilter === emp.id.toString() ? EMPLOYEE_COLORS[emp.id]?.text : undefined
-                        }}
+                        className={`tab ${planningFilter === 'all' ? 'active' : ''}`}
+                        onClick={() => setPlanningFilter('all')}
                       >
-                        {emp.nom.split(' ')[0]}
+                        Tous
                       </div>
-                    ))}
+                      {employees.filter(e => !e.isDirector).map(emp => (
+                        <div 
+                          key={emp.id} 
+                          className={`tab ${planningFilter === emp.id.toString() ? 'active' : ''}`}
+                          onClick={() => setPlanningFilter(emp.id.toString())}
+                          style={{ 
+                            borderColor: planningFilter === emp.id.toString() ? EMPLOYEE_COLORS[emp.id]?.border : undefined,
+                            color: planningFilter === emp.id.toString() ? EMPLOYEE_COLORS[emp.id]?.text : undefined
+                          }}
+                        >
+                          {emp.nom.split(' ')[0]}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
                 <button className="btn btn-primary" onClick={() => {
                   setPlanningRdvForm({ clientId: '', date: '', heure: '', duree: '45', type: 'Séance G5', employeeId: '' });
                   setEditingRdv(null);
                   setShowPlanningRdvModal(true);
-                }}>
-                  <Plus size={18} /> Nouveau RDV
+                }} style={{ alignSelf: 'flex-start' }}>
+                  <Plus size={18} /> <span className="desktop-only">Nouveau RDV</span><span className="mobile-only">+ RDV</span>
                 </button>
               </div>
               
               {/* Calendrier mensuel */}
-              <div className="card" style={{ marginBottom: '1.5rem' }}>
-                <div className="card-header">
+              <div className="card" style={{ marginBottom: '1.5rem', overflow: 'hidden' }}>
+                <div className="card-header" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
                   <button className="btn btn-ghost" onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}>
-                    ← Précédent
+                    ←
                   </button>
-                  <div className="card-title" style={{ textTransform: 'capitalize' }}>
+                  <div className="card-title" style={{ textTransform: 'capitalize', flex: 1, textAlign: 'center', minWidth: '150px' }}>
                     <Calendar size={20} />
                     {currentMonth.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
                   </div>
                   <button className="btn btn-ghost" onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}>
-                    Suivant →
+                    →
                   </button>
                 </div>
                 
                 {/* Légende des couleurs */}
                 {currentUser.isDirector && planningFilter === 'all' && (
-                  <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1rem', padding: '0.75rem', background: 'var(--bg)', borderRadius: '8px' }}>
+                  <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', padding: '0.75rem', background: 'var(--bg)', borderRadius: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
                     {employees.filter(e => !e.isDirector).map(emp => (
-                      <div key={emp.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: EMPLOYEE_COLORS[emp.id]?.border }} />
-                        <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{emp.nom.split(' ')[0]}</span>
+                      <div key={emp.id} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div style={{ width: '10px', height: '10px', borderRadius: '3px', background: EMPLOYEE_COLORS[emp.id]?.border }} />
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{emp.nom.split(' ')[0]}</span>
                       </div>
                     ))}
                   </div>
                 )}
                 
-                {/* Jours de la semaine */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px', marginBottom: '2px' }}>
-                  {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map(day => (
-                    <div key={day} style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', fontSize: '0.8rem', color: 'var(--text-muted)', background: 'var(--bg)', borderRadius: '4px' }}>
-                      {day}
-                    </div>
-                  ))}
-                </div>
-                
-                {/* Grille du calendrier */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px' }}>
+                {/* Wrapper scrollable pour mobile */}
+                <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                  {/* Jours de la semaine */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(45px, 1fr))', gap: '2px', marginBottom: '2px', minWidth: '315px' }}>
+                    {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map(day => (
+                      <div key={day} style={{ padding: '0.5rem', textAlign: 'center', fontWeight: '600', fontSize: '0.7rem', color: 'var(--text-muted)', background: 'var(--bg)', borderRadius: '4px' }}>
+                        {day}
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Grille du calendrier */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(45px, 1fr))', gap: '2px', minWidth: '315px' }}>
                   {getCalendarDays(currentMonth).map((dayInfo, index) => {
                     const dayRdvs = getRdvsForDay(dayInfo.date);
                     const isToday = dayInfo.date.toDateString() === new Date().toDateString();
@@ -6155,6 +6718,7 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                     );
                   })}
                 </div>
+                </div>{/* Fin wrapper scrollable */}
               </div>
               
               {/* Liste des RDV à venir */}
@@ -6250,26 +6814,28 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                   <div className="card-title"><Camera /> Tous les suivis en temps réel</div>
                 </div>
                 
-                <div className="tabs" style={{ marginBottom: '1.5rem' }}>
-                  <div 
-                    className={`tab ${suiviFilter === 'all' ? 'active' : ''}`}
-                    onClick={() => setSuiviFilter('all')}
-                  >
-                    Tous
-                  </div>
-                  {employees.filter(e => !e.isDirector).map(emp => (
+                <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', marginBottom: '1rem' }}>
+                  <div className="tabs" style={{ minWidth: 'max-content' }}>
                     <div 
-                      key={emp.id} 
-                      className={`tab ${suiviFilter === emp.id.toString() ? 'active' : ''}`}
-                      onClick={() => setSuiviFilter(emp.id.toString())}
-                      style={{
-                        borderColor: suiviFilter === emp.id.toString() ? EMPLOYEE_COLORS[emp.id]?.border : undefined,
-                        color: suiviFilter === emp.id.toString() ? EMPLOYEE_COLORS[emp.id]?.text : undefined
-                      }}
+                      className={`tab ${suiviFilter === 'all' ? 'active' : ''}`}
+                      onClick={() => setSuiviFilter('all')}
                     >
-                      {emp.nom.split(' ')[0]}
+                      Tous
                     </div>
-                  ))}
+                    {employees.filter(e => !e.isDirector).map(emp => (
+                      <div 
+                        key={emp.id} 
+                        className={`tab ${suiviFilter === emp.id.toString() ? 'active' : ''}`}
+                        onClick={() => setSuiviFilter(emp.id.toString())}
+                        style={{
+                          borderColor: suiviFilter === emp.id.toString() ? EMPLOYEE_COLORS[emp.id]?.border : undefined,
+                          color: suiviFilter === emp.id.toString() ? EMPLOYEE_COLORS[emp.id]?.text : undefined
+                        }}
+                      >
+                        {emp.nom.split(' ')[0]}
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 
                 <div className="suivi-timeline">
@@ -6351,14 +6917,14 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
           {/* ============================================ */}
           {currentView === 'employees' && currentUser.isDirector && !selectedEmployee && (
             <div className="animate-in">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <h3 style={{ fontFamily: 'Playfair Display, serif' }}>Gestion de l'équipe</h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+                <h3 style={{ fontFamily: 'Playfair Display, serif', fontSize: '1.2rem' }}>Gestion de l'équipe</h3>
                 <button className="btn btn-primary" onClick={() => setShowModal('newEmployee')}>
-                  <UserPlus size={18} /> Ajouter une praticienne
+                  <UserPlus size={18} /> <span className="desktop-only">Ajouter une praticienne</span><span className="mobile-only">Ajouter</span>
                 </button>
               </div>
               
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
                 {employees.filter(e => !e.isDirector).map(employee => {
                   const empClients = clients.filter(c => c.assignedTo === employee.id);
                   const empRdvs = rdvs.filter(r => r.employeeId === employee.id);
@@ -6446,7 +7012,7 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                 </div>
               </div>
               
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '1.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
                 {/* Clientes assignées */}
                 <div className="card">
                   <div className="card-header">
@@ -6546,44 +7112,43 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                           {empStats.clientsActifs} clientes • {empStats.rdvsAVenir} RDV à venir
                         </div>
                       </div>
-                      <div className="table-container">
+                      <div className="table-container" style={{ margin: '0 -0.75rem' }}>
                         <table>
                           <thead>
                             <tr>
                               <th>Produit</th>
                               <th>Quantité</th>
-                              <th>Seuil</th>
+                              <th className="hide-mobile">Seuil</th>
                               <th>Statut</th>
-                              <th>Actions</th>
+                              <th className="hide-mobile">Actions</th>
                             </tr>
                           </thead>
                           <tbody>
                             {empStocks.map(stock => (
                               <tr key={stock.id} style={{ background: stock.quantite <= stock.seuil ? 'rgba(248, 113, 113, 0.1)' : 'transparent' }}>
-                                <td><strong>{stock.nom}</strong></td>
+                                <td><strong style={{ fontSize: '0.85rem' }}>{stock.nom}</strong></td>
                                 <td>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                     <button 
                                       className="btn btn-ghost" 
-                                      style={{ padding: '4px 8px', minWidth: '32px' }}
+                                      style={{ padding: '4px 8px', minWidth: '32px', minHeight: '32px' }}
                                       onClick={() => updateStock(employee.id, stock.id, Math.max(0, stock.quantite - 1))}
                                     >−</button>
-                                    <span style={{ minWidth: '40px', textAlign: 'center', fontWeight: '600' }}>{stock.quantite}</span>
+                                    <span style={{ minWidth: '30px', textAlign: 'center', fontWeight: '600' }}>{stock.quantite}</span>
                                     <button 
                                       className="btn btn-ghost" 
-                                      style={{ padding: '4px 8px', minWidth: '32px' }}
+                                      style={{ padding: '4px 8px', minWidth: '32px', minHeight: '32px' }}
                                       onClick={() => updateStock(employee.id, stock.id, stock.quantite + 1)}
                                     >+</button>
-                                    <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{stock.unite}</span>
                                   </div>
                                 </td>
-                                <td>{stock.seuil} {stock.unite}</td>
+                                <td className="hide-mobile">{stock.seuil} {stock.unite}</td>
                                 <td>
-                                  <span className={`badge ${stock.quantite <= stock.seuil ? 'badge-danger' : 'badge-success'}`}>
-                                    {stock.quantite <= stock.seuil ? '⚠️ Stock bas' : '✓ OK'}
+                                  <span className={`badge ${stock.quantite <= stock.seuil ? 'badge-danger' : 'badge-success'}`} style={{ fontSize: '0.7rem', padding: '3px 6px' }}>
+                                    {stock.quantite <= stock.seuil ? '⚠️' : '✓'}
                                   </span>
                                 </td>
-                                <td>
+                                <td className="hide-mobile">
                                   <button 
                                     className="btn btn-secondary btn-sm"
                                     onClick={() => updateStock(employee.id, stock.id, stock.seuil + 5)}
@@ -6698,13 +7263,13 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
               </div>
               
               {/* Graphiques */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
                 {/* Graphique CA par mois */}
                 <div className="card">
                   <div className="card-header">
-                    <div className="card-title"><BarChart3 size={18} /> Évolution du CA</div>
+                    <div className="card-title" style={{ fontSize: '0.9rem' }}><BarChart3 size={18} /> Évolution du CA</div>
                   </div>
-                  <div style={{ height: '250px' }}>
+                  <div style={{ height: '200px', marginRight: '-10px' }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={getPaiementStats().caParMois}>
                         <defs>
@@ -6714,8 +7279,8 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                        <XAxis dataKey="mois" stroke="#888" fontSize={12} />
-                        <YAxis stroke="#888" fontSize={12} tickFormatter={(v) => `${v}€`} />
+                        <XAxis dataKey="mois" stroke="#888" fontSize={10} />
+                        <YAxis stroke="#888" fontSize={10} tickFormatter={(v) => `${v}€`} width={50} />
                         <Tooltip 
                           contentStyle={{ background: '#1a1a2e', border: '1px solid #c9a962', borderRadius: '8px' }}
                           formatter={(value) => [`${value}€`, 'CA']}
@@ -6730,14 +7295,14 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                 {/* Graphique CA par praticienne */}
                 <div className="card">
                   <div className="card-header">
-                    <div className="card-title"><Users size={18} /> CA par praticienne</div>
+                    <div className="card-title" style={{ fontSize: '0.9rem' }}><Users size={18} /> CA par praticienne</div>
                   </div>
-                  <div style={{ height: '250px' }}>
+                  <div style={{ height: '200px' }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={getCaParPraticienneData()} layout="vertical">
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                        <XAxis type="number" stroke="#888" fontSize={12} tickFormatter={(v) => `${v}€`} />
-                        <YAxis type="category" dataKey="name" stroke="#888" fontSize={12} width={60} />
+                        <XAxis type="number" stroke="#888" fontSize={10} tickFormatter={(v) => `${v}€`} />
+                        <YAxis type="category" dataKey="name" stroke="#888" fontSize={10} width={50} />
                         <Tooltip 
                           contentStyle={{ background: '#1a1a2e', border: '1px solid #c9a962', borderRadius: '8px' }}
                           formatter={(value) => [`${value}€`, 'CA']}
@@ -6825,39 +7390,43 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
               
               {/* Tableau des paiements amélioré */}
               <div className="card">
-                <div className="card-header">
-                  <div className="card-title"><CreditCard size={18} /> Gestion des paiements</div>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button className="btn btn-secondary btn-sm" onClick={() => setShowModal('newPaiement3x')}>
-                      <Repeat size={16} /> Paiement 3x
-                    </button>
-                    <button className="btn btn-primary btn-sm" onClick={() => {
-                      setPaiementForm({ clientId: '', montant: '', methode: 'CB' });
-                      setShowPaiementModal(true);
-                    }}>
-                      <Plus size={16} /> Paiement simple
-                    </button>
+                <div className="card-header" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <div className="card-title" style={{ fontSize: '0.95rem' }}><CreditCard size={18} /> Paiements</div>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <button className="btn btn-secondary btn-sm" onClick={() => setShowModal('newPaiement3x')}>
+                        <Repeat size={14} /> <span className="desktop-only">Paiement</span> 3x
+                      </button>
+                      <button className="btn btn-primary btn-sm" onClick={() => {
+                        setPaiementForm({ clientId: '', montant: '', methode: 'CB' });
+                        setShowPaiementModal(true);
+                      }}>
+                        <Plus size={14} /> <span className="desktop-only">Simple</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
                 
-                {/* Filtres */}
-                <div className="tabs" style={{ marginBottom: '1rem' }}>
-                  <div className="tab active">Tous</div>
-                  <div className="tab">✓ Payés</div>
-                  <div className="tab">⏳ En attente</div>
-                  <div className="tab">⚠️ En relance</div>
+                {/* Filtres scrollables */}
+                <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', marginBottom: '0.75rem' }}>
+                  <div className="tabs" style={{ minWidth: 'max-content' }}>
+                    <div className="tab active">Tous</div>
+                    <div className="tab">✓ Payés</div>
+                    <div className="tab">⏳ Attente</div>
+                    <div className="tab">⚠️ Relance</div>
+                  </div>
                 </div>
                 
                 <div className="table-container">
                   <table>
                     <thead>
                       <tr>
-                        <th>Facture</th>
-                        <th>Date</th>
+                        <th className="hide-mobile">Facture</th>
+                        <th className="hide-mobile">Date</th>
                         <th>Cliente</th>
-                        <th>Type</th>
+                        <th className="hide-mobile">Type</th>
                         <th>Montant</th>
-                        <th>Méthode</th>
+                        <th className="hide-mobile">Méthode</th>
                         <th>Statut</th>
                         <th>Actions</th>
                       </tr>
@@ -6870,7 +7439,7 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                             background: p.statut === 'relance' ? 'rgba(248, 113, 113, 0.05)' : 
                                         p.statut === 'en_attente' ? 'rgba(251, 191, 36, 0.05)' : 'transparent'
                           }}>
-                            <td>
+                            <td className="hide-mobile">
                               <button 
                                 className="btn btn-ghost btn-sm"
                                 onClick={() => {
@@ -6882,7 +7451,7 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                                 <FileText size={14} /> {p.factureNumero || 'N/A'}
                               </button>
                             </td>
-                            <td>{new Date(p.date).toLocaleDateString('fr-FR')}</td>
+                            <td className="hide-mobile">{new Date(p.date).toLocaleDateString('fr-FR')}</td>
                             <td>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                 <div className="client-avatar" style={{ width: '32px', height: '32px', fontSize: '0.85rem' }}>
@@ -6896,7 +7465,7 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                                 </div>
                               </div>
                             </td>
-                            <td>
+                            <td className="hide-mobile">
                               {p.type === '3x' ? (
                                 <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6', border: '1px solid #3b82f6' }}>
                                   <Repeat size={12} /> {p.echeance}/{p.totalEcheances}
@@ -6918,7 +7487,7 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                                 </div>
                               )}
                             </td>
-                            <td>{p.methode}</td>
+                            <td className="hide-mobile">{p.methode}</td>
                             <td>
                               {p.statut === 'payé' && (
                                 <span className="badge badge-success">✓ Payé</span>
@@ -7007,12 +7576,14 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                 </div>
               </div>
               
-              <div className="tabs" style={{ marginBottom: '1.5rem' }}>
-                <div className="tab active">Toutes</div>
-                <div className="tab">Technique</div>
-                <div className="tab">Relationnel</div>
-                <div className="tab">Sécurité</div>
-                <div className="tab">Outils</div>
+              <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', marginBottom: '1rem' }}>
+                <div className="tabs" style={{ minWidth: 'max-content' }}>
+                  <div className="tab active">Toutes</div>
+                  <div className="tab">Technique</div>
+                  <div className="tab">Relationnel</div>
+                  <div className="tab">Sécurité</div>
+                  <div className="tab">Outils</div>
+                </div>
               </div>
               
               <div className="video-grid">
@@ -7065,58 +7636,87 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
           {/* ============================================ */}
           {currentView === 'messages' && (
             <div className="animate-in">
-              <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '1.5rem', height: 'calc(100vh - 200px)', minHeight: '500px' }}>
-                {/* Liste des conversations */}
-                <div className="card" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                  <div className="card-header" style={{ borderBottom: '1px solid var(--border)', padding: '1rem 1.25rem' }}>
-                    <div className="card-title" style={{ margin: 0 }}><MessageCircle size={18} /> Conversations</div>
+              {/* Layout responsive : colonne sur mobile, grille sur desktop */}
+              <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column',
+                gap: '1rem', 
+                height: 'calc(100vh - 140px)', 
+                minHeight: '400px'
+              }}>
+                {/* Liste des conversations - collapsible sur mobile */}
+                <div className="card" style={{ 
+                  overflow: 'hidden', 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  maxHeight: selectedConversation ? '150px' : '100%',
+                  transition: 'max-height 0.3s ease'
+                }}>
+                  <div 
+                    className="card-header" 
+                    style={{ 
+                      borderBottom: '1px solid var(--border)', 
+                      padding: '0.75rem 1rem',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => selectedConversation && setSelectedConversation(null)}
+                  >
+                    <div className="card-title" style={{ margin: 0, fontSize: '0.95rem' }}>
+                      <MessageCircle size={18} /> 
+                      {selectedConversation ? `← ${selectedConversation.contact?.nom?.split(' ')[0]}` : 'Conversations'}
+                    </div>
+                    {getUnreadCount() > 0 && (
+                      <span className="badge badge-danger">{getUnreadCount()}</span>
+                    )}
                   </div>
                   
-                  <div style={{ flex: 1, overflowY: 'auto' }}>
-                    {getConversations().length > 0 ? getConversations().map(conv => {
-                      const colors = EMPLOYEE_COLORS[conv.contactId] || { bg: 'rgba(201,169,98,0.2)', border: '#c9a962' };
-                      return (
-                        <div 
-                          key={conv.contactId}
-                          onClick={() => {
-                            setSelectedConversation(conv);
-                            markMessagesAsRead(conv.contactId);
-                          }}
-                          style={{
-                            padding: '1rem 1.25rem',
-                            borderBottom: '1px solid var(--border)',
-                            cursor: 'pointer',
-                            background: selectedConversation?.contactId === conv.contactId ? colors.bg : 'transparent',
-                            borderLeft: selectedConversation?.contactId === conv.contactId ? `3px solid ${colors.border}` : '3px solid transparent',
-                            transition: 'all 0.2s'
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  {!selectedConversation && (
+                    <div style={{ flex: 1, overflowY: 'auto' }}>
+                      {getConversations().length > 0 ? getConversations().map(conv => {
+                        const colors = EMPLOYEE_COLORS[conv.contactId] || { bg: 'rgba(201,169,98,0.2)', border: '#c9a962' };
+                        return (
+                          <div 
+                            key={conv.contactId}
+                            onClick={() => {
+                              setSelectedConversation(conv);
+                              markMessagesAsRead(conv.contactId);
+                            }}
+                            style={{
+                              padding: '0.75rem 1rem',
+                              borderBottom: '1px solid var(--border)',
+                              cursor: 'pointer',
+                              background: 'transparent',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '10px'
+                            }}
+                          >
                             <div 
                               className="client-avatar" 
                               style={{ 
-                                width: '45px', 
-                                height: '45px', 
-                                fontSize: '1rem',
+                                width: '40px', 
+                                height: '40px', 
+                                fontSize: '0.9rem',
                                 background: colors.bg,
                                 border: `2px solid ${colors.border}`,
-                                color: colors.text || colors.border
+                                color: colors.text || colors.border,
+                                flexShrink: 0
                               }}
                             >
                               {conv.contact?.nom.charAt(0)}
                             </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <strong style={{ fontSize: '0.95rem' }}>{conv.contact?.nom.split(' ')[0]}</strong>
+                                <strong style={{ fontSize: '0.9rem' }}>{conv.contact?.nom.split(' ')[0]}</strong>
                                 {conv.unreadCount > 0 && (
-                                  <span className="badge badge-danger" style={{ minWidth: '22px', height: '22px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem' }}>
+                                  <span className="badge badge-danger" style={{ minWidth: '20px', height: '20px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem' }}>
                                     {conv.unreadCount}
                                   </span>
                                 )}
                               </div>
                               <p style={{ 
-                                margin: '4px 0 0', 
-                                fontSize: '0.8rem', 
+                                margin: '2px 0 0', 
+                                fontSize: '0.75rem', 
                                 color: 'var(--text-muted)',
                                 whiteSpace: 'nowrap',
                                 overflow: 'hidden',
@@ -7124,48 +7724,47 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                               }}>
                                 {conv.lastMessage?.message}
                               </p>
-                              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                                {conv.lastMessage?.date && new Date(conv.lastMessage.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                              </span>
                             </div>
                           </div>
+                        );
+                      }) : (
+                        <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                          <MessageCircle size={32} style={{ opacity: 0.3, marginBottom: '0.5rem' }} />
+                          <p style={{ fontSize: '0.85rem' }}>Aucune conversation</p>
                         </div>
-                      );
-                    }) : (
-                      <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                        <MessageCircle size={40} style={{ opacity: 0.3, marginBottom: '1rem' }} />
-                        <p>Aucune conversation</p>
-                      </div>
-                    )}
-                  </div>
+                      )}
+                    </div>
+                  )}
                   
-                  {/* Nouveau message à quelqu'un */}
-                  <div style={{ padding: '1rem', borderTop: '1px solid var(--border)' }}>
-                    <select 
-                      className="form-input" 
-                      style={{ fontSize: '0.85rem' }}
-                      onChange={(e) => {
-                        if (e.target.value) {
-                          const contact = employees.find(emp => emp.id === parseInt(e.target.value));
-                          setSelectedConversation({
-                            contactId: parseInt(e.target.value),
-                            contact,
-                            messages: messages.filter(m => 
-                              (m.fromId === currentUser?.id && m.toId === parseInt(e.target.value)) ||
-                              (m.fromId === parseInt(e.target.value) && m.toId === currentUser?.id)
-                            ).sort((a, b) => new Date(a.date) - new Date(b.date)),
-                            unreadCount: 0
-                          });
-                          e.target.value = '';
-                        }
-                      }}
-                    >
-                      <option value="">+ Nouvelle conversation...</option>
-                      {employees.filter(e => e.id !== currentUser?.id).map(emp => (
-                        <option key={emp.id} value={emp.id}>{emp.nom}</option>
-                      ))}
-                    </select>
-                  </div>
+                  {/* Nouveau message - seulement si pas de conversation sélectionnée */}
+                  {!selectedConversation && (
+                    <div style={{ padding: '0.75rem', borderTop: '1px solid var(--border)' }}>
+                      <select 
+                        className="form-input" 
+                        style={{ fontSize: '0.85rem' }}
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            const contact = employees.find(emp => emp.id === parseInt(e.target.value));
+                            setSelectedConversation({
+                              contactId: parseInt(e.target.value),
+                              contact,
+                              messages: messages.filter(m => 
+                                (m.fromId === currentUser?.id && m.toId === parseInt(e.target.value)) ||
+                                (m.fromId === parseInt(e.target.value) && m.toId === currentUser?.id)
+                              ).sort((a, b) => new Date(a.date) - new Date(b.date)),
+                              unreadCount: 0
+                            });
+                            e.target.value = '';
+                          }
+                        }}
+                      >
+                        <option value="">+ Nouvelle conversation...</option>
+                        {employees.filter(e => e.id !== currentUser?.id).map(emp => (
+                          <option key={emp.id} value={emp.id}>{emp.nom}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
                 
                 {/* Zone de conversation */}
@@ -7340,23 +7939,24 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                 <div className="card-header">
                   <div className="card-title"><Trophy size={18} /> Classement de l'équipe</div>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {getLeaderboard().map((emp, index) => {
                     const obj = emp.objectives;
                     const colors = EMPLOYEE_COLORS[emp.id] || { bg: 'rgba(201,169,98,0.2)', border: '#c9a962' };
                     return (
                       <div key={emp.id} style={{ 
                         display: 'flex', 
+                        flexWrap: 'wrap',
                         alignItems: 'center', 
-                        gap: '1rem',
-                        padding: '1rem 1.25rem',
+                        gap: '0.75rem',
+                        padding: '0.75rem 1rem',
                         background: index === 0 ? 'linear-gradient(135deg, rgba(201, 169, 98, 0.2), rgba(201, 169, 98, 0.05))' : 'var(--bg)',
                         border: `1px solid ${index === 0 ? 'var(--accent)' : 'var(--border)'}`,
                         borderRadius: '12px'
                       }}>
                         <div style={{ 
-                          width: '40px', 
-                          height: '40px', 
+                          width: '36px', 
+                          height: '36px', 
                           borderRadius: '50%', 
                           background: index === 0 ? 'var(--accent)' : index === 1 ? '#c0c0c0' : '#cd7f32',
                           display: 'flex',
@@ -7364,33 +7964,31 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                           justifyContent: 'center',
                           fontWeight: '700',
                           color: '#1a1a2e',
-                          fontSize: '1.25rem'
+                          fontSize: '1.1rem',
+                          flexShrink: 0
                         }}>
                           {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
                         </div>
-                        <div className="client-avatar" style={{ width: '50px', height: '50px', background: colors.bg, border: `2px solid ${colors.border}`, color: colors.text }}>
+                        <div className="client-avatar" style={{ width: '40px', height: '40px', background: colors.bg, border: `2px solid ${colors.border}`, color: colors.text, flexShrink: 0 }}>
                           {emp.nom.charAt(0)}
                         </div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>{emp.nom}</div>
-                          <div style={{ display: 'flex', gap: '1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                            <span>{obj.monthly_seances_current} séances ce mois</span>
-                            <span>•</span>
-                            <span>{obj.monthly_ca_current}€ CA</span>
-                            <span>•</span>
-                            <span>🔥 {obj.streak_days} jours</span>
+                        <div style={{ flex: 1, minWidth: '120px' }}>
+                          <div style={{ fontWeight: '600', marginBottom: '0.25rem', fontSize: '0.9rem' }}>{emp.nom.split(' ')[0]}</div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                            <span>{obj.monthly_seances_current} séances</span>
+                            <span>🔥 {obj.streak_days}j</span>
                           </div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--accent)' }}>{emp.score} pts</div>
-                          <div style={{ display: 'flex', gap: '4px' }}>
-                            {obj.badges_earned.slice(0, 5).map(badgeId => (
-                              <span key={badgeId} title={BADGES[badgeId]?.nom} style={{ fontSize: '1.1rem' }}>
+                          <div style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--accent)' }}>{emp.score} pts</div>
+                          <div style={{ display: 'flex', gap: '2px', justifyContent: 'flex-end' }}>
+                            {obj.badges_earned.slice(0, 3).map(badgeId => (
+                              <span key={badgeId} title={BADGES[badgeId]?.nom} style={{ fontSize: '0.9rem' }}>
                                 {BADGES[badgeId]?.icon}
                               </span>
                             ))}
-                            {obj.badges_earned.length > 5 && (
-                              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>+{obj.badges_earned.length - 5}</span>
+                            {obj.badges_earned.length > 3 && (
+                              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>+{obj.badges_earned.length - 3}</span>
                             )}
                           </div>
                         </div>
@@ -7401,7 +7999,7 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
               </div>
               
               {/* Détail par praticienne */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
                 {employees.filter(e => !e.isDirector).map(emp => {
                   const obj = getEmployeeObjectives(emp.id);
                   const colors = EMPLOYEE_COLORS[emp.id] || { bg: 'rgba(201,169,98,0.2)', border: '#c9a962', text: '#c9a962' };
@@ -7549,7 +8147,7 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                       </div>
                     </div>
                     
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '1.5rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
                       {/* Objectifs du mois */}
                       <div className="card">
                         <div className="card-header">
@@ -7757,7 +8355,7 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                 </div>
               </div>
               
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '1.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
                 {/* RDV à confirmer */}
                 <div className="card">
                   <div className="card-header">
@@ -7777,9 +8375,9 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                             key={rdv.id} 
                             style={{ 
                               display: 'flex', 
-                              alignItems: 'center', 
-                              gap: '1rem',
-                              padding: '1rem',
+                              flexDirection: 'column',
+                              gap: '0.75rem',
+                              padding: '0.75rem',
                               background: 'var(--bg)',
                               borderRadius: '12px',
                               borderLeft: `4px solid ${statusInfo.color}`,
@@ -7788,41 +8386,36 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                             }}
                             onClick={() => setShowRdvConfirmModal(rdv)}
                           >
-                            <div className="client-avatar" style={{ width: '45px', height: '45px' }}>
-                              {client?.nom.charAt(0)}
-                            </div>
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                {client?.nom}
-                                <span className="badge" style={{ 
-                                  background: `${statusInfo.color}20`, 
-                                  color: statusInfo.color,
-                                  border: `1px solid ${statusInfo.color}`,
-                                  fontSize: '0.65rem',
-                                  padding: '2px 8px'
-                                }}>
-                                  {statusInfo.icon} {statusInfo.label}
-                                </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                              <div className="client-avatar" style={{ width: '40px', height: '40px', fontSize: '0.9rem', flexShrink: 0 }}>
+                                {client?.nom.charAt(0)}
                               </div>
-                              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                                {new Date(rdv.date).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short' })} à {rdv.heure}
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontWeight: '600', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{client?.nom}</span>
+                                  <span className="badge" style={{ 
+                                    background: `${statusInfo.color}20`, 
+                                    color: statusInfo.color,
+                                    border: `1px solid ${statusInfo.color}`,
+                                    fontSize: '0.6rem',
+                                    padding: '2px 6px'
+                                  }}>
+                                    {statusInfo.icon}
+                                  </span>
+                                </div>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                  {new Date(rdv.date).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short' })} à {rdv.heure} • <span style={{ color: colors.text }}>{emp?.nom.split(' ')[0]}</span>
+                                </div>
                               </div>
-                              <div style={{ fontSize: '0.8rem', color: colors.text }}>{emp?.nom.split(' ')[0]}</div>
                             </div>
-                            <div style={{ display: 'flex', gap: '0.5rem' }} onClick={(e) => e.stopPropagation()}>
+                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }} onClick={(e) => e.stopPropagation()}>
                               <button 
                                 className="btn btn-secondary btn-sm"
                                 onClick={() => sendRappel(rdv.id, 'sms', 'rappel_j1')}
                                 title="Envoyer SMS"
+                                style={{ flex: '1', minWidth: '60px' }}
                               >
-                                <Smartphone size={14} />
-                              </button>
-                              <button 
-                                className="btn btn-secondary btn-sm"
-                                onClick={() => sendRappel(rdv.id, 'email', 'rappel_j1')}
-                                title="Envoyer Email"
-                              >
-                                <Mail size={14} />
+                                <Smartphone size={14} /> SMS
                               </button>
                               <button 
                                 className="btn btn-secondary btn-sm"
@@ -7834,7 +8427,7 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                               </button>
                               <button 
                                 className="btn btn-sm"
-                                style={{ background: 'rgba(34, 197, 94, 0.2)', border: '1px solid var(--success)', color: 'var(--success)' }}
+                                style={{ background: 'rgba(34, 197, 94, 0.2)', border: '1px solid var(--success)', color: 'var(--success)', flex: '1', minWidth: '80px' }}
                                 onClick={() => {
                                   // Sauvegarder dans Airtable
                                   if (rdv.airtable_id) {
@@ -7845,7 +8438,7 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                                 }}
                                 title="Confirmer"
                               >
-                                <CheckCircle size={14} />
+                                <CheckCircle size={14} /> OK
                               </button>
                             </div>
                           </div>
@@ -8018,7 +8611,7 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                 </div>
               </div>
               
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '1.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
                 {/* Top Marraines */}
                 <div className="card">
                   <div className="card-header">
