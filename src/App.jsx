@@ -2948,6 +2948,8 @@ export default function SlimTouchApp() {
   const [showSuiviModal, setShowSuiviModal] = useState(false);
   const [showMesureModal, setShowMesureModal] = useState(false);
   const [showPhotoModal, setShowPhotoModal] = useState(null); // 'avant', 'pendant', 'après'
+  const [capturedPhoto, setCapturedPhoto] = useState(null); // { preview: base64, file: File }
+  const [viewPhotoFullscreen, setViewPhotoFullscreen] = useState(null); // { url, type } pour voir en plein écran
   const [showRdvModal, setShowRdvModal] = useState(false);
   const [editingSuivi, setEditingSuivi] = useState(null);
   const [editingMesure, setEditingMesure] = useState(null);
@@ -3433,11 +3435,31 @@ export default function SlimTouchApp() {
   };
   
   // Fonction pour ajouter une photo
+  // Fonction pour gérer la capture/sélection de photo
+  const handlePhotoCapture = (event) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCapturedPhoto({
+          preview: reader.result,
+          file: file
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleAddPhoto = async (type) => {
+    if (!capturedPhoto) {
+      addNotification({ type: 'warning', message: 'Veuillez d\'abord prendre ou sélectionner une photo', forEmployee: null });
+      return;
+    }
+    
     const newPhoto = {
       id: Date.now(),
       type: type.toLowerCase(),
-      url: 'uploaded',
+      url: capturedPhoto.preview, // Base64 de l'image
       date: new Date().toISOString().split('T')[0]
     };
     const existingIndex = selectedClient.photos.findIndex(p => p.type === type.toLowerCase());
@@ -3452,21 +3474,24 @@ export default function SlimTouchApp() {
     try {
       if (selectedClient?.airtable_id) {
         const photoData = {};
-        if (type.toLowerCase() === 'avant') photoData.photoAvant = newPhoto.url;
-        if (type.toLowerCase() === 'pendant') photoData.photoPendant = newPhoto.url;
-        if (type.toLowerCase() === 'après' || type.toLowerCase() === 'apres') photoData.photoApres = newPhoto.url;
+        if (type.toLowerCase() === 'avant') photoData.photoAvant = capturedPhoto.preview;
+        if (type.toLowerCase() === 'pendant') photoData.photoPendant = capturedPhoto.preview;
+        if (type.toLowerCase() === 'après' || type.toLowerCase() === 'apres') photoData.photoApres = capturedPhoto.preview;
         
         await apiUpdatePhotos(selectedClient.airtable_id, photoData);
         console.log('✅ Photo mise à jour dans Airtable');
+        addNotification({ type: 'success', message: `📸 Photo ${type} enregistrée !`, forEmployee: null });
       }
     } catch (error) {
       console.error('⚠️ Erreur update photo Airtable:', error);
+      addNotification({ type: 'error', message: 'Erreur lors de l\'enregistrement de la photo', forEmployee: null });
     }
     
     setClients(prev => prev.map(c => 
       c.id === selectedClient.id ? { ...c, photos: newPhotos } : c
     ));
     setSelectedClient(prev => ({ ...prev, photos: newPhotos }));
+    setCapturedPhoto(null);
     setShowPhotoModal(null);
   };
   
@@ -6317,33 +6342,81 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                   <div className="card-header">
                     <div className="card-title"><Camera /> Photos de suivi</div>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
                     {['avant', 'pendant', 'après'].map((type) => {
                       const photo = selectedClient.photos.find(p => p.type === type);
+                      const hasRealPhoto = photo?.url && photo.url.startsWith('data:');
                       return (
                         <div 
                           key={type} 
-                          onClick={() => setShowPhotoModal(type)}
+                          onClick={() => {
+                            if (hasRealPhoto) {
+                              setViewPhotoFullscreen({ url: photo.url, type, date: photo.date });
+                            } else {
+                              setShowPhotoModal(type);
+                            }
+                          }}
                           style={{
                             aspectRatio: '1',
-                            background: photo?.url ? 'linear-gradient(135deg, var(--accent), var(--accent-light))' : 'var(--bg)',
-                            border: photo?.url ? '1px solid var(--accent)' : '2px dashed var(--border)',
+                            background: hasRealPhoto ? 'transparent' : photo?.url ? 'linear-gradient(135deg, var(--accent), var(--accent-light))' : 'var(--bg)',
+                            border: photo?.url ? '2px solid var(--accent)' : '2px dashed var(--border)',
                             borderRadius: '12px',
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            gap: '8px',
+                            gap: '6px',
                             cursor: 'pointer',
                             color: photo?.url ? 'var(--primary)' : 'var(--text-muted)',
                             transition: 'all 0.2s',
-                            fontSize: '0.8rem',
-                            textTransform: 'uppercase'
+                            fontSize: '0.75rem',
+                            textTransform: 'uppercase',
+                            overflow: 'hidden',
+                            position: 'relative'
                           }}
                         >
-                          {photo?.url ? <CheckCircle size={28} /> : <Camera size={28} />}
-                          <span>{type}</span>
-                          {photo?.url && <span style={{ fontSize: '0.65rem' }}>{photo.date}</span>}
+                          {hasRealPhoto ? (
+                            <>
+                              <img 
+                                src={photo.url} 
+                                alt={`Photo ${type}`}
+                                style={{
+                                  position: 'absolute',
+                                  top: 0,
+                                  left: 0,
+                                  width: '100%',
+                                  height: '100%',
+                                  objectFit: 'cover'
+                                }}
+                              />
+                              <div style={{
+                                position: 'absolute',
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
+                                background: 'linear-gradient(transparent, rgba(0,0,0,0.7))',
+                                padding: '0.5rem',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center'
+                              }}>
+                                <span style={{ color: 'white', fontWeight: '600' }}>{type}</span>
+                                <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.6rem' }}>{photo.date}</span>
+                              </div>
+                            </>
+                          ) : photo?.url ? (
+                            <>
+                              <CheckCircle size={24} />
+                              <span>{type}</span>
+                              <span style={{ fontSize: '0.6rem' }}>{photo.date}</span>
+                            </>
+                          ) : (
+                            <>
+                              <Camera size={24} />
+                              <span>{type}</span>
+                              <span style={{ fontSize: '0.6rem', opacity: 0.7 }}>Ajouter</span>
+                            </>
+                          )}
                         </div>
                       );
                     })}
@@ -9695,31 +9768,249 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
       
       {/* Modal Ajouter Photo */}
       {showPhotoModal && (
-        <div className="modal-overlay" onClick={() => setShowPhotoModal(null)}>
+        <div className="modal-overlay" onClick={() => { setShowPhotoModal(null); setCapturedPhoto(null); }}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">Photo {showPhotoModal.toUpperCase()}</h3>
-              <button className="btn btn-ghost" onClick={() => setShowPhotoModal(null)}><X size={20} /></button>
+              <h3 className="modal-title">📸 Photo {showPhotoModal.toUpperCase()}</h3>
+              <button className="btn btn-ghost" onClick={() => { setShowPhotoModal(null); setCapturedPhoto(null); }}><X size={20} /></button>
             </div>
             <div className="modal-body">
-              <div 
-                style={{
-                  border: '2px dashed var(--border)',
-                  borderRadius: '16px',
-                  padding: '3rem',
-                  textAlign: 'center',
-                  cursor: 'pointer',
-                  background: 'var(--bg)'
-                }}
-                onClick={() => handleAddPhoto(showPhotoModal)}
-              >
-                <Upload size={48} style={{ color: 'var(--accent)', marginBottom: '1rem' }} />
-                <p style={{ color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Cliquez pour ajouter une photo</p>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>ou glissez-déposez une image</p>
-              </div>
+              {/* Zone de prévisualisation */}
+              {capturedPhoto ? (
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{
+                    position: 'relative',
+                    borderRadius: '16px',
+                    overflow: 'hidden',
+                    marginBottom: '1rem',
+                    border: '3px solid var(--accent)'
+                  }}>
+                    <img 
+                      src={capturedPhoto.preview} 
+                      alt="Prévisualisation" 
+                      style={{ 
+                        width: '100%', 
+                        maxHeight: '300px', 
+                        objectFit: 'cover',
+                        display: 'block'
+                      }} 
+                    />
+                    <button
+                      className="btn btn-danger"
+                      onClick={() => setCapturedPhoto(null)}
+                      style={{
+                        position: 'absolute',
+                        top: '10px',
+                        right: '10px',
+                        borderRadius: '50%',
+                        width: '40px',
+                        height: '40px',
+                        padding: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+                  <p style={{ color: 'var(--success)', marginBottom: '0.5rem', fontWeight: '600' }}>
+                    ✓ Photo prête à être enregistrée
+                  </p>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                    Cliquez sur "Enregistrer" pour sauvegarder ou reprenez une photo
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Instructions */}
+                  <p style={{ textAlign: 'center', color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+                    Prenez une photo avec votre appareil ou sélectionnez-en une depuis votre galerie
+                  </p>
+                  
+                  {/* Boutons caméra et galerie */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {/* Bouton Prendre une photo (caméra arrière) */}
+                    <label style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '12px',
+                      padding: '1.5rem',
+                      background: 'linear-gradient(135deg, rgba(201, 169, 98, 0.2), rgba(201, 169, 98, 0.05))',
+                      border: '2px solid var(--accent)',
+                      borderRadius: '16px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={handlePhotoCapture}
+                        style={{ display: 'none' }}
+                      />
+                      <Camera size={32} style={{ color: 'var(--accent)' }} />
+                      <div>
+                        <div style={{ fontWeight: '600', fontSize: '1rem', color: 'var(--text)' }}>
+                          📷 Prendre une photo
+                        </div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                          Utiliser l'appareil photo
+                        </div>
+                      </div>
+                    </label>
+                    
+                    {/* Bouton Galerie */}
+                    <label style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '12px',
+                      padding: '1.25rem',
+                      background: 'var(--bg)',
+                      border: '2px dashed var(--border)',
+                      borderRadius: '16px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePhotoCapture}
+                        style={{ display: 'none' }}
+                      />
+                      <Image size={28} style={{ color: 'var(--text-muted)' }} />
+                      <div>
+                        <div style={{ fontWeight: '500', fontSize: '0.95rem', color: 'var(--text)' }}>
+                          Choisir depuis la galerie
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          Sélectionner une photo existante
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+                </>
+              )}
             </div>
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setShowPhotoModal(null)}>Annuler</button>
+              <button className="btn btn-secondary" onClick={() => { setShowPhotoModal(null); setCapturedPhoto(null); }}>
+                Annuler
+              </button>
+              {capturedPhoto && (
+                <button 
+                  className="btn btn-primary"
+                  onClick={() => handleAddPhoto(showPhotoModal)}
+                >
+                  <Save size={18} /> Enregistrer la photo
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Visualisation Photo Plein Écran */}
+      {viewPhotoFullscreen && (
+        <div 
+          className="modal-overlay" 
+          onClick={() => setViewPhotoFullscreen(null)}
+          style={{ background: 'rgba(0, 0, 0, 0.95)' }}
+        >
+          <div 
+            onClick={e => e.stopPropagation()}
+            style={{
+              position: 'relative',
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '1rem'
+            }}
+          >
+            {/* Header */}
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              padding: '1rem',
+              background: 'linear-gradient(rgba(0,0,0,0.8), transparent)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              zIndex: 10
+            }}>
+              <div>
+                <h3 style={{ color: 'white', fontFamily: 'Playfair Display, serif', marginBottom: '0.25rem' }}>
+                  Photo {viewPhotoFullscreen.type?.toUpperCase()}
+                </h3>
+                <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem' }}>
+                  {selectedClient?.nom} • {viewPhotoFullscreen.date}
+                </p>
+              </div>
+              <button 
+                className="btn btn-ghost" 
+                onClick={() => setViewPhotoFullscreen(null)}
+                style={{ color: 'white' }}
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Image */}
+            <img 
+              src={viewPhotoFullscreen.url} 
+              alt={`Photo ${viewPhotoFullscreen.type}`}
+              style={{
+                maxWidth: '100%',
+                maxHeight: 'calc(100vh - 150px)',
+                objectFit: 'contain',
+                borderRadius: '12px'
+              }}
+            />
+
+            {/* Footer avec actions */}
+            <div style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              padding: '1rem',
+              background: 'linear-gradient(transparent, rgba(0,0,0,0.8))',
+              display: 'flex',
+              justifyContent: 'center',
+              gap: '1rem',
+              flexWrap: 'wrap',
+              zIndex: 10
+            }}>
+              <button 
+                className="btn btn-secondary"
+                onClick={() => {
+                  setViewPhotoFullscreen(null);
+                  setShowPhotoModal(viewPhotoFullscreen.type);
+                }}
+              >
+                <Camera size={18} /> Reprendre
+              </button>
+              <button 
+                className="btn btn-danger"
+                onClick={() => {
+                  const type = viewPhotoFullscreen.type;
+                  const newPhotos = selectedClient.photos.filter(p => p.type !== type);
+                  setClients(prev => prev.map(c => 
+                    c.id === selectedClient.id ? { ...c, photos: newPhotos } : c
+                  ));
+                  setSelectedClient(prev => ({ ...prev, photos: newPhotos }));
+                  addNotification({ type: 'info', message: `Photo ${type} supprimée`, forEmployee: null });
+                  setViewPhotoFullscreen(null);
+                }}
+              >
+                <Trash2 size={18} /> Supprimer
+              </button>
             </div>
           </div>
         </div>
