@@ -152,6 +152,20 @@ const apiCreateVente = async (venteData) => {
   }
 };
 
+const apiUpdateVente = async (venteId, venteData) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/app-update-vente`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: venteId, ...venteData }),
+    });
+    return await response.json();
+  } catch (error) {
+    console.error('Erreur apiUpdateVente:', error);
+    throw error;
+  }
+};
+
 // ÉQUIPE
 const fetchEquipe = async () => {
   try {
@@ -306,6 +320,20 @@ const apiCreateParrainage = async (parrainageData) => {
     return await response.json();
   } catch (error) {
     console.error('Erreur apiCreateParrainage:', error);
+    throw error;
+  }
+};
+
+const apiUpdateParrainage = async (parrainageId, parrainageData) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/app-update-parrainage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: parrainageId, ...parrainageData }),
+    });
+    return await response.json();
+  } catch (error) {
+    console.error('Erreur apiUpdateParrainage:', error);
     throw error;
   }
 };
@@ -2466,11 +2494,36 @@ export default function SlimTouchApp() {
     return getFilteredRdvs().filter(r => r.date === dateStr);
   };
   
+  // Ouvrir Google Maps avec l'itinéraire vers l'adresse de la cliente
+  const openGoogleMapsItinerary = (adresse) => {
+    if (!adresse) {
+      alert('Adresse non renseignée pour cette cliente');
+      return;
+    }
+    const encodedAddress = encodeURIComponent(adresse);
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}`;
+    window.open(url, '_blank');
+  };
+  
   // Modifier le statut d'un RDV
-  const handleToggleRdvStatus = (rdvId) => {
+  const handleToggleRdvStatus = async (rdvId) => {
+    const rdv = rdvs.find(r => r.id === rdvId);
+    const newStatut = rdv?.statut === 'confirmé' ? 'en attente' : 'confirmé';
+    const airtableStatut = newStatut === 'confirmé' ? 'Realise' : 'A_Confirmer';
+    
+    // Sauvegarder dans Airtable
+    try {
+      if (rdv?.airtable_id) {
+        await apiUpdateRdv(rdv.airtable_id, { statut: airtableStatut });
+        console.log('✅ Statut RDV modifié dans Airtable');
+      }
+    } catch (error) {
+      console.error('⚠️ Erreur toggle statut RDV Airtable:', error);
+    }
+    
     setRdvs(prev => prev.map(r => 
       r.id === rdvId 
-        ? { ...r, statut: r.statut === 'confirmé' ? 'en attente' : 'confirmé' }
+        ? { ...r, statut: newStatut }
         : r
     ));
   };
@@ -2539,7 +2592,25 @@ export default function SlimTouchApp() {
   };
   
   // Modifier un RDV
-  const handleUpdateRdv = () => {
+  const handleUpdateRdv = async () => {
+    // Sauvegarder dans Airtable
+    try {
+      const rdv = rdvs.find(r => r.id === editingRdv.id);
+      if (rdv?.airtable_id) {
+        await apiUpdateRdv(rdv.airtable_id, {
+          date: planningRdvForm.date,
+          heure: planningRdvForm.heure,
+          duree: parseInt(planningRdvForm.duree),
+          type: planningRdvForm.type,
+          client_id: parseInt(planningRdvForm.clientId),
+          employee_id: parseInt(planningRdvForm.employeeId)
+        });
+        console.log('✅ RDV mis à jour dans Airtable');
+      }
+    } catch (error) {
+      console.error('⚠️ Erreur update RDV Airtable:', error);
+    }
+    
     setRdvs(prev => prev.map(r => 
       r.id === editingRdv.id 
         ? { ...r, clientId: parseInt(planningRdvForm.clientId), employeeId: parseInt(planningRdvForm.employeeId), date: planningRdvForm.date, heure: planningRdvForm.heure, duree: parseInt(planningRdvForm.duree), type: planningRdvForm.type }
@@ -2665,7 +2736,7 @@ export default function SlimTouchApp() {
   };
   
   // Fonction pour ajouter un suivi
-  const handleAddSuivi = () => {
+  const handleAddSuivi = async () => {
     if (!suiviForm.note.trim()) { alert('Veuillez entrer une note'); return; }
     const newSuivi = {
       id: Date.now(),
@@ -2674,6 +2745,20 @@ export default function SlimTouchApp() {
       note: suiviForm.note,
       employeeId: currentUser.id
     };
+    
+    // Sauvegarder dans Airtable
+    try {
+      if (selectedClient?.airtable_id) {
+        const updatedSuivis = [newSuivi, ...selectedClient.suivis];
+        await apiUpdateCliente(selectedClient.airtable_id, {
+          suivis: JSON.stringify(updatedSuivis)
+        });
+        console.log('✅ Suivi ajouté dans Airtable');
+      }
+    } catch (error) {
+      console.error('⚠️ Erreur ajout suivi Airtable:', error);
+    }
+    
     setClients(prev => prev.map(c => 
       c.id === selectedClient.id 
         ? { ...c, suivis: [newSuivi, ...c.suivis] }
@@ -2685,7 +2770,22 @@ export default function SlimTouchApp() {
   };
   
   // Fonction pour modifier un suivi
-  const handleUpdateSuivi = () => {
+  const handleUpdateSuivi = async () => {
+    // Sauvegarder dans Airtable
+    try {
+      if (selectedClient?.airtable_id) {
+        const updatedSuivis = selectedClient.suivis.map(s => 
+          s.id === editingSuivi.id ? { ...s, ...suiviForm, duree: parseInt(suiviForm.duree) } : s
+        );
+        await apiUpdateCliente(selectedClient.airtable_id, {
+          suivis: JSON.stringify(updatedSuivis)
+        });
+        console.log('✅ Suivi modifié dans Airtable');
+      }
+    } catch (error) {
+      console.error('⚠️ Erreur modification suivi Airtable:', error);
+    }
+    
     setClients(prev => prev.map(c => 
       c.id === selectedClient.id 
         ? { ...c, suivis: c.suivis.map(s => s.id === editingSuivi.id ? { ...s, ...suiviForm, duree: parseInt(suiviForm.duree) } : s) }
@@ -2698,8 +2798,22 @@ export default function SlimTouchApp() {
   };
   
   // Fonction pour supprimer un suivi
-  const handleDeleteSuivi = (suiviId) => {
+  const handleDeleteSuivi = async (suiviId) => {
     if (!window.confirm('Supprimer ce suivi ?')) return;
+    
+    // Sauvegarder dans Airtable
+    try {
+      if (selectedClient?.airtable_id) {
+        const updatedSuivis = selectedClient.suivis.filter(s => s.id !== suiviId);
+        await apiUpdateCliente(selectedClient.airtable_id, {
+          suivis: JSON.stringify(updatedSuivis)
+        });
+        console.log('✅ Suivi supprimé dans Airtable');
+      }
+    } catch (error) {
+      console.error('⚠️ Erreur suppression suivi Airtable:', error);
+    }
+    
     setClients(prev => prev.map(c => 
       c.id === selectedClient.id 
         ? { ...c, suivis: c.suivis.filter(s => s.id !== suiviId) }
@@ -2709,7 +2823,7 @@ export default function SlimTouchApp() {
   };
   
   // Fonction pour ajouter une mensuration
-  const handleAddMesure = () => {
+  const handleAddMesure = async () => {
     if (!mesureForm.tour_taille || !mesureForm.tour_hanches || !mesureForm.tour_cuisses) { 
       alert('Veuillez remplir toutes les mesures'); return; 
     }
@@ -2720,6 +2834,20 @@ export default function SlimTouchApp() {
       tour_hanches: parseInt(mesureForm.tour_hanches),
       tour_cuisses: parseInt(mesureForm.tour_cuisses)
     };
+    
+    // Sauvegarder dans Airtable
+    try {
+      if (selectedClient?.airtable_id) {
+        const updatedMesures = [newMesure, ...selectedClient.mesures];
+        await apiUpdateCliente(selectedClient.airtable_id, {
+          mesures: JSON.stringify(updatedMesures)
+        });
+        console.log('✅ Mesure ajoutée dans Airtable');
+      }
+    } catch (error) {
+      console.error('⚠️ Erreur ajout mesure Airtable:', error);
+    }
+    
     setClients(prev => prev.map(c => 
       c.id === selectedClient.id 
         ? { ...c, mesures: [newMesure, ...c.mesures] }
@@ -2731,8 +2859,22 @@ export default function SlimTouchApp() {
   };
   
   // Fonction pour supprimer une mensuration
-  const handleDeleteMesure = (mesureId) => {
+  const handleDeleteMesure = async (mesureId) => {
     if (!window.confirm('Supprimer cette mensuration ?')) return;
+    
+    // Sauvegarder dans Airtable
+    try {
+      if (selectedClient?.airtable_id) {
+        const updatedMesures = selectedClient.mesures.filter(m => m.id !== mesureId);
+        await apiUpdateCliente(selectedClient.airtable_id, {
+          mesures: JSON.stringify(updatedMesures)
+        });
+        console.log('✅ Mesure supprimée dans Airtable');
+      }
+    } catch (error) {
+      console.error('⚠️ Erreur suppression mesure Airtable:', error);
+    }
+    
     setClients(prev => prev.map(c => 
       c.id === selectedClient.id 
         ? { ...c, mesures: c.mesures.filter(m => m.id !== mesureId) }
@@ -2742,7 +2884,7 @@ export default function SlimTouchApp() {
   };
   
   // Fonction pour ajouter une photo
-  const handleAddPhoto = (type) => {
+  const handleAddPhoto = async (type) => {
     const newPhoto = {
       id: Date.now(),
       type: type.toLowerCase(),
@@ -2756,6 +2898,22 @@ export default function SlimTouchApp() {
     } else {
       newPhotos = [...selectedClient.photos, newPhoto];
     }
+    
+    // Sauvegarder dans Airtable
+    try {
+      if (selectedClient?.airtable_id) {
+        const photoData = {};
+        if (type.toLowerCase() === 'avant') photoData.photoAvant = newPhoto.url;
+        if (type.toLowerCase() === 'pendant') photoData.photoPendant = newPhoto.url;
+        if (type.toLowerCase() === 'après' || type.toLowerCase() === 'apres') photoData.photoApres = newPhoto.url;
+        
+        await apiUpdatePhotos(selectedClient.airtable_id, photoData);
+        console.log('✅ Photo mise à jour dans Airtable');
+      }
+    } catch (error) {
+      console.error('⚠️ Erreur update photo Airtable:', error);
+    }
+    
     setClients(prev => prev.map(c => 
       c.id === selectedClient.id ? { ...c, photos: newPhotos } : c
     ));
@@ -2814,27 +2972,52 @@ export default function SlimTouchApp() {
   // ============================================
   
   // Mettre à jour le statut d'un client automatiquement
-  const updateClientStatus = (clientId) => {
+  const updateClientStatus = async (clientId) => {
+    const client = clients.find(c => c.id === clientId);
+    if (!client) return;
+    
+    const seancesEffectuees = rdvs.filter(r => r.clientId === clientId && r.date < new Date().toISOString().split('T')[0] && r.statut === 'confirmé').length;
+    const objectifAtteint = client.poidsActuel <= client.objectif;
+    
+    let newStatut = client.statut;
+    if (seancesEffectuees >= client.seancesTotal || objectifAtteint) {
+      newStatut = 'terminé';
+    } else if (seancesEffectuees > 0 || client.paiements.length > 0) {
+      newStatut = 'active';
+    }
+    
+    // Sauvegarder dans Airtable si le statut a changé
+    if (newStatut !== client.statut && client.airtable_id) {
+      try {
+        await apiUpdateCliente(client.airtable_id, { 
+          statut: newStatut === 'terminé' ? 'Termine' : newStatut === 'active' ? 'Active' : 'Prospect'
+        });
+        console.log('✅ Statut cliente mis à jour dans Airtable');
+      } catch (error) {
+        console.error('⚠️ Erreur update statut cliente Airtable:', error);
+      }
+    }
+    
     setClients(prev => prev.map(c => {
       if (c.id !== clientId) return c;
-      const seancesEffectuees = rdvs.filter(r => r.clientId === clientId && r.date < new Date().toISOString().split('T')[0] && r.statut === 'confirmé').length;
-      const progression = c.poidsInitial - c.poidsActuel;
-      const objectifAtteint = c.poidsActuel <= c.objectif;
-      
-      let newStatut = c.statut;
-      if (seancesEffectuees >= c.seancesTotal || objectifAtteint) {
-        newStatut = 'terminé';
-      } else if (seancesEffectuees > 0 || c.paiements.length > 0) {
-        newStatut = 'active';
-      }
       return { ...c, statut: newStatut };
     }));
   };
   
   // Marquer une séance comme effectuée (appelé quand RDV passe et confirmé)
-  const markSeanceAsCompleted = (rdvId) => {
+  const markSeanceAsCompleted = async (rdvId) => {
     const rdv = rdvs.find(r => r.id === rdvId);
     if (!rdv) return;
+    
+    // Sauvegarder dans Airtable
+    try {
+      if (rdv.airtable_id) {
+        await apiUpdateRdv(rdv.airtable_id, { statut: 'Realise' });
+        console.log('✅ Séance marquée complétée dans Airtable');
+      }
+    } catch (error) {
+      console.error('⚠️ Erreur completion séance Airtable:', error);
+    }
     
     // Mettre le RDV en confirmé
     setRdvs(prev => prev.map(r => r.id === rdvId ? { ...r, statut: 'confirmé' } : r));
@@ -2852,7 +3035,18 @@ export default function SlimTouchApp() {
   };
   
   // Modifier les stocks (utilisable par tous)
-  const updateStock = (employeeId, stockId, newQuantity) => {
+  const updateStock = async (employeeId, stockId, newQuantity) => {
+    // Sauvegarder dans Airtable
+    try {
+      const stock = stocks[employeeId]?.find(s => s.id === stockId);
+      if (stock?.airtable_id) {
+        await apiUpdateStock(stock.airtable_id, { quantite: newQuantity });
+        console.log('✅ Stock mis à jour dans Airtable');
+      }
+    } catch (error) {
+      console.error('⚠️ Erreur update stock Airtable:', error);
+    }
+    
     setStocks(prev => ({
       ...prev,
       [employeeId]: prev[employeeId].map(s => 
@@ -2872,7 +3066,7 @@ export default function SlimTouchApp() {
   };
   
   // Ajouter un paiement (synchronisé avec CA global)
-  const addPayment = (clientId, montant, methode) => {
+  const addPayment = async (clientId, montant, methode) => {
     const newPaiement = {
       id: Date.now(),
       date: new Date().toISOString().split('T')[0],
@@ -2880,6 +3074,23 @@ export default function SlimTouchApp() {
       methode,
       statut: 'payé'
     };
+    
+    // Sauvegarder dans Airtable (table Ventes)
+    try {
+      const client = clients.find(c => c.id === clientId);
+      await apiCreateVente({
+        date: newPaiement.date,
+        montant: newPaiement.montant,
+        methode: methode,
+        statut: 'payé',
+        clienteId: client?.airtable_id,
+        sourceVente: 'App',
+        notes: `Paiement ${client?.nom}`
+      });
+      console.log('✅ Vente créée dans Airtable');
+    } catch (error) {
+      console.error('⚠️ Erreur création vente Airtable:', error);
+    }
     
     setClients(prev => prev.map(c => 
       c.id === clientId 
@@ -2953,7 +3164,7 @@ export default function SlimTouchApp() {
   };
   
   // Créer une nouvelle praticienne
-  const handleCreateEmployee = () => {
+  const handleCreateEmployee = async () => {
     if (!newEmployeeForm.nom || !newEmployeeForm.email || !newEmployeeForm.password) {
       alert('Veuillez remplir le nom, l\'email et le mot de passe');
       return;
@@ -2972,6 +3183,26 @@ export default function SlimTouchApp() {
       onboardingComplete: false,
       photo: null
     };
+    
+    // Sauvegarder dans Airtable
+    try {
+      const result = await apiCreateEmploye({
+        prenom: newEmployee.nom.split(' ')[0],
+        nomFamille: newEmployee.nom.split(' ').slice(1).join(' ') || '',
+        email: newEmployee.email,
+        telephone: newEmployee.telephone,
+        role: newEmployee.role,
+        dateEmbauche: newEmployee.dateEmbauche,
+        actif: newEmployee.actif,
+        onboardingComplete: newEmployee.onboardingComplete
+      });
+      console.log('✅ Employé créé dans Airtable:', result);
+      if (result.data?.id) {
+        newEmployee.airtable_id = result.data.id;
+      }
+    } catch (error) {
+      console.error('⚠️ Erreur création employé Airtable:', error);
+    }
     
     setEmployees(prev => [...prev, newEmployee]);
     
@@ -3005,9 +3236,22 @@ export default function SlimTouchApp() {
   };
   
   // Réassigner une cliente et mettre à jour les RDV associés
-  const reassignClient = (clientId, newEmployeeId) => {
+  const reassignClient = async (clientId, newEmployeeId) => {
     const oldClient = clients.find(c => c.id === clientId);
     const oldEmployeeId = oldClient?.assignedTo;
+    
+    // Sauvegarder dans Airtable
+    try {
+      const client = clients.find(c => c.id === clientId);
+      if (client?.airtable_id) {
+        await apiUpdateCliente(client.airtable_id, {
+          assigned_to: newEmployeeId
+        });
+        console.log('✅ Client réassigné dans Airtable');
+      }
+    } catch (error) {
+      console.error('⚠️ Erreur réassignation Airtable:', error);
+    }
     
     // Mettre à jour le client
     setClients(prev => prev.map(c => 
@@ -3082,7 +3326,7 @@ export default function SlimTouchApp() {
   };
   
   // Envoyer un message
-  const sendMessage = (toId, messageText, type = 'normal') => {
+  const sendMessage = async (toId, messageText, type = 'normal') => {
     if (!messageText.trim()) return;
     
     const newMsg = {
@@ -3094,6 +3338,22 @@ export default function SlimTouchApp() {
       lu: false,
       type: type
     };
+    
+    // Sauvegarder dans Airtable
+    try {
+      const fromEmployee = employees.find(e => e.id === currentUser.id);
+      const toEmployee = employees.find(e => e.id === toId);
+      await apiCreateMessage({
+        de: fromEmployee?.nom || currentUser.nom,
+        a: toEmployee?.nom || '',
+        message: newMsg.message,
+        date: newMsg.date,
+        type: newMsg.type
+      });
+      console.log('✅ Message créé dans Airtable');
+    } catch (error) {
+      console.error('⚠️ Erreur création message Airtable:', error);
+    }
     
     setMessages(prev => [...prev, newMsg]);
     setNewMessage('');
@@ -3107,7 +3367,19 @@ export default function SlimTouchApp() {
   };
   
   // Marquer les messages comme lus
-  const markMessagesAsRead = (contactId) => {
+  const markMessagesAsRead = async (contactId) => {
+    // Sauvegarder dans Airtable
+    const messagesToUpdate = messages.filter(m => m.fromId === contactId && m.toId === currentUser?.id && !m.lu);
+    for (const msg of messagesToUpdate) {
+      if (msg.airtable_id) {
+        try {
+          await apiUpdateMessage(msg.airtable_id, { lu: true });
+        } catch (error) {
+          console.error('⚠️ Erreur update message Airtable:', error);
+        }
+      }
+    }
+    
     setMessages(prev => prev.map(m => 
       m.fromId === contactId && m.toId === currentUser?.id && !m.lu
         ? { ...m, lu: true }
@@ -3405,7 +3677,7 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
   };
   
   // Créer un paiement échelonné (3x sans frais)
-  const createEchelonnement = (clientId, montantTotal, methode, employeeId) => {
+  const createEchelonnement = async (clientId, montantTotal, methode, employeeId) => {
     const client = clients.find(c => c.id === clientId);
     if (!client) return;
     
@@ -3456,6 +3728,28 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
       }
     ];
     
+    // Sauvegarder dans Airtable (créer 3 ventes pour les 3 échéances)
+    try {
+      for (const paiement of newPaiements) {
+        await apiCreateVente({
+          date: paiement.date,
+          montant: paiement.montant,
+          methode: methode,
+          statut: paiement.statut === 'payé' ? 'Paye' : 'En_Attente',
+          clienteId: client?.airtable_id,
+          paiementEnPlusieurs: true,
+          echeancesTotal: 3,
+          echeancesRestantes: paiement.echeance === 1 ? 2 : paiement.echeance === 2 ? 1 : 0,
+          factureNumero: paiement.factureNumero,
+          sourceVente: 'App',
+          notes: `Paiement 3x - Échéance ${paiement.echeance}/3`
+        });
+      }
+      console.log('✅ Paiements 3x créés dans Airtable');
+    } catch (error) {
+      console.error('⚠️ Erreur création paiements 3x Airtable:', error);
+    }
+    
     setClients(prev => prev.map(c => 
       c.id === clientId 
         ? { ...c, paiements: [...c.paiements, ...newPaiements], statut: 'active' }
@@ -3472,7 +3766,30 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
   };
   
   // Marquer un paiement comme payé
-  const markPaiementAsPaid = (clientId, paiementId) => {
+  const markPaiementAsPaid = async (clientId, paiementId) => {
+    const client = clients.find(c => c.id === clientId);
+    const paiement = client?.paiements.find(p => p.id === paiementId);
+    
+    // Sauvegarder dans Airtable (créer une vente pour l'échéance payée)
+    try {
+      if (client?.airtable_id && paiement) {
+        await apiCreateVente({
+          date: new Date().toISOString().split('T')[0],
+          montant: paiement.montant,
+          methode: paiement.methode || 'CB',
+          statut: 'Paye',
+          clienteId: client.airtable_id,
+          paiementEnPlusieurs: paiement.type === '3x',
+          factureNumero: paiement.factureNumero,
+          sourceVente: 'App',
+          notes: paiement.type === '3x' ? `Échéance ${paiement.echeance}/${paiement.totalEcheances} payée` : 'Paiement reçu'
+        });
+        console.log('✅ Paiement marqué payé dans Airtable');
+      }
+    } catch (error) {
+      console.error('⚠️ Erreur update paiement Airtable:', error);
+    }
+    
     setClients(prev => prev.map(c => {
       if (c.id !== clientId) return c;
       return {
@@ -3491,25 +3808,42 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
   };
   
   // Envoyer une relance
-  const sendRelance = (clientId, paiementId) => {
+  const sendRelance = async (clientId, paiementId) => {
+    const client = clients.find(c => c.id === clientId);
+    
+    // Calculer les nouveaux paiements
+    const updatedPaiements = client?.paiements.map(p => 
+      p.id === paiementId 
+        ? { 
+            ...p, 
+            statut: 'relance', 
+            relanceDate: new Date().toISOString().split('T')[0],
+            relanceCount: (p.relanceCount || 0) + 1
+          } 
+        : p
+    );
+    
+    // Sauvegarder dans Airtable
+    try {
+      if (client?.airtable_id) {
+        await apiUpdateCliente(client.airtable_id, {
+          paiements: JSON.stringify(updatedPaiements),
+          derniere_relance: new Date().toISOString()
+        });
+        console.log('✅ Relance enregistrée dans Airtable');
+      }
+    } catch (error) {
+      console.error('⚠️ Erreur envoi relance Airtable:', error);
+    }
+    
     setClients(prev => prev.map(c => {
       if (c.id !== clientId) return c;
       return {
         ...c,
-        paiements: c.paiements.map(p => 
-          p.id === paiementId 
-            ? { 
-                ...p, 
-                statut: 'relance', 
-                relanceDate: new Date().toISOString().split('T')[0],
-                relanceCount: (p.relanceCount || 0) + 1
-              } 
-            : p
-        )
+        paiements: updatedPaiements
       };
     }));
     
-    const client = clients.find(c => c.id === clientId);
     addNotification({
       type: 'warning',
       message: `Relance envoyée à ${client?.nom}`,
@@ -3742,7 +4076,7 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
   };
   
   // Vérifier et attribuer de nouveaux badges
-  const checkAndAwardBadges = (employeeId) => {
+  const checkAndAwardBadges = async (employeeId) => {
     const obj = objectives[employeeId];
     if (!obj) return;
     
@@ -3783,6 +4117,18 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
     }
     
     if (newBadges.length > obj.badges_earned.length) {
+      // Sauvegarder dans Airtable
+      try {
+        if (obj.airtable_id) {
+          await apiUpdateObjectifs(obj.airtable_id, {
+            badges: JSON.stringify(newBadges)
+          });
+          console.log('✅ Badges mis à jour dans Airtable');
+        }
+      } catch (error) {
+        console.error('⚠️ Erreur update badges Airtable:', error);
+      }
+      
       setObjectives(prev => ({
         ...prev,
         [employeeId]: { ...prev[employeeId], badges_earned: newBadges }
@@ -3791,16 +4137,32 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
   };
   
   // Incrémenter les objectifs après une séance
-  const incrementSeanceObjective = (employeeId, caAmount = 0) => {
+  const incrementSeanceObjective = async (employeeId, caAmount = 0) => {
+    const current = objectives[employeeId] || getEmployeeObjectives(employeeId);
+    const updated = {
+      ...current,
+      monthly_seances_current: current.monthly_seances_current + 1,
+      total_seances: current.total_seances + 1,
+      monthly_ca_current: current.monthly_ca_current + caAmount,
+      streak_days: current.streak_days + 1
+    };
+    
+    // Sauvegarder dans Airtable
+    try {
+      if (current.airtable_id) {
+        await apiUpdateObjectifs(current.airtable_id, {
+          seancesRealiseesMois: updated.monthly_seances_current,
+          caRealiseMois: updated.monthly_ca_current,
+          totalSeances: updated.total_seances,
+          streakJours: updated.streak_days
+        });
+        console.log('✅ Objectifs mis à jour dans Airtable');
+      }
+    } catch (error) {
+      console.error('⚠️ Erreur update objectifs Airtable:', error);
+    }
+    
     setObjectives(prev => {
-      const current = prev[employeeId] || getEmployeeObjectives(employeeId);
-      const updated = {
-        ...current,
-        monthly_seances_current: current.monthly_seances_current + 1,
-        total_seances: current.total_seances + 1,
-        monthly_ca_current: current.monthly_ca_current + caAmount,
-        streak_days: current.streak_days + 1
-      };
       return { ...prev, [employeeId]: updated };
     });
     
@@ -3834,7 +4196,7 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
   };
   
   // Envoyer un rappel (simulé)
-  const sendRappel = (rdvId, type = 'sms', action = 'rappel_j1') => {
+  const sendRappel = async (rdvId, type = 'sms', action = 'rappel_j1') => {
     const rdv = rdvs.find(r => r.id === rdvId);
     if (!rdv) return;
     
@@ -3866,6 +4228,20 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
     
     setRdvConfirmations(prev => [...prev, newConfirmation]);
     
+    // Sauvegarder dans Airtable
+    try {
+      if (rdv.airtable_id) {
+        await apiUpdateRdv(rdv.airtable_id, {
+          rappelEnvoye: true,
+          dernierRappel: new Date().toISOString(),
+          typeRappel: type
+        });
+        console.log('✅ Rappel enregistré dans Airtable');
+      }
+    } catch (error) {
+      console.error('⚠️ Erreur envoi rappel Airtable:', error);
+    }
+    
     // Mettre à jour le statut du RDV
     setRdvs(prev => prev.map(r => 
       r.id === rdvId 
@@ -3883,7 +4259,7 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
   };
   
   // Simuler une réponse cliente
-  const simulateClientResponse = (confirmationId, response, newStatus) => {
+  const simulateClientResponse = async (confirmationId, response, newStatus) => {
     setRdvConfirmations(prev => prev.map(c => 
       c.id === confirmationId 
         ? { ...c, response, responseDate: new Date().toISOString(), status: newStatus }
@@ -3892,6 +4268,19 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
     
     const confirmation = rdvConfirmations.find(c => c.id === confirmationId);
     if (confirmation) {
+      const rdv = rdvs.find(r => r.id === confirmation.rdvId);
+      const airtableStatut = newStatus === 'confirmed' ? 'Realise' : newStatus === 'cancelled' ? 'Annule' : 'A_Confirmer';
+      
+      // Sauvegarder dans Airtable
+      try {
+        if (rdv?.airtable_id) {
+          await apiUpdateRdv(rdv.airtable_id, { statut: airtableStatut });
+          console.log('✅ Réponse cliente enregistrée dans Airtable');
+        }
+      } catch (error) {
+        console.error('⚠️ Erreur simulation réponse Airtable:', error);
+      }
+      
       // Mettre à jour le RDV
       setRdvs(prev => prev.map(r => 
         r.id === confirmation.rdvId 
@@ -3909,11 +4298,25 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
   };
   
   // Annuler un RDV
-  const cancelRdv = (rdvId, reason = '') => {
+  const cancelRdv = async (rdvId, reason = '') => {
     const rdv = rdvs.find(r => r.id === rdvId);
     if (!rdv) return;
     
     const client = clients.find(c => c.id === rdv.clientId);
+    
+    // Sauvegarder dans Airtable
+    try {
+      if (rdv.airtable_id) {
+        await apiUpdateRdv(rdv.airtable_id, { 
+          statut: 'Annule',
+          raisonAnnulation: reason,
+          dateAnnulation: new Date().toISOString()
+        });
+        console.log('✅ RDV annulé dans Airtable');
+      }
+    } catch (error) {
+      console.error('⚠️ Erreur annulation RDV Airtable:', error);
+    }
     
     setRdvs(prev => prev.map(r => 
       r.id === rdvId 
@@ -3945,12 +4348,27 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
   };
   
   // Reporter un RDV
-  const rescheduleRdv = (rdvId, newDate, newHeure) => {
+  const rescheduleRdv = async (rdvId, newDate, newHeure) => {
     const rdv = rdvs.find(r => r.id === rdvId);
     if (!rdv) return;
     
     const client = clients.find(c => c.id === rdv.clientId);
     const oldDate = rdv.date;
+    
+    // Sauvegarder dans Airtable
+    try {
+      if (rdv.airtable_id) {
+        await apiUpdateRdv(rdv.airtable_id, { 
+          date: newDate,
+          heure: newHeure,
+          statut: 'A_Confirmer',
+          ancienneDate: oldDate
+        });
+        console.log('✅ RDV reporté dans Airtable');
+      }
+    } catch (error) {
+      console.error('⚠️ Erreur report RDV Airtable:', error);
+    }
     
     setRdvs(prev => prev.map(r => 
       r.id === rdvId 
@@ -4117,11 +4535,25 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
   };
   
   // Valider une récompense de parrainage
-  const validerRecompense = (parrainageId) => {
+  const validerRecompense = async (parrainageId) => {
+    const parrainage = parrainages.find(p => p.id === parrainageId);
+    
+    // Sauvegarder dans Airtable
+    try {
+      if (parrainage?.airtable_id) {
+        await apiUpdateParrainage(parrainage.airtable_id, {
+          recompenseUtilisee: true,
+          dateUtilisationRecompense: new Date().toISOString()
+        });
+        console.log('✅ Récompense validée dans Airtable');
+      }
+    } catch (error) {
+      console.error('⚠️ Erreur validation récompense Airtable:', error);
+    }
+    
     setParrainages(prev => prev.map(p => 
       p.id === parrainageId ? { ...p, recompenseVersee: true } : p
     ));
-    const parrainage = parrainages.find(p => p.id === parrainageId);
     const marraine = clients.find(c => c.id === parrainage?.marraineId);
     addNotification({
       type: 'success',
@@ -4799,6 +5231,14 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                             {currentUser.isDirector && <> • {employee?.nom.split(' ')[0]}</>}
                           </span>
                         </div>
+                        <button 
+                          className="btn btn-ghost" 
+                          title="Itinéraire GPS"
+                          onClick={(e) => { e.stopPropagation(); openGoogleMapsItinerary(client?.adresse); }}
+                          style={{ color: 'var(--accent)', padding: '6px' }}
+                        >
+                          <MapPin size={18} />
+                        </button>
                         <span className={`badge ${rdv.statut === 'confirmé' ? 'badge-success' : 'badge-warning'}`}>
                           {rdv.statut}
                         </span>
@@ -5085,7 +5525,13 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', color: 'var(--text-muted)' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Phone size={16} style={{ color: 'var(--accent)' }} /> {selectedClient.telephone}</span>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Mail size={16} style={{ color: 'var(--accent)' }} /> {selectedClient.email}</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><MapPin size={16} style={{ color: 'var(--accent)' }} /> {selectedClient.adresse}</span>
+                    <span 
+                      style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', textDecoration: 'underline' }}
+                      onClick={() => openGoogleMapsItinerary(selectedClient.adresse)}
+                      title="Ouvrir l'itinéraire dans Google Maps"
+                    >
+                      <MapPin size={16} style={{ color: 'var(--accent)' }} /> {selectedClient.adresse} 🗺️
+                    </span>
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -5748,6 +6194,14 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                         {rdv.statut}
                       </span>
                       <div style={{ display: 'flex', gap: '4px' }}>
+                        <button 
+                          className="btn btn-ghost" 
+                          title="Itinéraire Google Maps" 
+                          onClick={() => openGoogleMapsItinerary(client?.adresse)}
+                          style={{ color: 'var(--accent)' }}
+                        >
+                          <MapPin size={18} />
+                        </button>
                         <button 
                           className="btn btn-ghost" 
                           title="Modifier" 
@@ -7371,9 +7825,21 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                                 <Mail size={14} />
                               </button>
                               <button 
+                                className="btn btn-secondary btn-sm"
+                                onClick={() => openGoogleMapsItinerary(client?.adresse)}
+                                title="Itinéraire GPS"
+                                style={{ color: 'var(--accent)' }}
+                              >
+                                <MapPin size={14} />
+                              </button>
+                              <button 
                                 className="btn btn-sm"
                                 style={{ background: 'rgba(34, 197, 94, 0.2)', border: '1px solid var(--success)', color: 'var(--success)' }}
                                 onClick={() => {
+                                  // Sauvegarder dans Airtable
+                                  if (rdv.airtable_id) {
+                                    apiUpdateRdv(rdv.airtable_id, { statut: 'Realise' }).catch(console.error);
+                                  }
                                   setRdvs(prev => prev.map(r => r.id === rdv.id ? { ...r, statut: 'confirmé' } : r));
                                   addNotification({ type: 'success', message: `RDV confirmé : ${client?.nom}`, forEmployee: null });
                                 }}
@@ -7444,7 +7910,18 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                                   <button 
                                     className="btn btn-sm"
                                     style={{ padding: '2px 6px', background: 'rgba(248, 113, 113, 0.2)', border: '1px solid var(--danger)', color: 'var(--danger)', fontSize: '0.65rem' }}
-                                    onClick={() => {
+                                    onClick={async () => {
+                                      // Sauvegarder dans Airtable
+                                      const rdv = rdvs.find(r => r.id === conf.rdvId);
+                                      if (rdv?.airtable_id) {
+                                        try {
+                                          await apiUpdateRdv(rdv.airtable_id, { statut: 'Annule' });
+                                          console.log('✅ RDV annulé dans Airtable');
+                                        } catch (error) {
+                                          console.error('⚠️ Erreur annulation RDV Airtable:', error);
+                                        }
+                                      }
+                                      
                                       simulateClientResponse(conf.id, 'NON', 'cancelled');
                                       setRdvs(prev => prev.map(r => r.id === conf.rdvId ? { ...r, statut: 'annulé' } : r));
                                     }}
@@ -8232,7 +8709,27 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
             </div>
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => { setShowModal(null); setEditingClient(null); }}>Annuler</button>
-              <button className="btn btn-primary" onClick={() => {
+              <button className="btn btn-primary" onClick={async () => {
+                // Sauvegarder dans Airtable
+                try {
+                  if (editingClient.airtable_id) {
+                    await apiUpdateCliente(editingClient.airtable_id, {
+                      nom: newClientForm.nom,
+                      telephone: newClientForm.telephone,
+                      email: newClientForm.email,
+                      adresse: newClientForm.adresse,
+                      poids_actuel: parseInt(newClientForm.poidsActuel) || editingClient.poidsActuel,
+                      objectif_poids: parseInt(newClientForm.objectif) || editingClient.objectif,
+                      forfait: newClientForm.forfait,
+                      assigned_to: newClientForm.assignedTo,
+                      notes: newClientForm.notes
+                    });
+                    console.log('✅ Cliente modifiée dans Airtable');
+                  }
+                } catch (error) {
+                  console.error('⚠️ Erreur modification cliente Airtable:', error);
+                }
+                
                 setClients(prev => prev.map(c => 
                   c.id === editingClient.id 
                     ? {
@@ -9282,6 +9779,10 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                         className="btn"
                         style={{ background: 'rgba(34, 197, 94, 0.1)', border: '1px solid var(--success)', color: 'var(--success)' }}
                         onClick={() => {
+                          // Sauvegarder dans Airtable
+                          if (rdv.airtable_id) {
+                            apiUpdateRdv(rdv.airtable_id, { statut: 'Realise' }).catch(console.error);
+                          }
                           setRdvs(prev => prev.map(r => r.id === rdv.id ? { ...r, statut: 'confirmé' } : r));
                           setShowRdvConfirmModal(null);
                         }}
@@ -9359,6 +9860,10 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                           className="btn btn-sm"
                           style={{ background: 'rgba(34, 197, 94, 0.2)', border: '1px solid var(--success)', color: 'var(--success)' }}
                           onClick={() => {
+                            // Sauvegarder dans Airtable
+                            if (rdv.airtable_id) {
+                              apiUpdateRdv(rdv.airtable_id, { statut: 'Realise' }).catch(console.error);
+                            }
                             const lastConf = rdvConfirmations.filter(c => c.rdvId === rdv.id).sort((a,b) => new Date(b.date) - new Date(a.date))[0];
                             if (lastConf) {
                               simulateClientResponse(lastConf.id, 'OUI, je confirme !', 'confirmed');
