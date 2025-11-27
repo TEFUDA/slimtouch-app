@@ -301,30 +301,30 @@ const fetchMessages = async () => {
   }
 };
 
-const apiCreateMessage = async (messageData) => {
+const apiSendMessage = async (messageData) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/app-create-message`, {
+    const response = await fetch(`${API_BASE_URL}/app-send-message`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(messageData),
     });
     return await response.json();
   } catch (error) {
-    console.error('Erreur apiCreateMessage:', error);
+    console.error('Erreur apiSendMessage:', error);
     throw error;
   }
 };
 
-const apiUpdateMessage = async (messageId, messageData) => {
+const apiMarkMessageRead = async (messageId) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/app-update-message`, {
+    const response = await fetch(`${API_BASE_URL}/app-mark-message-read`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: messageId, ...messageData }),
+      body: JSON.stringify({ messageId }),
     });
     return await response.json();
   } catch (error) {
-    console.error('Erreur apiUpdateMessage:', error);
+    console.error('Erreur apiMarkMessageRead:', error);
     throw error;
   }
 };
@@ -4324,22 +4324,34 @@ export default function SlimTouchApp() {
   
   // Obtenir les conversations de l'utilisateur actuel
   const getConversations = () => {
-    const userMessages = messages.filter(m => m.fromId === currentUser?.id || m.toId === currentUser?.id);
+    // Filtrer les messages pour l'utilisateur courant (comparaison flexible des IDs)
+    const userMessages = messages.filter(m => 
+      String(m.fromId) === String(currentUser?.id) || 
+      String(m.toId) === String(currentUser?.id)
+    );
+    
     const contacts = new Set();
     userMessages.forEach(m => {
-      if (m.fromId !== currentUser?.id) contacts.add(m.fromId);
-      if (m.toId !== currentUser?.id) contacts.add(m.toId);
+      if (String(m.fromId) !== String(currentUser?.id)) contacts.add(m.fromId);
+      if (String(m.toId) !== String(currentUser?.id)) contacts.add(m.toId);
     });
     
     return Array.from(contacts).map(contactId => {
-      const contact = employees.find(e => e.id === contactId);
+      // Trouver l'employé par ID flexible
+      const contact = employees.find(e => 
+        String(e.id) === String(contactId) || 
+        e.id === contactId
+      );
+      
       const conversationMessages = messages.filter(m => 
-        (m.fromId === currentUser?.id && m.toId === contactId) ||
-        (m.fromId === contactId && m.toId === currentUser?.id)
-      ).sort((a, b) => new Date(a.date) - new Date(b.date));
+        (String(m.fromId) === String(currentUser?.id) && String(m.toId) === String(contactId)) ||
+        (String(m.fromId) === String(contactId) && String(m.toId) === String(currentUser?.id))
+      ).sort((a, b) => new Date(a.createdAt || a.date) - new Date(b.createdAt || b.date));
       
       const lastMessage = conversationMessages[conversationMessages.length - 1];
-      const unreadCount = conversationMessages.filter(m => m.toId === currentUser?.id && !m.lu).length;
+      const unreadCount = conversationMessages.filter(m => 
+        String(m.toId) === String(currentUser?.id) && !m.read
+      ).length;
       
       return {
         contactId,
@@ -4348,7 +4360,10 @@ export default function SlimTouchApp() {
         unreadCount,
         messages: conversationMessages
       };
-    }).sort((a, b) => new Date(b.lastMessage?.date || 0) - new Date(a.lastMessage?.date || 0));
+    }).filter(c => c.contact).sort((a, b) => 
+      new Date(b.lastMessage?.createdAt || b.lastMessage?.date || 0) - 
+      new Date(a.lastMessage?.createdAt || a.lastMessage?.date || 0)
+    );
   };
   
   // Envoyer un message
@@ -4360,25 +4375,24 @@ export default function SlimTouchApp() {
       fromId: currentUser.id,
       toId: toId,
       message: messageText.trim(),
-      date: new Date().toISOString(),
-      lu: false,
+      createdAt: new Date().toISOString(),
+      read: false,
       type: type
     };
     
     // Sauvegarder dans Airtable
     try {
-      const fromEmployee = employees.find(e => e.id === currentUser.id);
-      const toEmployee = employees.find(e => e.id === toId);
-      await apiCreateMessage({
-        de: fromEmployee?.nom || currentUser.nom,
-        a: toEmployee?.nom || '',
+      const result = await apiSendMessage({
+        fromId: String(currentUser.id),
+        toId: String(toId),
         message: newMsg.message,
-        date: newMsg.date,
-        type: newMsg.type
+        createdAt: newMsg.createdAt
       });
-      console.log('✅ Message créé dans Airtable');
+      if (result.id) {
+        newMsg.airtable_id = result.id;
+      }
     } catch (error) {
-      console.error('⚠️ Erreur création message Airtable:', error);
+      console.error('Erreur envoi message:', error);
     }
     
     setMessages(prev => [...prev, newMsg]);
@@ -4387,35 +4401,45 @@ export default function SlimTouchApp() {
     // Notification pour le destinataire
     addNotification({
       type: 'info',
-      message: `Nouveau message de ${currentUser.nom.split(' ')[0]}`,
+      message: `Nouveau message de ${currentUser.nom?.split(' ')[0] || 'Utilisateur'}`,
       forEmployee: toId
     });
   };
   
   // Marquer les messages comme lus
   const markMessagesAsRead = async (contactId) => {
-    // Sauvegarder dans Airtable
-    const messagesToUpdate = messages.filter(m => m.fromId === contactId && m.toId === currentUser?.id && !m.lu);
+    const messagesToUpdate = messages.filter(m => 
+      String(m.fromId) === String(contactId) && 
+      String(m.toId) === String(currentUser?.id) && 
+      !m.read
+    );
+    
+    // Mettre à jour dans Airtable
     for (const msg of messagesToUpdate) {
-      if (msg.airtable_id) {
+      if (msg.id || msg.airtable_id) {
         try {
-          await apiUpdateMessage(msg.airtable_id, { lu: true });
+          await apiMarkMessageRead(msg.airtable_id || msg.id);
         } catch (error) {
-          console.error('⚠️ Erreur update message Airtable:', error);
+          // Silencieux
         }
       }
     }
     
+    // Mettre à jour localement
     setMessages(prev => prev.map(m => 
-      m.fromId === contactId && m.toId === currentUser?.id && !m.lu
-        ? { ...m, lu: true }
+      String(m.fromId) === String(contactId) && 
+      String(m.toId) === String(currentUser?.id) && 
+      !m.read
+        ? { ...m, read: true }
         : m
     ));
   };
   
   // Compter les messages non lus
   const getUnreadCount = () => {
-    return messages.filter(m => m.toId === currentUser?.id && !m.lu).length;
+    return messages.filter(m => 
+      String(m.toId) === String(currentUser?.id) && !m.read
+    ).length;
   };
   
   // ============================================
@@ -9151,7 +9175,7 @@ export default function SlimTouchApp() {
                   {!selectedConversation && (
                     <div style={{ flex: 1, overflowY: 'auto' }}>
                       {getConversations().length > 0 ? getConversations().map(conv => {
-                        const colors = EMPLOYEE_COLORS[conv.contactId] || { bg: 'rgba(201,169,98,0.2)', border: '#c9a962' };
+                        const colors = EMPLOYEE_COLORS[String(conv.contactId)] || getEmployeeColor(conv.contactId) || { bg: 'rgba(201,169,98,0.2)', border: '#c9a962' };
                         return (
                           <div 
                             key={conv.contactId}
@@ -9163,29 +9187,33 @@ export default function SlimTouchApp() {
                               padding: '0.75rem 1rem',
                               borderBottom: '1px solid var(--border)',
                               cursor: 'pointer',
-                              background: 'transparent',
+                              background: conv.unreadCount > 0 ? 'rgba(201,169,98,0.05)' : 'transparent',
                               display: 'flex',
                               alignItems: 'center',
                               gap: '10px'
                             }}
                           >
                             <div 
-                              className="client-avatar" 
                               style={{ 
                                 width: '40px', 
                                 height: '40px', 
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
                                 fontSize: '0.9rem',
+                                fontWeight: '600',
                                 background: colors.bg,
                                 border: `2px solid ${colors.border}`,
                                 color: colors.text || colors.border,
                                 flexShrink: 0
                               }}
                             >
-                              {conv.contact?.nom.charAt(0)}
+                              {conv.contact?.nom?.charAt(0) || '?'}
                             </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <strong style={{ fontSize: '0.9rem' }}>{conv.contact?.nom.split(' ')[0]}</strong>
+                                <strong style={{ fontSize: '0.9rem' }}>{conv.contact?.nom?.split(' ')[0] || 'Utilisateur'}</strong>
                                 {conv.unreadCount > 0 && (
                                   <span className="badge badge-danger" style={{ minWidth: '20px', height: '20px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem' }}>
                                     {conv.unreadCount}
@@ -9200,7 +9228,7 @@ export default function SlimTouchApp() {
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis'
                               }}>
-                                {conv.lastMessage?.message}
+                                {conv.lastMessage?.message || 'Aucun message'}
                               </p>
                             </div>
                           </div>
@@ -9209,6 +9237,7 @@ export default function SlimTouchApp() {
                         <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                           <MessageCircle size={32} style={{ opacity: 0.3, marginBottom: '0.5rem' }} />
                           <p style={{ fontSize: '0.85rem' }}>Aucune conversation</p>
+                          <p style={{ fontSize: '0.75rem' }}>Sélectionnez un contact ci-dessous</p>
                         </div>
                       )}
                     </div>
@@ -9222,22 +9251,24 @@ export default function SlimTouchApp() {
                         style={{ fontSize: '0.85rem' }}
                         onChange={(e) => {
                           if (e.target.value) {
-                            const contact = employees.find(emp => emp.id === parseInt(e.target.value));
-                            setSelectedConversation({
-                              contactId: parseInt(e.target.value),
-                              contact,
-                              messages: messages.filter(m => 
-                                (m.fromId === currentUser?.id && m.toId === parseInt(e.target.value)) ||
-                                (m.fromId === parseInt(e.target.value) && m.toId === currentUser?.id)
-                              ).sort((a, b) => new Date(a.date) - new Date(b.date)),
-                              unreadCount: 0
-                            });
+                            const contact = employees.find(emp => String(emp.id) === String(e.target.value));
+                            if (contact) {
+                              setSelectedConversation({
+                                contactId: e.target.value,
+                                contact,
+                                messages: messages.filter(m => 
+                                  (String(m.fromId) === String(currentUser?.id) && String(m.toId) === String(e.target.value)) ||
+                                  (String(m.fromId) === String(e.target.value) && String(m.toId) === String(currentUser?.id))
+                                ).sort((a, b) => new Date(a.createdAt || a.date) - new Date(b.createdAt || b.date)),
+                                unreadCount: 0
+                              });
+                            }
                             e.target.value = '';
                           }
                         }}
                       >
                         <option value="">+ Nouvelle conversation...</option>
-                        {employees.filter(e => e.id !== currentUser?.id).map(emp => (
+                        {employees.filter(e => String(e.id) !== String(currentUser?.id) && !e.isDirector === currentUser?.isDirector || true).map(emp => (
                           <option key={emp.id} value={emp.id}>{emp.nom}</option>
                         ))}
                       </select>
@@ -9288,39 +9319,29 @@ export default function SlimTouchApp() {
                       }}>
                         {messages
                           .filter(m => 
-                            (m.fromId === currentUser?.id && m.toId === selectedConversation.contactId) ||
-                            (m.fromId === selectedConversation.contactId && m.toId === currentUser?.id)
+                            (String(m.fromId) === String(currentUser?.id) && String(m.toId) === String(selectedConversation.contactId)) ||
+                            (String(m.fromId) === String(selectedConversation.contactId) && String(m.toId) === String(currentUser?.id))
                           )
-                          .sort((a, b) => new Date(a.date) - new Date(b.date))
+                          .sort((a, b) => new Date(a.createdAt || a.date) - new Date(b.createdAt || b.date))
                           .map((msg, i) => {
-                          const isMe = msg.fromId === currentUser?.id;
-                          const msgTypeColors = {
-                            stock: { bg: 'rgba(251, 191, 36, 0.2)', border: 'var(--warning)' },
-                            success: { bg: 'rgba(34, 197, 94, 0.2)', border: 'var(--success)' },
-                            warning: { bg: 'rgba(248, 113, 113, 0.2)', border: 'var(--danger)' },
-                            normal: {}
-                          };
-                          const typeStyle = msgTypeColors[msg.type] || {};
+                          const isMe = String(msg.fromId) === String(currentUser?.id);
                           
                           return (
                             <div 
-                              key={msg.id} 
+                              key={msg.id || i} 
                               style={{ 
                                 alignSelf: isMe ? 'flex-end' : 'flex-start',
-                                maxWidth: '70%'
+                                maxWidth: '75%'
                               }}
                             >
                               <div style={{
-                                background: isMe ? 'var(--accent)' : (typeStyle.bg || 'var(--bg)'),
+                                background: isMe ? 'var(--accent)' : 'var(--bg)',
                                 color: isMe ? '#1a1a2e' : 'var(--text)',
                                 padding: '0.75rem 1rem',
                                 borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-                                border: !isMe ? `1px solid ${typeStyle.border || 'var(--border)'}` : 'none',
+                                border: !isMe ? '1px solid var(--border)' : 'none',
                                 boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
                               }}>
-                                {msg.type === 'stock' && <Package size={14} style={{ display: 'inline', marginRight: '6px', color: 'var(--warning)' }} />}
-                                {msg.type === 'success' && <Award size={14} style={{ display: 'inline', marginRight: '6px', color: 'var(--success)' }} />}
-                                {msg.type === 'warning' && <AlertCircle size={14} style={{ display: 'inline', marginRight: '6px', color: 'var(--danger)' }} />}
                                 {msg.message}
                               </div>
                               <div style={{ 
@@ -9329,12 +9350,21 @@ export default function SlimTouchApp() {
                                 marginTop: '4px',
                                 textAlign: isMe ? 'right' : 'left'
                               }}>
-                                {new Date(msg.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                                {isMe && msg.lu && <span style={{ marginLeft: '6px' }}>✓✓</span>}
+                                {new Date(msg.createdAt || msg.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                                {isMe && msg.read && <span style={{ marginLeft: '6px', color: 'var(--success)' }}>✓✓</span>}
                               </div>
                             </div>
                           );
                         })}
+                        {messages.filter(m => 
+                          (String(m.fromId) === String(currentUser?.id) && String(m.toId) === String(selectedConversation.contactId)) ||
+                          (String(m.fromId) === String(selectedConversation.contactId) && String(m.toId) === String(currentUser?.id))
+                        ).length === 0 && (
+                          <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
+                            <p>Aucun message</p>
+                            <p style={{ fontSize: '0.85rem' }}>Commencez la conversation !</p>
+                          </div>
+                        )}
                       </div>
                       
                       {/* Zone de saisie */}
@@ -9370,21 +9400,21 @@ export default function SlimTouchApp() {
                       <div style={{ padding: '0 1rem 1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                         <button 
                           className="btn btn-secondary btn-sm"
-                          onClick={() => sendMessage(selectedConversation.contactId, "Stock de gel conducteur bas, peux-tu commander ?", 'stock')}
+                          onClick={() => setNewMessage("Ok, bien reçu ! 👍")}
                         >
-                          <Package size={14} /> Stock bas
+                          👍 Ok
                         </button>
                         <button 
                           className="btn btn-secondary btn-sm"
-                          onClick={() => sendMessage(selectedConversation.contactId, "RDV annulé par la cliente", 'warning')}
+                          onClick={() => setNewMessage("Je suis disponible")}
                         >
-                          <AlertCircle size={14} /> RDV annulé
+                          ✅ Disponible
                         </button>
                         <button 
                           className="btn btn-secondary btn-sm"
-                          onClick={() => sendMessage(selectedConversation.contactId, "Objectif atteint ! 🎉", 'success')}
+                          onClick={() => setNewMessage("J'ai terminé avec la cliente")}
                         >
-                          <Award size={14} /> Objectif atteint
+                          🏁 Terminé
                         </button>
                       </div>
                     </>
