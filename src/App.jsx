@@ -4219,9 +4219,14 @@ export default function SlimTouchApp() {
   };
   
   // Générer le texte pour partage WhatsApp/SMS
-  const generateShareText = (client) => {
+  const generateShareText = (client, includePhotos = true) => {
     const data = generateExportData(client);
-    return `✨ TRANSFORMATION SLIM TOUCH ✨
+    
+    // Récupérer les photos
+    const photoAvant = client.photos?.find(p => p.type === 'avant')?.url;
+    const photoApres = client.photos?.find(p => p.type === 'après')?.url;
+    
+    let text = `✨ TRANSFORMATION SLIM TOUCH ✨
 
 🎯 Résultats de ${client.nom.split(' ')[0]} :
 • -${data.poidsPerdu} kg perdus
@@ -4229,12 +4234,21 @@ export default function SlimTouchApp() {
 • ${data.seancesEffectuees} séances réalisées
 • ${data.progressionPoids}% de l'objectif atteint !
 
-💪 Programme ${client.forfait}
+💪 Programme ${client.forfait}`;
 
-Vous aussi, transformez votre corps avec notre méthode G5 garantie !
+    // Ajouter les liens photos si disponibles
+    if (includePhotos && (photoAvant || photoApres)) {
+      text += `\n\n📸 Photos de la transformation :`;
+      if (photoAvant) text += `\n• Avant : ${photoAvant}`;
+      if (photoApres) text += `\n• Après : ${photoApres}`;
+    }
+
+    text += `\n\nVous aussi, transformez votre corps avec notre méthode G5 garantie !
 
 📞 Contactez-nous pour votre séance découverte
 🌐 www.slimtouch.fr`;
+
+    return text;
   };
   
   // Partager via WhatsApp
@@ -10725,6 +10739,68 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
               
               {/* Options d'export */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                
+                {/* Aperçu photos avant/après si disponibles */}
+                {(showExportModal.photos?.find(p => p.type === 'avant') || showExportModal.photos?.find(p => p.type === 'après')) && (
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: '1fr 1fr', 
+                    gap: '1rem', 
+                    marginBottom: '1rem',
+                    padding: '1rem',
+                    background: 'var(--bg)',
+                    borderRadius: '12px',
+                    border: '1px solid var(--border)'
+                  }}>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>📸 AVANT</div>
+                      {showExportModal.photos?.find(p => p.type === 'avant') ? (
+                        <img 
+                          src={showExportModal.photos.find(p => p.type === 'avant').url} 
+                          alt="Avant"
+                          style={{ width: '100%', maxHeight: '150px', objectFit: 'cover', borderRadius: '8px' }}
+                        />
+                      ) : (
+                        <div style={{ 
+                          height: '100px', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center',
+                          background: 'var(--card)',
+                          borderRadius: '8px',
+                          color: 'var(--text-muted)',
+                          fontSize: '0.8rem'
+                        }}>
+                          Pas de photo
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>📸 APRÈS</div>
+                      {showExportModal.photos?.find(p => p.type === 'après') ? (
+                        <img 
+                          src={showExportModal.photos.find(p => p.type === 'après').url} 
+                          alt="Après"
+                          style={{ width: '100%', maxHeight: '150px', objectFit: 'cover', borderRadius: '8px' }}
+                        />
+                      ) : (
+                        <div style={{ 
+                          height: '100px', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center',
+                          background: 'var(--card)',
+                          borderRadius: '8px',
+                          color: 'var(--text-muted)',
+                          fontSize: '0.8rem'
+                        }}>
+                          Pas de photo
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
                 <button 
                   className="btn" 
                   style={{ 
