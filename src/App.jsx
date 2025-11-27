@@ -9332,9 +9332,10 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                   <label className="form-label">Assigner à</label>
                   <select 
                     className="form-input"
-                    value={newClientForm.assignedTo}
+                    value={newClientForm.assignedTo || ''}
                     onChange={(e) => setNewClientForm(prev => ({ ...prev, assignedTo: e.target.value }))}
                   >
+                    <option value="">-- Sélectionner --</option>
                     {employees.filter(e => !e.isDirector).map(emp => (
                       <option key={emp.id} value={emp.id}>{emp.nom}</option>
                     ))}
@@ -9446,9 +9447,10 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                     <label className="form-label">Assigner à</label>
                     <select 
                       className="form-input"
-                      value={newClientForm.assignedTo}
-                      onChange={(e) => setNewClientForm(prev => ({ ...prev, assignedTo: parseInt(e.target.value) }))}
+                      value={newClientForm.assignedTo || ''}
+                      onChange={(e) => setNewClientForm(prev => ({ ...prev, assignedTo: e.target.value }))}
                     >
+                      <option value="">-- Sélectionner --</option>
                       {employees.filter(e => !e.isDirector).map(emp => (
                         <option key={emp.id} value={emp.id}>{emp.nom}</option>
                       ))}
