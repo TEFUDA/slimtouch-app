@@ -3766,12 +3766,14 @@ export default function SlimTouchApp() {
     if (!clientId) return null;
     const searchId = String(clientId);
     
-    return clients.find(c => 
-      String(c.id) === searchId ||
-      String(c.airtable_id) === searchId ||
-      (c.id && String(c.id) === searchId) ||
-      (c.airtable_id && String(c.airtable_id) === searchId)
-    );
+    // Test toutes les possibilités
+    const found = clients.find(c => {
+      const cId = String(c.id || '');
+      const cAirtableId = String(c.airtable_id || '');
+      return cId === searchId || cAirtableId === searchId;
+    });
+    
+    return found;
   };
   
   // Trouver un employé de façon flexible (ID peut être string ou number)
@@ -3779,12 +3781,13 @@ export default function SlimTouchApp() {
     if (!employeeId) return null;
     const searchId = String(employeeId);
     
-    return employees.find(e => 
-      String(e.id) === searchId ||
-      String(e.airtable_id) === searchId ||
-      (e.id && String(e.id) === searchId) ||
-      (e.airtable_id && String(e.airtable_id) === searchId)
-    );
+    const found = employees.find(e => {
+      const eId = String(e.id || '');
+      const eAirtableId = String(e.airtable_id || '');
+      return eId === searchId || eAirtableId === searchId;
+    });
+    
+    return found;
   };
   
   // Obtenir la couleur d'un employé de façon sécurisée
@@ -6994,6 +6997,17 @@ export default function SlimTouchApp() {
           {/* ============================================ */}
           {currentView === 'planning' && (
             <div className="animate-in">
+              {/* DEBUG - À SUPPRIMER */}
+              <div style={{ background: 'rgba(255,0,0,0.1)', padding: '1rem', marginBottom: '1rem', borderRadius: '8px', fontSize: '0.7rem', fontFamily: 'monospace' }}>
+                <strong>🔧 DEBUG INFO:</strong><br/>
+                Clients: {clients.length} | Premier client ID: {clients[0]?.id} | Type: {typeof clients[0]?.id}<br/>
+                Employees: {employees.length} | Premier emp ID: {employees[0]?.id} | Type: {typeof employees[0]?.id}<br/>
+                RDVs: {rdvs.length} | Dernier RDV clientId: {rdvs[rdvs.length-1]?.clientId} | Type: {typeof rdvs[rdvs.length-1]?.clientId}<br/>
+                Test findClient: {findClient(rdvs[rdvs.length-1]?.clientId)?.nom || 'NOT FOUND'}<br/>
+                Test findEmployee: {findEmployee(rdvs[rdvs.length-1]?.employeeId)?.nom || 'NOT FOUND'}
+              </div>
+              {/* FIN DEBUG */}
+              
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1rem' }}>
                 {currentUser.isDirector && (
                   <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', margin: '0 -0.5rem', padding: '0 0.5rem' }}>
@@ -7010,8 +7024,8 @@ export default function SlimTouchApp() {
                           className={`tab ${planningFilter === emp.id.toString() ? 'active' : ''}`}
                           onClick={() => setPlanningFilter(emp.id.toString())}
                           style={{ 
-                            borderColor: planningFilter === emp.id.toString() ? EMPLOYEE_COLORS[emp.id]?.border : undefined,
-                            color: planningFilter === emp.id.toString() ? EMPLOYEE_COLORS[emp.id]?.text : undefined
+                            borderColor: planningFilter === emp.id.toString() ? EMPLOYEE_COLORS[String(emp.id)]?.border : undefined,
+                            color: planningFilter === emp.id.toString() ? EMPLOYEE_COLORS[String(emp.id)]?.text : undefined
                           }}
                         >
                           {emp.nom.split(' ')[0]}
