@@ -2945,9 +2945,6 @@ export default function SlimTouchApp() {
           paiements: Array.isArray(c.paiements) ? c.paiements : []
         }));
         
-        console.log('📋 CLIENTS CHARGÉS:', sanitizedClientes.map(c => ({ id: c.id, airtable_id: c.airtable_id, nom: c.nom })));
-        console.log('👥 EMPLOYEES CHARGÉS:', equipeData.map(e => ({ id: e.id, airtable_id: e.airtable_id, nom: e.nom })));
-        
         setClients(sanitizedClientes);
         setRdvs(rdvsData);
         setEmployees(equipeData.length > 0 ? equipeData : DEMO_EMPLOYEES); // Fallback sur démo si vide
@@ -3174,7 +3171,8 @@ export default function SlimTouchApp() {
   // Générer les couleurs dynamiquement pour chaque employé
   const getEmployeeColor = (employeeId) => {
     const nonDirectorEmployees = employees.filter(e => !e.isDirector);
-    const index = nonDirectorEmployees.findIndex(e => e.id === employeeId);
+    const searchId = String(employeeId);
+    const index = nonDirectorEmployees.findIndex(e => String(e.id) === searchId);
     if (index === -1) return { bg: 'rgba(201, 169, 98, 0.2)', border: '#c9a962', text: '#c9a962' }; // Couleur par défaut dorée
     return COLOR_PALETTE[index % COLOR_PALETTE.length];
   };
@@ -3182,7 +3180,7 @@ export default function SlimTouchApp() {
   // EMPLOYEE_COLORS dynamique basé sur les employés actuels
   const EMPLOYEE_COLORS = employees.reduce((acc, emp) => {
     if (!emp.isDirector) {
-      acc[emp.id] = getEmployeeColor(emp.id);
+      acc[String(emp.id)] = getEmployeeColor(emp.id);
     }
     return acc;
   }, {});
@@ -3280,8 +3278,6 @@ export default function SlimTouchApp() {
   
   // Créer un RDV depuis le planning
   const handleCreatePlanningRdv = async () => {
-    console.log('🆕 Création RDV - Form:', planningRdvForm);
-    
     if (!planningRdvForm.clientId || !planningRdvForm.date || !planningRdvForm.heure || !planningRdvForm.employeeId) {
       alert('Veuillez remplir tous les champs obligatoires');
       return;
@@ -3290,9 +3286,6 @@ export default function SlimTouchApp() {
     // Gérer les IDs (peuvent être des strings Airtable ou des numbers)
     const clientId = planningRdvForm.clientId;
     const employeeId = planningRdvForm.employeeId;
-    
-    console.log('📌 clientId sélectionné:', clientId);
-    console.log('📌 employeeId sélectionné:', employeeId);
     
     const newRdv = {
       id: Date.now(),
@@ -3304,8 +3297,6 @@ export default function SlimTouchApp() {
       type: planningRdvForm.type,
       statut: 'en attente'
     };
-    
-    console.log('📅 Nouveau RDV créé:', newRdv);
     
     // Trouver le client (comparaison flexible)
     const client = clients.find(c => 
@@ -3770,53 +3761,38 @@ export default function SlimTouchApp() {
   // FONCTIONS UTILITAIRES POUR TROUVER CLIENT/EMPLOYEE
   // ============================================
   
-  // Trouver un client de façon flexible (ID peut être string ou number)
+  // Trouver un client de façon flexible (ID peut être string ou number, id ou airtable_id)
   const findClient = (clientId) => {
     if (!clientId) return null;
+    const searchId = String(clientId);
     
-    // Debug
-    console.log('🔍 findClient cherche:', clientId, 'type:', typeof clientId);
-    console.log('📋 Clients disponibles:', clients.map(c => ({ id: c.id, airtable_id: c.airtable_id, nom: c.nom })));
-    
-    const found = clients.find(c => 
-      c.id === clientId || 
-      c.id === String(clientId) ||
-      c.id === parseInt(clientId) ||
-      c.airtable_id === clientId ||
-      c.airtable_id === String(clientId) ||
-      String(c.id) === String(clientId)
+    return clients.find(c => 
+      String(c.id) === searchId ||
+      String(c.airtable_id) === searchId ||
+      (c.id && String(c.id) === searchId) ||
+      (c.airtable_id && String(c.airtable_id) === searchId)
     );
-    
-    console.log('✅ Trouvé:', found?.nom || 'RIEN');
-    return found;
   };
   
   // Trouver un employé de façon flexible (ID peut être string ou number)
   const findEmployee = (employeeId) => {
     if (!employeeId) return null;
+    const searchId = String(employeeId);
     
-    // Debug
-    console.log('🔍 findEmployee cherche:', employeeId, 'type:', typeof employeeId);
-    console.log('👥 Employees disponibles:', employees.map(e => ({ id: e.id, airtable_id: e.airtable_id, nom: e.nom })));
-    
-    const found = employees.find(e => 
-      e.id === employeeId || 
-      e.id === String(employeeId) ||
-      e.id === parseInt(employeeId) ||
-      e.airtable_id === employeeId ||
-      e.airtable_id === String(employeeId) ||
-      String(e.id) === String(employeeId)
+    return employees.find(e => 
+      String(e.id) === searchId ||
+      String(e.airtable_id) === searchId ||
+      (e.id && String(e.id) === searchId) ||
+      (e.airtable_id && String(e.airtable_id) === searchId)
     );
-    
-    console.log('✅ Trouvé:', found?.nom || 'RIEN');
-    return found;
   };
   
   // Obtenir la couleur d'un employé de façon sécurisée
   const getEmployeeColorSafe = (employeeId) => {
+    if (!employeeId) return { bg: 'rgba(201, 169, 98, 0.2)', border: '#c9a962', text: '#c9a962' };
     const emp = findEmployee(employeeId);
     if (!emp) return { bg: 'rgba(201, 169, 98, 0.2)', border: '#c9a962', text: '#c9a962' };
-    return EMPLOYEE_COLORS[emp.id] || getEmployeeColor(emp.id);
+    return EMPLOYEE_COLORS[String(emp.id)] || getEmployeeColor(emp.id);
   };
   
   // Calculer séances effectuées depuis les RDV passés
