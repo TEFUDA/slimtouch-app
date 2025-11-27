@@ -6793,9 +6793,43 @@ export default function SlimTouchApp() {
                   <div className="card-header">
                     <div className="card-title"><Edit /> Notes</div>
                   </div>
-                  <p style={{ color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                    {selectedClient.notes || 'Aucune note'}
-                  </p>
+                  <textarea
+                    style={{ 
+                      width: '100%', 
+                      minHeight: '100px', 
+                      background: 'var(--bg)', 
+                      border: '1px solid var(--border)', 
+                      borderRadius: '8px', 
+                      padding: '0.75rem',
+                      color: 'var(--text)',
+                      resize: 'vertical',
+                      fontFamily: 'inherit',
+                      fontSize: '0.9rem',
+                      lineHeight: 1.6
+                    }}
+                    placeholder="Ajouter des notes sur cette cliente..."
+                    value={selectedClient.notes || ''}
+                    onChange={(e) => {
+                      const newNotes = e.target.value;
+                      setSelectedClient(prev => ({ ...prev, notes: newNotes }));
+                      setClients(prev => prev.map(c => 
+                        c.id === selectedClient.id ? { ...c, notes: newNotes } : c
+                      ));
+                    }}
+                    onBlur={async () => {
+                      // Sauvegarder dans Airtable quand on quitte le champ
+                      if (selectedClient.airtable_id) {
+                        try {
+                          await apiUpdateCliente(selectedClient.airtable_id, {
+                            notes: selectedClient.notes
+                          });
+                          console.log('✅ Notes sauvegardées');
+                        } catch (error) {
+                          console.error('❌ Erreur sauvegarde notes:', error);
+                        }
+                      }
+                    }}
+                  />
                 </div>
               </div>
             </div>
