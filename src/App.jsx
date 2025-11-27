@@ -3314,7 +3314,12 @@ export default function SlimTouchApp() {
   // RDV filtrés pour le planning
   const getFilteredRdvs = () => {
     if (planningFilter === 'all') return rdvs;
-    return rdvs.filter(r => r.employeeId === parseInt(planningFilter));
+    // Comparaison flexible des IDs
+    return rdvs.filter(r => 
+      String(r.employeeId) === String(planningFilter) ||
+      r.employeeId === planningFilter ||
+      r.employeeId === parseInt(planningFilter)
+    );
   };
   
   // Obtenir les RDV d'un jour donné
@@ -5831,6 +5836,8 @@ export default function SlimTouchApp() {
       createdAt: new Date().toISOString()
     };
     
+    console.log('🔔 addNotification appelé:', newNotif);
+    
     setNotifications(prev => [newNotif, ...prev]);
     
     // Afficher le toast si la notification est pour l'utilisateur courant
@@ -5861,13 +5868,15 @@ export default function SlimTouchApp() {
     
     // Sauvegarder dans Airtable (async, non-bloquant)
     try {
-      await fetch(`${API_BASE_URL}/app-create-notification`, {
+      console.log('📤 Envoi notification vers Airtable...');
+      const response = await fetch(`${API_BASE_URL}/app-create-notification`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newNotif)
       });
+      console.log('✅ Notification envoyée, status:', response.status);
     } catch (error) {
-      console.log('Notification locale uniquement');
+      console.error('❌ Erreur envoi notification:', error);
     }
   };
 
@@ -5979,13 +5988,25 @@ export default function SlimTouchApp() {
   // Filtrer les clients selon le rôle
   const getVisibleClients = () => {
     if (currentUser?.isDirector) return clients;
-    return clients.filter(c => c.assignedTo === currentUser?.id);
+    // Comparaison flexible des IDs
+    return clients.filter(c => 
+      String(c.assignedTo) === String(currentUser?.id) ||
+      c.assignedTo === currentUser?.id ||
+      c.assignedTo === currentUser?.airtable_id ||
+      String(c.assignedTo) === String(currentUser?.airtable_id)
+    );
   };
 
   // Filtrer les RDVs selon le rôle
   const getVisibleRdvs = () => {
     if (currentUser?.isDirector) return rdvs;
-    return rdvs.filter(r => r.employeeId === currentUser?.id);
+    // Comparaison flexible des IDs (string ou number)
+    return rdvs.filter(r => 
+      String(r.employeeId) === String(currentUser?.id) ||
+      r.employeeId === currentUser?.id ||
+      r.employeeId === currentUser?.airtable_id ||
+      String(r.employeeId) === String(currentUser?.airtable_id)
+    );
   };
 
   // Obtenir les stocks visibles
