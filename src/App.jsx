@@ -3043,6 +3043,7 @@ export default function SlimTouchApp() {
   // States pour le planning
   const [planningFilter, setPlanningFilter] = useState('all'); // 'all' ou employeeId
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDayView, setSelectedDayView] = useState(null); // null = vue mensuelle, Date = vue journalière
   const [showPlanningRdvModal, setShowPlanningRdvModal] = useState(false);
   const [editingRdv, setEditingRdv] = useState(null);
   const [planningRdvForm, setPlanningRdvForm] = useState({ clientId: '', date: '', heure: '', duree: '45', type: 'Séance G5', employeeId: '' });
@@ -3077,11 +3078,111 @@ export default function SlimTouchApp() {
   const [parrainages, setParrainages] = useState([]);
   const [codesParrainage, setCodesParrainage] = useState(DEMO_CODES_PARRAINAGE);
   
-  // Couleurs par employé pour le calendrier
-  const EMPLOYEE_COLORS = {
-    2: { bg: 'rgba(59, 130, 246, 0.2)', border: '#3b82f6', text: '#3b82f6' }, // Julie - Bleu
-    3: { bg: 'rgba(168, 85, 247, 0.2)', border: '#a855f7', text: '#a855f7' }, // Emma - Violet
+  // Palette de 75 couleurs vives pour les praticiennes
+  const COLOR_PALETTE = [
+    // Rouges & Roses (10)
+    { bg: 'rgba(239, 68, 68, 0.2)', border: '#ef4444', text: '#ef4444' },     // Rouge vif
+    { bg: 'rgba(220, 38, 38, 0.2)', border: '#dc2626', text: '#dc2626' },     // Rouge foncé
+    { bg: 'rgba(236, 72, 153, 0.2)', border: '#ec4899', text: '#ec4899' },    // Rose fuchsia
+    { bg: 'rgba(219, 39, 119, 0.2)', border: '#db2777', text: '#db2777' },    // Rose vif
+    { bg: 'rgba(244, 114, 182, 0.2)', border: '#f472b6', text: '#f472b6' },   // Rose clair
+    { bg: 'rgba(251, 113, 133, 0.2)', border: '#fb7185', text: '#fb7185' },   // Rose corail
+    { bg: 'rgba(248, 113, 113, 0.2)', border: '#f87171', text: '#f87171' },   // Rouge corail
+    { bg: 'rgba(190, 24, 93, 0.2)', border: '#be185d', text: '#be185d' },     // Magenta
+    { bg: 'rgba(157, 23, 77, 0.2)', border: '#9d174d', text: '#9d174d' },     // Bordeaux
+    { bg: 'rgba(225, 29, 72, 0.2)', border: '#e11d48', text: '#e11d48' },     // Cerise
+    
+    // Oranges & Jaunes (10)
+    { bg: 'rgba(245, 158, 11, 0.2)', border: '#f59e0b', text: '#f59e0b' },    // Orange ambre
+    { bg: 'rgba(249, 115, 22, 0.2)', border: '#f97316', text: '#f97316' },    // Orange vif
+    { bg: 'rgba(234, 88, 12, 0.2)', border: '#ea580c', text: '#ea580c' },     // Orange foncé
+    { bg: 'rgba(251, 146, 60, 0.2)', border: '#fb923c', text: '#fb923c' },    // Orange clair
+    { bg: 'rgba(253, 186, 116, 0.2)', border: '#fdba74', text: '#d97706' },   // Pêche
+    { bg: 'rgba(234, 179, 8, 0.2)', border: '#eab308', text: '#eab308' },     // Jaune or
+    { bg: 'rgba(202, 138, 4, 0.2)', border: '#ca8a04', text: '#ca8a04' },     // Jaune moutarde
+    { bg: 'rgba(250, 204, 21, 0.2)', border: '#facc15', text: '#ca8a04' },    // Jaune vif
+    { bg: 'rgba(253, 224, 71, 0.2)', border: '#fde047', text: '#ca8a04' },    // Jaune citron
+    { bg: 'rgba(254, 240, 138, 0.2)', border: '#fef08a', text: '#a16207' },   // Jaune pâle
+    
+    // Verts (15)
+    { bg: 'rgba(34, 197, 94, 0.2)', border: '#22c55e', text: '#22c55e' },     // Vert émeraude
+    { bg: 'rgba(21, 128, 61, 0.2)', border: '#15803d', text: '#15803d' },     // Vert forêt
+    { bg: 'rgba(74, 222, 128, 0.2)', border: '#4ade80', text: '#16a34a' },    // Vert clair
+    { bg: 'rgba(134, 239, 172, 0.2)', border: '#86efac', text: '#15803d' },   // Vert menthe
+    { bg: 'rgba(132, 204, 22, 0.2)', border: '#84cc16', text: '#84cc16' },    // Lime
+    { bg: 'rgba(163, 230, 53, 0.2)', border: '#a3e635', text: '#65a30d' },    // Lime clair
+    { bg: 'rgba(101, 163, 13, 0.2)', border: '#65a30d', text: '#65a30d' },    // Lime foncé
+    { bg: 'rgba(77, 124, 15, 0.2)', border: '#4d7c0f', text: '#4d7c0f' },     // Olive
+    { bg: 'rgba(5, 150, 105, 0.2)', border: '#059669', text: '#059669' },     // Émeraude foncé
+    { bg: 'rgba(16, 185, 129, 0.2)', border: '#10b981', text: '#10b981' },    // Émeraude
+    { bg: 'rgba(52, 211, 153, 0.2)', border: '#34d399', text: '#059669' },    // Turquoise vert
+    { bg: 'rgba(110, 231, 183, 0.2)', border: '#6ee7b7', text: '#047857' },   // Aqua menthe
+    { bg: 'rgba(20, 184, 166, 0.2)', border: '#14b8a6', text: '#14b8a6' },    // Teal
+    { bg: 'rgba(13, 148, 136, 0.2)', border: '#0d9488', text: '#0d9488' },    // Teal foncé
+    { bg: 'rgba(45, 212, 191, 0.2)', border: '#2dd4bf', text: '#0d9488' },    // Teal clair
+    
+    // Bleus & Cyans (15)
+    { bg: 'rgba(6, 182, 212, 0.2)', border: '#06b6d4', text: '#06b6d4' },     // Cyan
+    { bg: 'rgba(8, 145, 178, 0.2)', border: '#0891b2', text: '#0891b2' },     // Cyan foncé
+    { bg: 'rgba(34, 211, 238, 0.2)', border: '#22d3ee', text: '#0891b2' },    // Cyan clair
+    { bg: 'rgba(14, 165, 233, 0.2)', border: '#0ea5e9', text: '#0ea5e9' },    // Bleu ciel
+    { bg: 'rgba(56, 189, 248, 0.2)', border: '#38bdf8', text: '#0284c7' },    // Bleu ciel clair
+    { bg: 'rgba(2, 132, 199, 0.2)', border: '#0284c7', text: '#0284c7' },     // Bleu océan
+    { bg: 'rgba(59, 130, 246, 0.2)', border: '#3b82f6', text: '#3b82f6' },    // Bleu royal
+    { bg: 'rgba(37, 99, 235, 0.2)', border: '#2563eb', text: '#2563eb' },     // Bleu vif
+    { bg: 'rgba(29, 78, 216, 0.2)', border: '#1d4ed8', text: '#1d4ed8' },     // Bleu foncé
+    { bg: 'rgba(96, 165, 250, 0.2)', border: '#60a5fa', text: '#2563eb' },    // Bleu clair
+    { bg: 'rgba(147, 197, 253, 0.2)', border: '#93c5fd', text: '#1d4ed8' },   // Bleu pastel
+    { bg: 'rgba(99, 102, 241, 0.2)', border: '#6366f1', text: '#6366f1' },    // Indigo
+    { bg: 'rgba(79, 70, 229, 0.2)', border: '#4f46e5', text: '#4f46e5' },     // Indigo vif
+    { bg: 'rgba(129, 140, 248, 0.2)', border: '#818cf8', text: '#4f46e5' },   // Indigo clair
+    { bg: 'rgba(67, 56, 202, 0.2)', border: '#4338ca', text: '#4338ca' },     // Indigo foncé
+    
+    // Violets & Mauves (15)
+    { bg: 'rgba(168, 85, 247, 0.2)', border: '#a855f7', text: '#a855f7' },    // Violet
+    { bg: 'rgba(147, 51, 234, 0.2)', border: '#9333ea', text: '#9333ea' },    // Violet vif
+    { bg: 'rgba(126, 34, 206, 0.2)', border: '#7e22ce', text: '#7e22ce' },    // Violet foncé
+    { bg: 'rgba(192, 132, 252, 0.2)', border: '#c084fc', text: '#9333ea' },   // Violet clair
+    { bg: 'rgba(216, 180, 254, 0.2)', border: '#d8b4fe', text: '#7e22ce' },   // Lavande
+    { bg: 'rgba(217, 70, 239, 0.2)', border: '#d946ef', text: '#d946ef' },    // Fuchsia
+    { bg: 'rgba(192, 38, 211, 0.2)', border: '#c026d3', text: '#c026d3' },    // Fuchsia vif
+    { bg: 'rgba(162, 28, 175, 0.2)', border: '#a21caf', text: '#a21caf' },    // Fuchsia foncé
+    { bg: 'rgba(232, 121, 249, 0.2)', border: '#e879f9', text: '#a21caf' },   // Fuchsia clair
+    { bg: 'rgba(240, 171, 252, 0.2)', border: '#f0abfc', text: '#86198f' },   // Mauve
+    { bg: 'rgba(139, 92, 246, 0.2)', border: '#8b5cf6', text: '#8b5cf6' },    // Violet bleu
+    { bg: 'rgba(124, 58, 237, 0.2)', border: '#7c3aed', text: '#7c3aed' },    // Violet électrique
+    { bg: 'rgba(109, 40, 217, 0.2)', border: '#6d28d9', text: '#6d28d9' },    // Violet profond
+    { bg: 'rgba(167, 139, 250, 0.2)', border: '#a78bfa', text: '#6d28d9' },   // Violet pastel
+    { bg: 'rgba(196, 181, 253, 0.2)', border: '#c4b5fd', text: '#5b21b6' },   // Lilas
+    
+    // Gris & Neutres colorés (10)
+    { bg: 'rgba(115, 115, 115, 0.2)', border: '#737373', text: '#737373' },   // Gris
+    { bg: 'rgba(82, 82, 82, 0.2)', border: '#525252', text: '#525252' },      // Gris foncé
+    { bg: 'rgba(163, 163, 163, 0.2)', border: '#a3a3a3', text: '#525252' },   // Gris clair
+    { bg: 'rgba(120, 113, 108, 0.2)', border: '#78716c', text: '#78716c' },   // Gris chaud
+    { bg: 'rgba(168, 162, 158, 0.2)', border: '#a8a29e', text: '#57534e' },   // Pierre
+    { bg: 'rgba(113, 113, 122, 0.2)', border: '#71717a', text: '#71717a' },   // Gris zinc
+    { bg: 'rgba(161, 161, 170, 0.2)', border: '#a1a1aa', text: '#52525b' },   // Gris zinc clair
+    { bg: 'rgba(107, 114, 128, 0.2)', border: '#6b7280', text: '#6b7280' },   // Gris bleu
+    { bg: 'rgba(156, 163, 175, 0.2)', border: '#9ca3af', text: '#4b5563' },   // Gris bleu clair
+    { bg: 'rgba(100, 116, 139, 0.2)', border: '#64748b', text: '#64748b' },   // Ardoise
+  ];
+  
+  // Générer les couleurs dynamiquement pour chaque employé
+  const getEmployeeColor = (employeeId) => {
+    const nonDirectorEmployees = employees.filter(e => !e.isDirector);
+    const index = nonDirectorEmployees.findIndex(e => e.id === employeeId);
+    if (index === -1) return { bg: 'rgba(201, 169, 98, 0.2)', border: '#c9a962', text: '#c9a962' }; // Couleur par défaut dorée
+    return COLOR_PALETTE[index % COLOR_PALETTE.length];
   };
+  
+  // EMPLOYEE_COLORS dynamique basé sur les employés actuels
+  const EMPLOYEE_COLORS = employees.reduce((acc, emp) => {
+    if (!emp.isDirector) {
+      acc[emp.id] = getEmployeeColor(emp.id);
+    }
+    return acc;
+  }, {});
   
   // Fonction pour obtenir les jours du mois
   const getCalendarDays = (date) => {
@@ -6876,6 +6977,7 @@ export default function SlimTouchApp() {
               </div>
               
               {/* Calendrier mensuel */}
+              {!selectedDayView ? (
               <div className="card" style={{ marginBottom: '1.5rem', overflow: 'hidden' }}>
                 <div className="card-header" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
                   <button className="btn btn-ghost" onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}>
@@ -6892,13 +6994,49 @@ export default function SlimTouchApp() {
                 
                 {/* Légende des couleurs */}
                 {currentUser.isDirector && planningFilter === 'all' && (
-                  <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', padding: '0.75rem', background: 'var(--bg)', borderRadius: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                    {employees.filter(e => !e.isDirector).map(emp => (
-                      <div key={emp.id} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <div style={{ width: '10px', height: '10px', borderRadius: '3px', background: EMPLOYEE_COLORS[emp.id]?.border }} />
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{emp.nom.split(' ')[0]}</span>
-                      </div>
-                    ))}
+                  <div style={{ 
+                    display: 'flex', 
+                    gap: '1.5rem', 
+                    marginBottom: '1rem', 
+                    padding: '1rem', 
+                    background: 'var(--bg)', 
+                    borderRadius: '12px', 
+                    flexWrap: 'wrap', 
+                    justifyContent: 'center',
+                    border: '1px solid var(--border)'
+                  }}>
+                    {employees.filter(e => !e.isDirector).map(emp => {
+                      const colors = EMPLOYEE_COLORS[emp.id] || getEmployeeColor(emp.id);
+                      return (
+                        <div 
+                          key={emp.id} 
+                          style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '8px',
+                            padding: '0.5rem 1rem',
+                            background: colors.bg,
+                            borderRadius: '20px',
+                            border: `2px solid ${colors.border}`
+                          }}
+                        >
+                          <div style={{ 
+                            width: '12px', 
+                            height: '12px', 
+                            borderRadius: '50%', 
+                            background: colors.border,
+                            boxShadow: `0 0 8px ${colors.border}`
+                          }} />
+                          <span style={{ 
+                            fontSize: '0.85rem', 
+                            fontWeight: '600',
+                            color: colors.text 
+                          }}>
+                            {emp.nom.split(' ')[0]}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
                 
@@ -6928,14 +7066,23 @@ export default function SlimTouchApp() {
                           borderRadius: '4px',
                           opacity: dayInfo.currentMonth ? 1 : 0.4,
                           border: isToday ? '2px solid var(--accent)' : '1px solid var(--border)',
-                          cursor: 'pointer'
+                          cursor: dayInfo.currentMonth ? 'pointer' : 'default',
+                          transition: 'transform 0.1s, box-shadow 0.1s'
                         }}
                         onClick={() => {
                           if (dayInfo.currentMonth) {
-                            setPlanningRdvForm({ clientId: '', date: dayInfo.date.toISOString().split('T')[0], heure: '10:00', duree: '45', type: 'Séance G5', employeeId: '' });
-                            setEditingRdv(null);
-                            setShowPlanningRdvModal(true);
+                            setSelectedDayView(new Date(dayInfo.date));
                           }
+                        }}
+                        onMouseEnter={(e) => {
+                          if (dayInfo.currentMonth) {
+                            e.currentTarget.style.transform = 'scale(1.02)';
+                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'scale(1)';
+                          e.currentTarget.style.boxShadow = 'none';
                         }}
                       >
                         <div style={{ 
@@ -6996,6 +7143,258 @@ export default function SlimTouchApp() {
                 </div>
                 </div>{/* Fin wrapper scrollable */}
               </div>
+              ) : (
+              /* ============================================ */
+              /* VUE JOURNALIÈRE DÉTAILLÉE */
+              /* ============================================ */
+              <div className="card" style={{ marginBottom: '1.5rem' }}>
+                <div className="card-header">
+                  <button 
+                    className="btn btn-ghost" 
+                    onClick={() => setSelectedDayView(null)}
+                    style={{ marginRight: '1rem' }}
+                  >
+                    ← Retour au mois
+                  </button>
+                  <div className="card-title" style={{ flex: 1, textAlign: 'center' }}>
+                    <Calendar size={20} />
+                    {selectedDayView.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button 
+                      className="btn btn-ghost" 
+                      onClick={() => setSelectedDayView(new Date(selectedDayView.getTime() - 86400000))}
+                    >
+                      ←
+                    </button>
+                    <button 
+                      className="btn btn-ghost" 
+                      onClick={() => setSelectedDayView(new Date(selectedDayView.getTime() + 86400000))}
+                    >
+                      →
+                    </button>
+                  </div>
+                </div>
+                
+                {/* Bouton ajouter RDV pour ce jour */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem', alignItems: 'center' }}>
+                  <button 
+                    className="btn btn-primary"
+                    onClick={() => {
+                      setPlanningRdvForm({ 
+                        clientId: '', 
+                        date: selectedDayView.toISOString().split('T')[0], 
+                        heure: '10:00', 
+                        duree: '45', 
+                        type: 'Séance G5', 
+                        employeeId: '' 
+                      });
+                      setEditingRdv(null);
+                      setShowPlanningRdvModal(true);
+                    }}
+                  >
+                    <Plus size={18} /> Ajouter un RDV ce jour
+                  </button>
+                  
+                  {/* Légende des praticiennes */}
+                  {currentUser.isDirector && (
+                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                      {employees.filter(e => !e.isDirector).map(emp => {
+                        const colors = EMPLOYEE_COLORS[emp.id] || getEmployeeColor(emp.id);
+                        return (
+                          <div 
+                            key={emp.id} 
+                            style={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: '6px',
+                              padding: '0.35rem 0.75rem',
+                              background: colors.bg,
+                              borderRadius: '15px',
+                              border: `2px solid ${colors.border}`
+                            }}
+                          >
+                            <div style={{ 
+                              width: '10px', 
+                              height: '10px', 
+                              borderRadius: '50%', 
+                              background: colors.border 
+                            }} />
+                            <span style={{ fontSize: '0.8rem', fontWeight: '600', color: colors.text }}>
+                              {emp.nom.split(' ')[0]}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+                
+                {/* Grille horaire */}
+                <div style={{ position: 'relative' }}>
+                  {/* Heures de 8h à 20h */}
+                  {Array.from({ length: 13 }, (_, i) => i + 8).map(hour => {
+                    const hourStr = `${hour.toString().padStart(2, '0')}:00`;
+                    const dayRdvs = getRdvsForDay(selectedDayView).filter(rdv => {
+                      const rdvHour = parseInt(rdv.heure.split(':')[0]);
+                      return rdvHour === hour;
+                    });
+                    
+                    return (
+                      <div 
+                        key={hour}
+                        style={{
+                          display: 'flex',
+                          borderBottom: '1px solid var(--border)',
+                          minHeight: '60px'
+                        }}
+                      >
+                        {/* Colonne heure */}
+                        <div style={{
+                          width: '60px',
+                          padding: '0.5rem',
+                          fontSize: '0.8rem',
+                          color: 'var(--text-muted)',
+                          fontWeight: '600',
+                          borderRight: '1px solid var(--border)',
+                          flexShrink: 0
+                        }}>
+                          {hourStr}
+                        </div>
+                        
+                        {/* Colonne RDV */}
+                        <div style={{
+                          flex: 1,
+                          padding: '0.25rem 0.5rem',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.25rem'
+                        }}>
+                          {dayRdvs.length === 0 ? (
+                            <div 
+                              style={{ 
+                                height: '100%', 
+                                display: 'flex', 
+                                alignItems: 'center',
+                                cursor: 'pointer',
+                                color: 'var(--text-muted)',
+                                fontSize: '0.75rem',
+                                opacity: 0.5
+                              }}
+                              onClick={() => {
+                                setPlanningRdvForm({ 
+                                  clientId: '', 
+                                  date: selectedDayView.toISOString().split('T')[0], 
+                                  heure: hourStr, 
+                                  duree: '45', 
+                                  type: 'Séance G5', 
+                                  employeeId: '' 
+                                });
+                                setEditingRdv(null);
+                                setShowPlanningRdvModal(true);
+                              }}
+                            >
+                              + Cliquer pour ajouter
+                            </div>
+                          ) : (
+                            dayRdvs.map(rdv => {
+                              const client = clients.find(c => c.id === rdv.clientId);
+                              const employee = employees.find(e => e.id === rdv.employeeId);
+                              const colors = EMPLOYEE_COLORS[rdv.employeeId] || { bg: 'rgba(201,169,98,0.2)', border: '#c9a962', text: '#c9a962' };
+                              
+                              return (
+                                <div 
+                                  key={rdv.id}
+                                  onClick={() => {
+                                    setEditingRdv(rdv);
+                                    setPlanningRdvForm({
+                                      clientId: rdv.clientId.toString(),
+                                      date: rdv.date,
+                                      heure: rdv.heure,
+                                      duree: rdv.duree.toString(),
+                                      type: rdv.type,
+                                      employeeId: rdv.employeeId.toString()
+                                    });
+                                    setShowPlanningRdvModal(true);
+                                  }}
+                                  style={{
+                                    background: colors.bg,
+                                    borderLeft: `4px solid ${colors.border}`,
+                                    borderRadius: '6px',
+                                    padding: '0.75rem',
+                                    cursor: 'pointer',
+                                    transition: 'transform 0.1s'
+                                  }}
+                                  onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.01)'}
+                                  onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                >
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.25rem' }}>
+                                    <div style={{ fontWeight: '600', color: 'var(--text)' }}>
+                                      {rdv.heure} - {client?.nom || 'Client inconnu'}
+                                    </div>
+                                    <span className={`badge ${rdv.statut === 'confirmé' ? 'badge-success' : 'badge-warning'}`} style={{ fontSize: '0.65rem' }}>
+                                      {rdv.statut}
+                                    </span>
+                                  </div>
+                                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                    {rdv.type} • {rdv.duree} min
+                                    {currentUser.isDirector && employee && (
+                                      <> • <span style={{ color: colors.border, fontWeight: '600' }}>{employee.nom.split(' ')[0]}</span></>
+                                    )}
+                                  </div>
+                                  {client && (
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                                      📍 {client.adresse || 'Adresse non renseignée'}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                {/* Résumé du jour */}
+                <div style={{ 
+                  marginTop: '1rem', 
+                  padding: '1rem', 
+                  background: 'var(--bg)', 
+                  borderRadius: '8px',
+                  display: 'flex',
+                  justifyContent: 'space-around',
+                  flexWrap: 'wrap',
+                  gap: '1rem'
+                }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--accent)' }}>
+                      {getRdvsForDay(selectedDayView).length}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>RDV ce jour</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--success)' }}>
+                      {getRdvsForDay(selectedDayView).filter(r => r.statut === 'confirmé').length}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Confirmés</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--warning)' }}>
+                      {getRdvsForDay(selectedDayView).filter(r => r.statut === 'en attente').length}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>En attente</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--text)' }}>
+                      {getRdvsForDay(selectedDayView).reduce((acc, r) => acc + (r.duree || 45), 0)} min
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Temps total</div>
+                  </div>
+                </div>
+              </div>
+              )}
               
               {/* Liste des RDV à venir */}
               <div className="card">
