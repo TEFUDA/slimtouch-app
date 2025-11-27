@@ -84,32 +84,16 @@ const fetchRdvs = async () => {
     const response = await fetch(`${API_BASE_URL}/app-get-rdvs`);
     const data = await response.json();
     
-    // Normaliser les RDV pour extraire les IDs correctement
-    const rdvs = (data.data || []).map(rdv => {
-      // clientId peut être un string, un array (linked record), ou un objet
-      let clientId = rdv.clientId || rdv.client_id || rdv.Cliente;
-      if (Array.isArray(clientId)) clientId = clientId[0]; // Linked record = array
-      if (typeof clientId === 'object' && clientId !== null) clientId = clientId.id || clientId[0];
-      
-      // Pareil pour employeeId
-      let employeeId = rdv.employeeId || rdv.employee_id || rdv.Employe;
-      if (Array.isArray(employeeId)) employeeId = employeeId[0];
-      if (typeof employeeId === 'object' && employeeId !== null) employeeId = employeeId.id || employeeId[0];
-      
-      return {
-        ...rdv,
-        id: rdv.id || rdv.airtable_id,
-        clientId: clientId ? String(clientId) : '',
-        employeeId: employeeId ? String(employeeId) : '',
-        date: rdv.date || rdv.Date,
-        heure: rdv.heure || rdv.Heure,
-        duree: rdv.duree || rdv.Duree || 45,
-        type: rdv.type || rdv.Type || 'Séance G5',
-        statut: rdv.statut || rdv.Statut || 'en attente'
-      };
-    });
+    console.log('📅 RDVs depuis API:', data.data?.length, 'premiers:', data.data?.slice(0, 2));
     
-    console.log('📅 RDVs chargés:', rdvs.length, rdvs.slice(0, 2));
+    // Les RDV viennent déjà normalisés du workflow n8n
+    // Mais on s'assure que clientId et employeeId sont des strings
+    const rdvs = (data.data || []).map(rdv => ({
+      ...rdv,
+      clientId: rdv.clientId ? String(rdv.clientId) : '',
+      employeeId: rdv.employeeId ? String(rdv.employeeId) : ''
+    }));
+    
     return rdvs;
   } catch (error) {
     console.error('Erreur fetchRdvs:', error);
@@ -3334,16 +3318,19 @@ export default function SlimTouchApp() {
     
     // Envoyer à Airtable
     try {
-      const result = await apiCreateRdv({
-        client_id: client?.airtable_id || clientId,
+      const rdvToCreate = {
+        cliente_id: client?.id || clientId,  // ID du client (record ID Airtable)
         client_nom: client?.nom || '',
-        employee_id: employeeId,
+        employe_id: employeeId,  // ID de l'employé (record ID Airtable)
         date: newRdv.date,
         heure: newRdv.heure,
         duree: newRdv.duree,
         type: newRdv.type,
-        statut: newRdv.statut
-      });
+        statut: 'Planifie'  // Statut Airtable
+      };
+      console.log('📤 Envoi RDV à Airtable:', rdvToCreate);
+      
+      const result = await apiCreateRdv(rdvToCreate);
       console.log('✅ RDV créé dans Airtable:', result);
       if (result.id) {
         newRdv.airtable_id = result.id;
