@@ -2885,6 +2885,36 @@ function LoginPage({ onLogin, isDark, toggleTheme }) {
           <button onClick={handleLogin} className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: '1rem' }}>
             <Lock size={18} /> Se connecter
           </button>
+          
+          {/* Connexion rapide pour les tests */}
+          <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border)' }}>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.75rem', textAlign: 'center' }}>
+              ⚡ Connexion rapide (dev)
+            </p>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <button 
+                onClick={() => { setLoginForm({ email: 'ines@slimtouch.fr', password: 'inesamiens' }); }}
+                className="btn btn-ghost"
+                style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}
+              >
+                👑 Directrice
+              </button>
+              <button 
+                onClick={() => { setLoginForm({ email: 'julie@slimtouch.fr', password: 'julie123' }); }}
+                className="btn btn-ghost"
+                style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}
+              >
+                💆 Julie
+              </button>
+              <button 
+                onClick={() => { setLoginForm({ email: 'emma@slimtouch.fr', password: 'emma123' }); }}
+                className="btn btn-ghost"
+                style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}
+              >
+                💆 Emma
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
