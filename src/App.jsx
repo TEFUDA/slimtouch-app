@@ -4284,11 +4284,38 @@ export default function SlimTouchApp() {
     }
   };
   
-  // Filtrer les suivis selon l'employée sélectionnée
+  // Filtrer les suivis selon l'employée sélectionnée ou l'utilisateur courant
   const getFilteredSuivis = () => {
-    const allSuivis = clients.flatMap(c => c.suivis.map(s => ({ ...s, clientNom: c.nom, clientId: c.id, clientForfait: c.forfait })));
-    if (suiviFilter === 'all') return allSuivis.sort((a, b) => new Date(b.date) - new Date(a.date));
-    return allSuivis.filter(s => s.employeeId === parseInt(suiviFilter)).sort((a, b) => new Date(b.date) - new Date(a.date));
+    // Pour les non-directeurs, ne montrer que les suivis de leurs propres clientes
+    const clientsToShow = currentUser?.isDirector 
+      ? clients 
+      : clients.filter(c => 
+          String(c.assignedTo) === String(currentUser?.id) ||
+          c.assignedTo === currentUser?.id ||
+          c.assignedTo === currentUser?.airtable_id
+        );
+    
+    const allSuivis = clientsToShow.flatMap(c => 
+      c.suivis.map(s => ({ 
+        ...s, 
+        clientNom: c.nom, 
+        clientId: c.id, 
+        clientForfait: c.forfait,
+        assignedTo: c.assignedTo
+      }))
+    );
+    
+    // Pour la directrice, appliquer le filtre par praticienne si sélectionné
+    if (currentUser?.isDirector && suiviFilter !== 'all') {
+      return allSuivis
+        .filter(s => 
+          String(s.employeeId) === String(suiviFilter) ||
+          String(s.assignedTo) === String(suiviFilter)
+        )
+        .sort((a, b) => new Date(b.date) - new Date(a.date));
+    }
+    
+    return allSuivis.sort((a, b) => new Date(b.date) - new Date(a.date));
   };
   
   // ============================================
@@ -8191,34 +8218,86 @@ export default function SlimTouchApp() {
                 
                 <div className="suivi-timeline">
                   {getFilteredSuivis().length > 0 ? getFilteredSuivis().map((suivi, i) => {
-                    const employee = employees.find(e => e.id === suivi.employeeId);
-                    const colors = EMPLOYEE_COLORS[suivi.employeeId] || { bg: 'rgba(201,169,98,0.2)', border: '#c9a962' };
+                    // Trouver l'employé qui a fait le suivi ou qui est assigné à la cliente
+                    const employee = employees.find(e => 
+                      String(e.id) === String(suivi.employeeId) || 
+                      String(e.id) === String(suivi.assignedTo)
+                    );
+                    const colors = employee ? (EMPLOYEE_COLORS[String(employee.id)] || getEmployeeColor(employee.id)) : { bg: 'rgba(201,169,98,0.2)', border: '#c9a962', text: '#c9a962' };
+                    
+                    // Trouver le numéro de séance
+                    const client = clients.find(c => c.id === suivi.clientId || c.nom === suivi.clientNom);
+                    const seanceNum = suivi.numeroSeance || (client?.suivis?.findIndex(s => s.id === suivi.id || (s.date === suivi.date && s.note === suivi.note)) + 1) || '?';
+                    const seanceTotal = client?.seancesTotal || 10;
+                    
                     return (
                       <div 
                         key={suivi.id || i} 
                         className="suivi-item slide-in" 
                         style={{ 
                           animationDelay: `${i * 0.05}s`,
-                          borderLeft: `3px solid ${colors.border}`
+                          borderLeft: `4px solid ${colors.border}`,
+                          background: colors.bg
                         }}
                       >
-                        <div className="suivi-header">
-                          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <div className="suivi-header" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                            {/* Badge praticienne avec couleur */}
                             <span 
-                              className="badge" 
                               style={{ 
-                                background: colors.bg, 
-                                color: colors.text || colors.border,
-                                border: `1px solid ${colors.border}`
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                padding: '0.3rem 0.6rem',
+                                borderRadius: '20px',
+                                background: colors.border,
+                                color: '#fff',
+                                fontSize: '0.75rem',
+                                fontWeight: '600'
                               }}
                             >
-                              {employee?.nom.split(' ')[0]}
+                              <span style={{ 
+                                width: '8px', 
+                                height: '8px', 
+                                borderRadius: '50%', 
+                                background: '#fff' 
+                              }} />
+                              {employee?.nom?.split(' ')[0] || 'Praticienne'}
                             </span>
-                            <span style={{ color: 'var(--accent)' }}>{suivi.clientNom}</span>
+                            
+                            {/* Nom cliente */}
+                            <span style={{ color: 'var(--text)', fontWeight: '600', fontSize: '0.95rem' }}>
+                              {suivi.clientNom}
+                            </span>
+                            
+                            {/* Numéro de séance */}
+                            <span 
+                              style={{ 
+                                padding: '0.2rem 0.5rem',
+                                borderRadius: '12px',
+                                background: 'var(--bg)',
+                                border: '1px solid var(--border)',
+                                fontSize: '0.75rem',
+                                fontWeight: '600',
+                                color: 'var(--accent)'
+                              }}
+                            >
+                              Séance {seanceNum}/{seanceTotal}
+                            </span>
                           </div>
-                          <span className="suivi-date">{new Date(suivi.date).toLocaleDateString('fr-FR')} • {suivi.duree} min</span>
+                          
+                          <span className="suivi-date" style={{ fontSize: '0.8rem' }}>
+                            {new Date(suivi.date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })} • {suivi.duree || 45} min
+                          </span>
                         </div>
-                        <p className="suivi-note">{suivi.note}</p>
+                        
+                        <p className="suivi-note" style={{ marginTop: '0.75rem' }}>{suivi.note || 'Aucune note'}</p>
+                        
+                        {/* Infos supplémentaires */}
+                        <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem', flexWrap: 'wrap', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                          {suivi.zones && <span>📍 {suivi.zones}</span>}
+                          {suivi.satisfaction && <span>{'⭐'.repeat(suivi.satisfaction)}</span>}
+                        </div>
                       </div>
                     );
                   }) : (
@@ -8234,13 +8313,55 @@ export default function SlimTouchApp() {
           {/* SUIVI (Employée) */}
           {currentView === 'suivi' && !currentUser.isDirector && (
             <div className="animate-in">
+              <div className="card" style={{ marginBottom: '1.5rem' }}>
+                <div className="card-header">
+                  <div className="card-title"><Camera /> Mes suivis récents</div>
+                </div>
+                
+                <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>
+                  Historique de vos suivis avec vos clientes.
+                </p>
+                
+                <div className="suivi-timeline">
+                  {getFilteredSuivis().length > 0 ? getFilteredSuivis().slice(0, 20).map((suivi, i) => (
+                    <div 
+                      key={suivi.id || i} 
+                      className="suivi-item slide-in" 
+                      style={{ animationDelay: `${i * 0.03}s` }}
+                    >
+                      <div className="suivi-header">
+                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                          <span style={{ color: 'var(--accent)', fontWeight: '600' }}>{suivi.clientNom}</span>
+                          {suivi.satisfaction && (
+                            <span style={{ fontSize: '0.8rem' }}>
+                              {'⭐'.repeat(suivi.satisfaction)}
+                            </span>
+                          )}
+                        </div>
+                        <span className="suivi-date">{new Date(suivi.date).toLocaleDateString('fr-FR')} • {suivi.duree || 45} min</span>
+                      </div>
+                      <p className="suivi-note">{suivi.note || 'Aucune note'}</p>
+                      {suivi.zones && (
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+                          📍 Zones : {suivi.zones}
+                        </div>
+                      )}
+                    </div>
+                  )) : (
+                    <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem' }}>
+                      Aucun suivi enregistré pour le moment.
+                    </p>
+                  )}
+                </div>
+              </div>
+              
               <div className="card">
                 <div className="card-header">
-                  <div className="card-title"><Camera /> Suivi photo de mes clientes</div>
+                  <div className="card-title"><Users /> Mes clientes - Photos & Suivis</div>
                 </div>
                 
                 <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-                  Sélectionnez une cliente pour gérer ses photos et son suivi.
+                  Cliquez sur une cliente pour gérer ses photos et ajouter un suivi.
                 </p>
                 
                 {visibleClients.filter(c => c.statut !== 'prospect').map(client => (
@@ -8253,12 +8374,18 @@ export default function SlimTouchApp() {
                       <div className="client-avatar">{client.nom.charAt(0)}</div>
                       <div className="client-info">
                         <h3>{client.nom}</h3>
-                        <span>{client.photos.length} photo(s) • {client.suivis.length} suivi(s)</span>
+                        <span>{client.photos?.length || 0} photo(s) • {client.suivis?.length || 0} suivi(s)</span>
                       </div>
                       <ChevronRight size={20} style={{ color: 'var(--text-muted)' }} />
                     </div>
                   </div>
                 ))}
+                
+                {visibleClients.filter(c => c.statut !== 'prospect').length === 0 && (
+                  <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem' }}>
+                    Aucune cliente assignée.
+                  </p>
+                )}
               </div>
             </div>
           )}
