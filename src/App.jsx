@@ -4648,11 +4648,14 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
       });
     }
     
+    // Trier les mesures par date croissante (anciennes à gauche, récentes à droite)
+    const sortedMesures = [...client.mesures].sort((a, b) => new Date(a.date) - new Date(b.date));
+    
     // Points des mesures
-    client.mesures.forEach((m, i) => {
+    sortedMesures.forEach((m, i) => {
       data.push({
         date: new Date(m.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }),
-        poids: client.poidsActuel - (client.mesures.length - 1 - i) * 0.5, // Estimation
+        poids: client.poidsActuel - (sortedMesures.length - 1 - i) * 0.5, // Estimation
         objectif: client.objectif
       });
     });
