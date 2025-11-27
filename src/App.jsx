@@ -2986,28 +2986,38 @@ export default function SlimTouchApp() {
   useEffect(() => {
     const loadData = async () => {
       setDataLoading(true);
+      console.log('🔄 Début chargement des données pour:', currentUser?.email);
+      
       try {
-        const [
-          clientesData,
-          rdvsData,
-          equipeData,
-          messagesData,
-          stocksData,
-          produitsData,
-          parrainagesData,
-          objectifsData,
-          ventesData
-        ] = await Promise.all([
-          fetchClientes(),
-          fetchRdvs(),
-          fetchEquipe(),
-          fetchMessages(),
-          fetchStocks(),
-          fetchProduits(),
-          fetchParrainages(),
-          fetchObjectifs(),
-          fetchVentes()
-        ]);
+        // Charger chaque donnée séparément pour mieux identifier les erreurs
+        console.log('📥 Chargement clientes...');
+        const clientesData = await fetchClientes().catch(e => { console.error('❌ Erreur clientes:', e); return []; });
+        
+        console.log('📥 Chargement RDVs...');
+        const rdvsData = await fetchRdvs().catch(e => { console.error('❌ Erreur RDVs:', e); return []; });
+        
+        console.log('📥 Chargement équipe...');
+        const equipeData = await fetchEquipe().catch(e => { console.error('❌ Erreur équipe:', e); return []; });
+        
+        console.log('📥 Chargement messages...');
+        const messagesData = await fetchMessages().catch(e => { console.error('❌ Erreur messages:', e); return []; });
+        
+        console.log('📥 Chargement stocks...');
+        const stocksData = await fetchStocks().catch(e => { console.error('❌ Erreur stocks:', e); return []; });
+        
+        console.log('📥 Chargement produits...');
+        const produitsData = await fetchProduits().catch(e => { console.error('❌ Erreur produits:', e); return []; });
+        
+        console.log('📥 Chargement parrainages...');
+        const parrainagesData = await fetchParrainages().catch(e => { console.error('❌ Erreur parrainages:', e); return []; });
+        
+        console.log('📥 Chargement objectifs...');
+        const objectifsData = await fetchObjectifs().catch(e => { console.error('❌ Erreur objectifs:', e); return []; });
+        
+        console.log('📥 Chargement ventes...');
+        const ventesData = await fetchVentes().catch(e => { console.error('❌ Erreur ventes:', e); return []; });
+        
+        console.log('✅ Toutes les données reçues, traitement...');
         
         // Sanitiser les données pour s'assurer que suivis est toujours un tableau
         const sanitizedClientes = clientesData.map(c => ({
