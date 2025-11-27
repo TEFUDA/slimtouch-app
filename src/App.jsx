@@ -9470,6 +9470,14 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => { setShowModal(null); setEditingClient(null); }}>Annuler</button>
               <button className="btn btn-primary" onClick={async () => {
+                // Récupérer les infos du forfait sélectionné
+                const forfaitInfo = forfaits[newClientForm.forfait] || { seances: 10, prix: 690 };
+                const newSeancesTotal = forfaitInfo.seances;
+                
+                // Calculer les séances restantes (garder le même nombre de séances effectuées)
+                const seancesEffectuees = editingClient.seancesTotal - editingClient.seancesRestantes;
+                const newSeancesRestantes = Math.max(0, newSeancesTotal - seancesEffectuees);
+                
                 // Sauvegarder dans Airtable
                 try {
                   if (editingClient.airtable_id) {
@@ -9501,6 +9509,8 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                         poidsActuel: parseInt(newClientForm.poidsActuel) || c.poidsActuel,
                         objectif: parseInt(newClientForm.objectif) || c.objectif,
                         forfait: newClientForm.forfait,
+                        seancesTotal: newSeancesTotal,
+                        seancesRestantes: newSeancesRestantes,
                         assignedTo: newClientForm.assignedTo,
                         notes: newClientForm.notes
                       }
@@ -9510,7 +9520,7 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                 setEditingClient(null);
                 addNotification({
                   type: 'success',
-                  message: `Cliente modifiée : ${newClientForm.nom}`,
+                  message: `Cliente modifiée : ${newClientForm.nom} (${newClientForm.forfait} - ${newSeancesTotal} séances)`,
                   forEmployee: newClientForm.assignedTo
                 });
               }}><Save size={18} /> Enregistrer</button>
