@@ -7305,167 +7305,294 @@ export default function SlimTouchApp() {
                   >
                     <Plus size={18} /> Ajouter un RDV ce jour
                   </button>
-                  
-                  {/* Légende des praticiennes */}
-                  {currentUser.isDirector && (
-                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                </div>
+                
+                {/* VUE MANAGER : Grille par praticienne */}
+                {currentUser.isDirector && employees.filter(e => !e.isDirector).length > 0 ? (
+                  <div style={{ overflowX: 'auto' }}>
+                    {/* En-têtes des colonnes (praticiennes) */}
+                    <div style={{ display: 'flex', borderBottom: '2px solid var(--border)', minWidth: 'max-content' }}>
+                      {/* Colonne heure */}
+                      <div style={{
+                        width: '70px',
+                        padding: '0.75rem',
+                        fontWeight: '700',
+                        textAlign: 'center',
+                        background: 'var(--bg)',
+                        flexShrink: 0
+                      }}>
+                        Heure
+                      </div>
+                      {/* Colonnes praticiennes */}
                       {employees.filter(e => !e.isDirector).map(emp => {
-                        const colors = EMPLOYEE_COLORS[emp.id] || getEmployeeColor(emp.id);
+                        const colors = EMPLOYEE_COLORS[String(emp.id)] || getEmployeeColor(emp.id);
                         return (
                           <div 
-                            key={emp.id} 
-                            style={{ 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: '6px',
-                              padding: '0.35rem 0.75rem',
+                            key={emp.id}
+                            style={{
+                              flex: 1,
+                              minWidth: '180px',
+                              padding: '0.75rem',
+                              fontWeight: '700',
+                              textAlign: 'center',
                               background: colors.bg,
-                              borderRadius: '15px',
-                              border: `2px solid ${colors.border}`
+                              borderLeft: `4px solid ${colors.border}`,
+                              color: colors.text
                             }}
                           >
-                            <div style={{ 
-                              width: '10px', 
-                              height: '10px', 
-                              borderRadius: '50%', 
-                              background: colors.border 
-                            }} />
-                            <span style={{ fontSize: '0.8rem', fontWeight: '600', color: colors.text }}>
-                              {emp.nom.split(' ')[0]}
-                            </span>
+                            {emp.nom.split(' ')[0]}
                           </div>
                         );
                       })}
                     </div>
-                  )}
-                </div>
-                
-                {/* Grille horaire */}
-                <div style={{ position: 'relative' }}>
-                  {/* Heures de 8h à 20h */}
-                  {Array.from({ length: 13 }, (_, i) => i + 8).map(hour => {
-                    const hourStr = `${hour.toString().padStart(2, '0')}:00`;
-                    const dayRdvs = getRdvsForDay(selectedDayView).filter(rdv => {
-                      const rdvHour = parseInt(rdv.heure.split(':')[0]);
-                      return rdvHour === hour;
-                    });
                     
-                    return (
-                      <div 
-                        key={hour}
-                        style={{
-                          display: 'flex',
-                          borderBottom: '1px solid var(--border)',
-                          minHeight: '60px'
-                        }}
-                      >
-                        {/* Colonne heure */}
-                        <div style={{
-                          width: '60px',
-                          padding: '0.5rem',
-                          fontSize: '0.8rem',
-                          color: 'var(--text-muted)',
-                          fontWeight: '600',
-                          borderRight: '1px solid var(--border)',
-                          flexShrink: 0
-                        }}>
-                          {hourStr}
-                        </div>
-                        
-                        {/* Colonne RDV */}
-                        <div style={{
-                          flex: 1,
-                          padding: '0.25rem 0.5rem',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '0.25rem'
-                        }}>
-                          {dayRdvs.length === 0 ? (
-                            <div 
-                              style={{ 
-                                height: '100%', 
-                                display: 'flex', 
-                                alignItems: 'center',
-                                cursor: 'pointer',
-                                color: 'var(--text-muted)',
-                                fontSize: '0.75rem',
-                                opacity: 0.5
-                              }}
-                              onClick={() => {
-                                setPlanningRdvForm({ 
-                                  clientId: '', 
-                                  date: selectedDayView.toISOString().split('T')[0], 
-                                  heure: hourStr, 
-                                  duree: '45', 
-                                  type: 'Séance G5', 
-                                  employeeId: '' 
-                                });
-                                setEditingRdv(null);
-                                setShowPlanningRdvModal(true);
-                              }}
-                            >
-                              + Cliquer pour ajouter
-                            </div>
-                          ) : (
-                            dayRdvs.map(rdv => {
-                              const client = findClient(rdv.clientId);
-                              const employee = findEmployee(rdv.employeeId);
-                              const colors = getEmployeeColorSafe(rdv.employeeId);
-                              
-                              return (
-                                <div 
-                                  key={rdv.id}
-                                  onClick={() => {
-                                    setEditingRdv(rdv);
-                                    setPlanningRdvForm({
-                                      clientId: rdv.clientId?.toString() || '',
-                                      date: rdv.date,
-                                      heure: rdv.heure,
-                                      duree: rdv.duree?.toString() || '45',
-                                      type: rdv.type,
-                                      employeeId: rdv.employeeId?.toString() || ''
-                                    });
-                                    setShowPlanningRdvModal(true);
-                                  }}
-                                  style={{
-                                    background: colors.bg,
-                                    borderLeft: `4px solid ${colors.border}`,
-                                    borderRadius: '6px',
-                                    padding: '0.75rem',
-                                    cursor: 'pointer',
-                                    transition: 'transform 0.1s'
-                                  }}
-                                  onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.01)'}
-                                  onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                                >
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.25rem' }}>
-                                    <div style={{ fontWeight: '600', color: 'var(--text)' }}>
-                                      {rdv.heure} - {client?.nom || 'Client inconnu'}
-                                    </div>
-                                    <span className={`badge ${rdv.statut === 'confirmé' ? 'badge-success' : 'badge-warning'}`} style={{ fontSize: '0.65rem' }}>
-                                      {rdv.statut}
-                                    </span>
+                    {/* Lignes horaires */}
+                    {Array.from({ length: 13 }, (_, i) => i + 8).map(hour => {
+                      const hourStr = `${hour.toString().padStart(2, '0')}:00`;
+                      
+                      return (
+                        <div 
+                          key={hour}
+                          style={{
+                            display: 'flex',
+                            borderBottom: '1px solid var(--border)',
+                            minHeight: '70px',
+                            minWidth: 'max-content'
+                          }}
+                        >
+                          {/* Colonne heure */}
+                          <div style={{
+                            width: '70px',
+                            padding: '0.5rem',
+                            fontSize: '0.85rem',
+                            color: 'var(--text-muted)',
+                            fontWeight: '600',
+                            borderRight: '1px solid var(--border)',
+                            flexShrink: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}>
+                            {hourStr}
+                          </div>
+                          
+                          {/* Colonnes par praticienne */}
+                          {employees.filter(e => !e.isDirector).map(emp => {
+                            const colors = EMPLOYEE_COLORS[String(emp.id)] || getEmployeeColor(emp.id);
+                            // RDV de cette praticienne à cette heure
+                            const empRdvs = getRdvsForDay(selectedDayView).filter(rdv => {
+                              const rdvHour = parseInt(rdv.heure?.split(':')[0] || '0');
+                              return rdvHour === hour && String(rdv.employeeId) === String(emp.id);
+                            });
+                            
+                            return (
+                              <div 
+                                key={emp.id}
+                                style={{
+                                  flex: 1,
+                                  minWidth: '180px',
+                                  padding: '0.25rem',
+                                  borderLeft: '1px solid var(--border)',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '0.25rem'
+                                }}
+                              >
+                                {empRdvs.length === 0 ? (
+                                  <div 
+                                    style={{ 
+                                      height: '100%', 
+                                      display: 'flex', 
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      cursor: 'pointer',
+                                      color: 'var(--text-muted)',
+                                      fontSize: '0.7rem',
+                                      opacity: 0.4
+                                    }}
+                                    onClick={() => {
+                                      setPlanningRdvForm({ 
+                                        clientId: '', 
+                                        date: selectedDayView.toISOString().split('T')[0], 
+                                        heure: hourStr, 
+                                        duree: '45', 
+                                        type: 'Séance G5', 
+                                        employeeId: emp.id.toString() 
+                                      });
+                                      setEditingRdv(null);
+                                      setShowPlanningRdvModal(true);
+                                    }}
+                                  >
+                                    + Ajouter
                                   </div>
-                                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                    {rdv.type} • {rdv.duree} min
-                                    {employee && (
-                                      <> • <span style={{ color: colors.border, fontWeight: '600' }}>{employee.nom?.split(' ')[0]}</span></>
-                                    )}
-                                  </div>
-                                  {client && (
-                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                                      📍 {client.adresse || 'Adresse non renseignée'}
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })
-                          )}
+                                ) : (
+                                  empRdvs.map(rdv => {
+                                    const client = findClient(rdv.clientId);
+                                    
+                                    return (
+                                      <div 
+                                        key={rdv.id}
+                                        onClick={() => {
+                                          setEditingRdv(rdv);
+                                          setPlanningRdvForm({
+                                            clientId: rdv.clientId?.toString() || '',
+                                            date: rdv.date,
+                                            heure: rdv.heure,
+                                            duree: rdv.duree?.toString() || '45',
+                                            type: rdv.type,
+                                            employeeId: rdv.employeeId?.toString() || ''
+                                          });
+                                          setShowPlanningRdvModal(true);
+                                        }}
+                                        style={{
+                                          background: colors.bg,
+                                          borderLeft: `3px solid ${colors.border}`,
+                                          borderRadius: '4px',
+                                          padding: '0.5rem',
+                                          cursor: 'pointer',
+                                          fontSize: '0.8rem'
+                                        }}
+                                      >
+                                        <div style={{ fontWeight: '600', color: 'var(--text)', marginBottom: '2px' }}>
+                                          {rdv.heure} - {client?.nom?.split(' ')[0] || '?'}
+                                        </div>
+                                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                                          {rdv.type} • {rdv.duree}min
+                                        </div>
+                                        <span 
+                                          className={`badge ${rdv.statut === 'confirmé' ? 'badge-success' : 'badge-warning'}`} 
+                                          style={{ fontSize: '0.6rem', marginTop: '2px' }}
+                                        >
+                                          {rdv.statut}
+                                        </span>
+                                      </div>
+                                    );
+                                  })
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  /* VUE SIMPLE (praticienne ou pas de filtre) */
+                  <div style={{ position: 'relative' }}>
+                    {Array.from({ length: 13 }, (_, i) => i + 8).map(hour => {
+                      const hourStr = `${hour.toString().padStart(2, '0')}:00`;
+                      const dayRdvs = getRdvsForDay(selectedDayView).filter(rdv => {
+                        const rdvHour = parseInt(rdv.heure?.split(':')[0] || '0');
+                        return rdvHour === hour;
+                      });
+                      
+                      return (
+                        <div 
+                          key={hour}
+                          style={{
+                            display: 'flex',
+                            borderBottom: '1px solid var(--border)',
+                            minHeight: '60px'
+                          }}
+                        >
+                          <div style={{
+                            width: '60px',
+                            padding: '0.5rem',
+                            fontSize: '0.8rem',
+                            color: 'var(--text-muted)',
+                            fontWeight: '600',
+                            borderRight: '1px solid var(--border)',
+                            flexShrink: 0
+                          }}>
+                            {hourStr}
+                          </div>
+                          
+                          <div style={{
+                            flex: 1,
+                            padding: '0.25rem 0.5rem',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '0.25rem'
+                          }}>
+                            {dayRdvs.length === 0 ? (
+                              <div 
+                                style={{ 
+                                  height: '100%', 
+                                  display: 'flex', 
+                                  alignItems: 'center',
+                                  cursor: 'pointer',
+                                  color: 'var(--text-muted)',
+                                  fontSize: '0.75rem',
+                                  opacity: 0.5
+                                }}
+                                onClick={() => {
+                                  setPlanningRdvForm({ 
+                                    clientId: '', 
+                                    date: selectedDayView.toISOString().split('T')[0], 
+                                    heure: hourStr, 
+                                    duree: '45', 
+                                    type: 'Séance G5', 
+                                    employeeId: currentUser.isDirector ? '' : currentUser.id.toString()
+                                  });
+                                  setEditingRdv(null);
+                                  setShowPlanningRdvModal(true);
+                                }}
+                              >
+                                + Cliquer pour ajouter
+                              </div>
+                            ) : (
+                              dayRdvs.map(rdv => {
+                                const client = findClient(rdv.clientId);
+                                const employee = findEmployee(rdv.employeeId);
+                                const colors = getEmployeeColorSafe(rdv.employeeId);
+                                
+                                return (
+                                  <div 
+                                    key={rdv.id}
+                                    onClick={() => {
+                                      setEditingRdv(rdv);
+                                      setPlanningRdvForm({
+                                        clientId: rdv.clientId?.toString() || '',
+                                        date: rdv.date,
+                                        heure: rdv.heure,
+                                        duree: rdv.duree?.toString() || '45',
+                                        type: rdv.type,
+                                        employeeId: rdv.employeeId?.toString() || ''
+                                      });
+                                      setShowPlanningRdvModal(true);
+                                    }}
+                                    style={{
+                                      background: colors.bg,
+                                      borderLeft: `4px solid ${colors.border}`,
+                                      borderRadius: '6px',
+                                      padding: '0.75rem',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.25rem' }}>
+                                      <div style={{ fontWeight: '600', color: 'var(--text)' }}>
+                                        {rdv.heure} - {client?.nom || 'Client inconnu'}
+                                      </div>
+                                      <span className={`badge ${rdv.statut === 'confirmé' ? 'badge-success' : 'badge-warning'}`} style={{ fontSize: '0.65rem' }}>
+                                        {rdv.statut}
+                                      </span>
+                                    </div>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                      {rdv.type} • {rdv.duree} min
+                                      {employee && (
+                                        <> • <span style={{ color: colors.border, fontWeight: '600' }}>{employee.nom?.split(' ')[0]}</span></>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
                 
                 {/* Résumé du jour */}
                 <div style={{ 
