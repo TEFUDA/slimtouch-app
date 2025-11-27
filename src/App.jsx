@@ -84,7 +84,7 @@ const fetchRdvs = async () => {
     const response = await fetch(`${API_BASE_URL}/app-get-rdvs`);
     const data = await response.json();
     
-    console.log('📅 RDVs depuis API:', data.data?.length, 'premiers:', data.data?.slice(0, 2));
+    
     
     // Les RDV viennent déjà normalisés du workflow n8n
     // Mais on s'assure que clientId et employeeId sont des strings
@@ -2986,38 +2986,30 @@ export default function SlimTouchApp() {
   useEffect(() => {
     const loadData = async () => {
       setDataLoading(true);
-      console.log('🔄 Début chargement des données pour:', currentUser?.email);
       
       try {
-        // Charger chaque donnée séparément pour mieux identifier les erreurs
-        console.log('📥 Chargement clientes...');
-        const clientesData = await fetchClientes().catch(e => { console.error('❌ Erreur clientes:', e); return []; });
-        
-        console.log('📥 Chargement RDVs...');
-        const rdvsData = await fetchRdvs().catch(e => { console.error('❌ Erreur RDVs:', e); return []; });
-        
-        console.log('📥 Chargement équipe...');
-        const equipeData = await fetchEquipe().catch(e => { console.error('❌ Erreur équipe:', e); return []; });
-        
-        console.log('📥 Chargement messages...');
-        const messagesData = await fetchMessages().catch(e => { console.error('❌ Erreur messages:', e); return []; });
-        
-        console.log('📥 Chargement stocks...');
-        const stocksData = await fetchStocks().catch(e => { console.error('❌ Erreur stocks:', e); return []; });
-        
-        console.log('📥 Chargement produits...');
-        const produitsData = await fetchProduits().catch(e => { console.error('❌ Erreur produits:', e); return []; });
-        
-        console.log('📥 Chargement parrainages...');
-        const parrainagesData = await fetchParrainages().catch(e => { console.error('❌ Erreur parrainages:', e); return []; });
-        
-        console.log('📥 Chargement objectifs...');
-        const objectifsData = await fetchObjectifs().catch(e => { console.error('❌ Erreur objectifs:', e); return []; });
-        
-        console.log('📥 Chargement ventes...');
-        const ventesData = await fetchVentes().catch(e => { console.error('❌ Erreur ventes:', e); return []; });
-        
-        console.log('✅ Toutes les données reçues, traitement...');
+        // Charger toutes les données en parallèle
+        const [
+          clientesData,
+          rdvsData,
+          equipeData,
+          messagesData,
+          stocksData,
+          produitsData,
+          parrainagesData,
+          objectifsData,
+          ventesData
+        ] = await Promise.all([
+          fetchClientes().catch(() => []),
+          fetchRdvs().catch(() => []),
+          fetchEquipe().catch(() => []),
+          fetchMessages().catch(() => []),
+          fetchStocks().catch(() => []),
+          fetchProduits().catch(() => []),
+          fetchParrainages().catch(() => []),
+          fetchObjectifs().catch(() => []),
+          fetchVentes().catch(() => [])
+        ]);
         
         // Sanitiser les données pour s'assurer que suivis est toujours un tableau
         const sanitizedClientes = clientesData.map(c => ({
@@ -3030,7 +3022,7 @@ export default function SlimTouchApp() {
         
         setClients(sanitizedClientes);
         setRdvs(rdvsData);
-        setEmployees(equipeData.length > 0 ? equipeData : DEMO_EMPLOYEES); // Fallback sur démo si vide
+        setEmployees(equipeData.length > 0 ? equipeData : DEMO_EMPLOYEES);
         setMessages(messagesData);
         setStocks(stocksData);
         setProduits(produitsData);
@@ -3050,14 +3042,10 @@ export default function SlimTouchApp() {
               ...airtableUser,
               isDirector: airtableUser.role === 'Directrice' || airtableUser.isDirector
             }));
-            console.log('✅ Utilisateur synchronisé avec Airtable:', airtableUser.nom, airtableUser.id);
           }
         }
-        
-        console.log('✅ Toutes les données chargées !');
       } catch (error) {
-        console.error('❌ Erreur chargement:', error);
-        // Fallback sur les employés démo pour permettre la connexion
+        console.error('Erreur chargement:', error);
         setEmployees(DEMO_EMPLOYEES);
       }
       setDataLoading(false);
@@ -3111,7 +3099,7 @@ export default function SlimTouchApp() {
       setObjectives(objectifsData);
       setVentes(ventesData);
       
-      console.log('🔄 Toutes les données rafraîchies !');
+      
     } catch (err) {
       console.error('❌ Erreur rafraîchissement:', err);
       setApiError('Erreur de synchronisation');
@@ -3313,6 +3301,16 @@ export default function SlimTouchApp() {
   
   // RDV filtrés pour le planning
   const getFilteredRdvs = () => {
+    // Pour les non-directeurs, toujours filtrer par leur propre ID
+    if (!currentUser?.isDirector) {
+      return rdvs.filter(r => 
+        String(r.employeeId) === String(currentUser?.id) ||
+        r.employeeId === currentUser?.id ||
+        r.employeeId === currentUser?.airtable_id ||
+        String(r.employeeId) === String(currentUser?.airtable_id)
+      );
+    }
+    // Pour les directeurs, utiliser le filtre sélectionné
     if (planningFilter === 'all') return rdvs;
     // Comparaison flexible des IDs
     return rdvs.filter(r => 
@@ -3421,10 +3419,10 @@ export default function SlimTouchApp() {
         type: newRdv.type,
         statut: 'Planifie'  // Statut Airtable
       };
-      console.log('📤 Envoi RDV à Airtable:', rdvToCreate);
+      
       
       const result = await apiCreateRdv(rdvToCreate);
-      console.log('✅ RDV créé dans Airtable:', result);
+      
       if (result.id) {
         newRdv.airtable_id = result.id;
       }
@@ -3850,7 +3848,7 @@ export default function SlimTouchApp() {
         type: newRdv.type,
         statut: newRdv.statut
       });
-      console.log('✅ RDV créé dans Airtable:', result);
+      
       if (result.id) {
         newRdv.airtable_id = result.id;
       }
@@ -5836,7 +5834,7 @@ export default function SlimTouchApp() {
       createdAt: new Date().toISOString()
     };
     
-    console.log('🔔 addNotification appelé:', newNotif);
+    
     
     setNotifications(prev => [newNotif, ...prev]);
     
@@ -5868,13 +5866,13 @@ export default function SlimTouchApp() {
     
     // Sauvegarder dans Airtable (async, non-bloquant)
     try {
-      console.log('📤 Envoi notification vers Airtable...');
+      
       const response = await fetch(`${API_BASE_URL}/app-create-notification`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newNotif)
       });
-      console.log('✅ Notification envoyée, status:', response.status);
+      
     } catch (error) {
       console.error('❌ Erreur envoi notification:', error);
     }
