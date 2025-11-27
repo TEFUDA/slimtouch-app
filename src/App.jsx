@@ -8,12 +8,70 @@ import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart as RechartsPi
 
 const API_BASE_URL = 'https://n8n.srv819641.hstgr.cloud/webhook';
 
+// ============================================
+// SERVICE D'UPLOAD D'IMAGES (ImgBB - gratuit)
+// ============================================
+// Pour obtenir une clé API gratuite : https://api.imgbb.com/
+const IMGBB_API_KEY = 'eb9227c3528a767e78c577f308792b31';
+
+const uploadImageToImgBB = async (base64Image) => {
+  try {
+    // Extraire seulement les données base64 (sans le préfixe data:image/...)
+    const base64Data = base64Image.split(',')[1] || base64Image;
+    
+    const formData = new FormData();
+    formData.append('key', IMGBB_API_KEY);
+    formData.append('image', base64Data);
+    
+    const response = await fetch('https://api.imgbb.com/1/upload', {
+      method: 'POST',
+      body: formData
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      console.log('✅ Image uploadée vers ImgBB:', result.data.url);
+      return result.data.url; // URL permanente de l'image
+    } else {
+      console.error('❌ Échec upload ImgBB:', result);
+      throw new Error('Échec upload ImgBB');
+    }
+  } catch (error) {
+    console.error('❌ Erreur upload image:', error);
+    // En cas d'erreur, on stocke en local seulement
+    return null;
+  }
+};
+
 // Récupérer toutes les clientes
 const fetchClientes = async () => {
   try {
     const response = await fetch(`${API_BASE_URL}/app-get-clientes`);
     const data = await response.json();
-    return data.data || [];
+    
+    // Mapper les photos depuis Airtable vers le format attendu par l'app
+    const clientesWithPhotos = (data.data || []).map(cliente => {
+      const photos = [];
+      
+      // Récupérer les photos depuis les champs Airtable
+      if (cliente.photoAvant) {
+        photos.push({ id: 1, type: 'avant', url: cliente.photoAvant, date: cliente.datePhotoAvant || '' });
+      }
+      if (cliente.photoPendant) {
+        photos.push({ id: 2, type: 'pendant', url: cliente.photoPendant, date: cliente.datePhotoPendant || '' });
+      }
+      if (cliente.photoApres) {
+        photos.push({ id: 3, type: 'après', url: cliente.photoApres, date: cliente.datePhotoApres || '' });
+      }
+      
+      return {
+        ...cliente,
+        photos: photos.length > 0 ? photos : (cliente.photos || [])
+      };
+    });
+    
+    return clientesWithPhotos;
   } catch (error) {
     console.error('Erreur fetchClientes:', error);
     return [];
@@ -3456,12 +3514,29 @@ export default function SlimTouchApp() {
       return;
     }
     
+    // Afficher un message de chargement
+    addNotification({ type: 'info', message: '📤 Upload de la photo en cours...', forEmployee: null });
+    
+    // 1. Uploader l'image vers ImgBB pour obtenir une URL
+    let imageUrl = capturedPhoto.preview; // Fallback: garder le base64 si l'upload échoue
+    
+    try {
+      const uploadedUrl = await uploadImageToImgBB(capturedPhoto.preview);
+      if (uploadedUrl) {
+        imageUrl = uploadedUrl;
+        console.log('✅ Image uploadée, URL:', imageUrl);
+      }
+    } catch (uploadError) {
+      console.warn('⚠️ Upload ImgBB échoué, utilisation du stockage local', uploadError);
+    }
+    
     const newPhoto = {
       id: Date.now(),
       type: type.toLowerCase(),
-      url: capturedPhoto.preview, // Base64 de l'image
+      url: imageUrl, // URL ImgBB ou base64 en fallback
       date: new Date().toISOString().split('T')[0]
     };
+    
     const existingIndex = selectedClient.photos.findIndex(p => p.type === type.toLowerCase());
     let newPhotos;
     if (existingIndex >= 0) {
@@ -3470,24 +3545,36 @@ export default function SlimTouchApp() {
       newPhotos = [...selectedClient.photos, newPhoto];
     }
     
-    // Sauvegarder dans Airtable
+    // 2. Sauvegarder l'URL dans Airtable
     try {
       if (selectedClient?.airtable_id) {
         const photoData = {};
-        if (type.toLowerCase() === 'avant') photoData.photoAvant = capturedPhoto.preview;
-        if (type.toLowerCase() === 'pendant') photoData.photoPendant = capturedPhoto.preview;
-        if (type.toLowerCase() === 'après' || type.toLowerCase() === 'apres') photoData.photoApres = capturedPhoto.preview;
+        const today = new Date().toISOString().split('T')[0];
+        
+        if (type.toLowerCase() === 'avant') {
+          photoData.photoAvant = imageUrl;
+          photoData.datePhotoAvant = today;
+        }
+        if (type.toLowerCase() === 'pendant') {
+          photoData.photoPendant = imageUrl;
+          photoData.datePhotoPendant = today;
+        }
+        if (type.toLowerCase() === 'après' || type.toLowerCase() === 'apres') {
+          photoData.photoApres = imageUrl;
+          photoData.datePhotoApres = today;
+        }
         
         await apiUpdatePhotos(selectedClient.airtable_id, photoData);
         console.log('✅ Photo mise à jour dans Airtable');
-        addNotification({ type: 'success', message: `📸 Photo ${type} enregistrée !`, forEmployee: null });
+        addNotification({ type: 'success', message: `📸 Photo ${type} enregistrée avec succès !`, forEmployee: null });
       }
     } catch (error) {
       console.error('⚠️ Erreur update photo Airtable:', error);
-      addNotification({ type: 'error', message: 'Erreur lors de l\'enregistrement de la photo', forEmployee: null });
+      addNotification({ type: 'error', message: 'Erreur lors de l\'enregistrement dans Airtable', forEmployee: null });
     }
     
-    setClients(prev => prev.map(c => 
+    // 3. Mettre à jour l'état local
+    setClients(prev => prev.map(c =>
       c.id === selectedClient.id ? { ...c, photos: newPhotos } : c
     ));
     setSelectedClient(prev => ({ ...prev, photos: newPhotos }));
@@ -6345,7 +6432,12 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
                     {['avant', 'pendant', 'après'].map((type) => {
                       const photo = selectedClient.photos.find(p => p.type === type);
-                      const hasRealPhoto = photo?.url && photo.url.startsWith('data:');
+                      // Vérifier si c'est une vraie photo (base64 ou URL)
+                      const hasRealPhoto = photo?.url && (
+                        photo.url.startsWith('data:') || 
+                        photo.url.startsWith('http://') || 
+                        photo.url.startsWith('https://')
+                      );
                       return (
                         <div 
                           key={type} 
