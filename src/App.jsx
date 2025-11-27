@@ -83,7 +83,34 @@ const fetchRdvs = async () => {
   try {
     const response = await fetch(`${API_BASE_URL}/app-get-rdvs`);
     const data = await response.json();
-    return data.data || [];
+    
+    // Normaliser les RDV pour extraire les IDs correctement
+    const rdvs = (data.data || []).map(rdv => {
+      // clientId peut être un string, un array (linked record), ou un objet
+      let clientId = rdv.clientId || rdv.client_id || rdv.Cliente;
+      if (Array.isArray(clientId)) clientId = clientId[0]; // Linked record = array
+      if (typeof clientId === 'object' && clientId !== null) clientId = clientId.id || clientId[0];
+      
+      // Pareil pour employeeId
+      let employeeId = rdv.employeeId || rdv.employee_id || rdv.Employe;
+      if (Array.isArray(employeeId)) employeeId = employeeId[0];
+      if (typeof employeeId === 'object' && employeeId !== null) employeeId = employeeId.id || employeeId[0];
+      
+      return {
+        ...rdv,
+        id: rdv.id || rdv.airtable_id,
+        clientId: clientId ? String(clientId) : '',
+        employeeId: employeeId ? String(employeeId) : '',
+        date: rdv.date || rdv.Date,
+        heure: rdv.heure || rdv.Heure,
+        duree: rdv.duree || rdv.Duree || 45,
+        type: rdv.type || rdv.Type || 'Séance G5',
+        statut: rdv.statut || rdv.Statut || 'en attente'
+      };
+    });
+    
+    console.log('📅 RDVs chargés:', rdvs.length, rdvs.slice(0, 2));
+    return rdvs;
   } catch (error) {
     console.error('Erreur fetchRdvs:', error);
     return [];
@@ -7001,10 +7028,10 @@ export default function SlimTouchApp() {
               <div style={{ background: 'rgba(255,0,0,0.1)', padding: '1rem', marginBottom: '1rem', borderRadius: '8px', fontSize: '0.7rem', fontFamily: 'monospace' }}>
                 <strong>🔧 DEBUG INFO:</strong><br/>
                 Clients: {clients.length} | Premier client ID: {clients[0]?.id} | Type: {typeof clients[0]?.id}<br/>
-                Employees: {employees.length} | Premier emp ID: {employees[0]?.id} | Type: {typeof employees[0]?.id}<br/>
-                RDVs: {rdvs.length} | Dernier RDV clientId: {rdvs[rdvs.length-1]?.clientId} | Type: {typeof rdvs[rdvs.length-1]?.clientId}<br/>
-                Test findClient: {findClient(rdvs[rdvs.length-1]?.clientId)?.nom || 'NOT FOUND'}<br/>
-                Test findEmployee: {findEmployee(rdvs[rdvs.length-1]?.employeeId)?.nom || 'NOT FOUND'}
+                Employees: {employees.length} | Premier emp ID: {employees.filter(e => !e.isDirector)[0]?.id} | Type: {typeof employees.filter(e => !e.isDirector)[0]?.id}<br/>
+                RDVs: {rdvs.length} | Dernier RDV clientId: {rdvs[rdvs.length-1]?.clientId} | empId: {rdvs[rdvs.length-1]?.employeeId}<br/>
+                Test findClient("{rdvs[rdvs.length-1]?.clientId}"): {findClient(rdvs[rdvs.length-1]?.clientId)?.nom || 'NOT FOUND'}<br/>
+                Test findEmployee("{rdvs[rdvs.length-1]?.employeeId}"): {findEmployee(rdvs[rdvs.length-1]?.employeeId)?.nom || 'NOT FOUND'}
               </div>
               {/* FIN DEBUG */}
               
