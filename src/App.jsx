@@ -2835,13 +2835,69 @@ function LoginPage({ onLogin, isDark, toggleTheme }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = () => {
-    const user = DEMO_EMPLOYEES.find(emp => emp.email === email && emp.password === password);
-    if (user) {
-      onLogin(user);
-    } else {
-      setError('Email ou mot de passe incorrect');
+  const handleLogin = async () => {
+    if (!email || !password) {
+      setError('Veuillez remplir tous les champs');
+      return;
+    }
+    
+    setIsLoading(true);
+    setError('');
+    
+    try {
+      // Vérifier les credentials via Airtable
+      const response = await fetch(`${API_BASE_URL}/app-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success && data.user) {
+        onLogin(data.user);
+      } else {
+        setError(data.message || 'Email ou mot de passe incorrect');
+      }
+    } catch (err) {
+      // Fallback sur DEMO_EMPLOYEES si le serveur est indisponible
+      const user = DEMO_EMPLOYEES.find(emp => emp.email === email && emp.password === password);
+      if (user) {
+        onLogin(user);
+      } else {
+        setError('Email ou mot de passe incorrect');
+      }
+    }
+    
+    setIsLoading(false);
+  };
+
+  const handleQuickLogin = async (userEmail) => {
+    const demoUser = DEMO_EMPLOYEES.find(emp => emp.email === userEmail);
+    if (demoUser) {
+      setEmail(demoUser.email);
+      setPassword(demoUser.password);
+      
+      // Tenter le login via Airtable
+      setIsLoading(true);
+      try {
+        const response = await fetch(`${API_BASE_URL}/app-login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: demoUser.email, password: demoUser.password })
+        });
+        const data = await response.json();
+        if (data.success && data.user) {
+          onLogin(data.user);
+        } else {
+          onLogin(demoUser); // Fallback
+        }
+      } catch {
+        onLogin(demoUser); // Fallback
+      }
+      setIsLoading(false);
     }
   };
 
@@ -2895,8 +2951,13 @@ function LoginPage({ onLogin, isDark, toggleTheme }) {
             </div>
           )}
           
-          <button onClick={handleLogin} className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: '1rem' }}>
-            <Lock size={18} /> Se connecter
+          <button 
+            onClick={handleLogin} 
+            className="btn btn-primary" 
+            style={{ width: '100%', justifyContent: 'center', marginTop: '1rem' }}
+            disabled={isLoading}
+          >
+            {isLoading ? '⏳ Connexion...' : <><Lock size={18} /> Se connecter</>}
           </button>
           
           {/* Connexion rapide pour les tests */}
@@ -2906,42 +2967,34 @@ function LoginPage({ onLogin, isDark, toggleTheme }) {
             </p>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
               <button 
-                onClick={() => {
-                  const user = DEMO_EMPLOYEES.find(emp => emp.email === 'ines@slimtouch.fr');
-                  if (user) onLogin(user);
-                }}
+                onClick={() => handleQuickLogin('ines@slimtouch.fr')}
                 className="btn btn-ghost"
                 style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}
+                disabled={isLoading}
               >
                 👑 Inès
               </button>
               <button 
-                onClick={() => {
-                  const user = DEMO_EMPLOYEES.find(emp => emp.email === 'emma@slimtouch.fr');
-                  if (user) onLogin(user);
-                }}
+                onClick={() => handleQuickLogin('emma@slimtouch.fr')}
                 className="btn btn-ghost"
                 style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}
+                disabled={isLoading}
               >
                 💆 Emma
               </button>
               <button 
-                onClick={() => {
-                  const user = DEMO_EMPLOYEES.find(emp => emp.email === 'sophie@slimtouch.fr');
-                  if (user) onLogin(user);
-                }}
+                onClick={() => handleQuickLogin('sophie@slimtouch.fr')}
                 className="btn btn-ghost"
                 style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}
+                disabled={isLoading}
               >
                 💆 Sophie
               </button>
               <button 
-                onClick={() => {
-                  const user = DEMO_EMPLOYEES.find(emp => emp.email === 'loicgrosflandredigital@gmail.com');
-                  if (user) onLogin(user);
-                }}
+                onClick={() => handleQuickLogin('loicgrosflandredigital@gmail.com')}
                 className="btn btn-ghost"
                 style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}
+                disabled={isLoading}
               >
                 💆 Loic
               </button>
