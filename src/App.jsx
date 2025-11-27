@@ -5319,12 +5319,44 @@ export default function SlimTouchApp() {
     telephone: '',
     email: '',
     adresse: '',
+    poidsInitial: '',
     poidsActuel: '',
     objectif: '',
     forfait: 'Sculptage Zones',
     assignedTo: 2,
     notes: ''
   });
+  
+  // Calcul de l'objectif suggéré basé sur le forfait et le poids initial
+  const suggestObjectif = (poidsInitial, forfait) => {
+    if (!poidsInitial || poidsInitial <= 0) return '';
+    
+    // Perte réaliste par séance : environ 0.6 kg
+    const perteParSeance = 0.6;
+    const forfaitSeances = {
+      'Sculptage Zones': 5,
+      'Transformation Express': 10,
+      'Transformation Globale': 15,
+      'Anti-Cellulite Expert': 8
+    };
+    
+    const nbSeances = forfaitSeances[forfait] || 10;
+    const perteEstimee = Math.round(nbSeances * perteParSeance);
+    const objectifSuggere = Math.round(poidsInitial - perteEstimee);
+    
+    return objectifSuggere;
+  };
+  
+  // Obtenir la description de la perte estimée pour un forfait
+  const getPerteEstimee = (forfait) => {
+    const pertes = {
+      'Sculptage Zones': '2-4 kg',
+      'Transformation Express': '5-8 kg',
+      'Transformation Globale': '8-12 kg',
+      'Anti-Cellulite Expert': '4-6 kg'
+    };
+    return pertes[forfait] || '5-8 kg';
+  };
   
   // Fonction pour créer une nouvelle cliente
   const handleCreateClient = async () => {
@@ -6185,6 +6217,7 @@ export default function SlimTouchApp() {
                                     telephone: client.telephone,
                                     email: client.email,
                                     adresse: client.adresse,
+                                    poidsInitial: client.poidsInitial?.toString() || '',
                                     poidsActuel: client.poidsActuel.toString(),
                                     objectif: client.objectif.toString(),
                                     forfait: client.forfait,
@@ -9453,6 +9486,24 @@ export default function SlimTouchApp() {
               </div>
               <div className="form-row">
                 <div className="form-group">
+                  <label className="form-label">Poids initial (kg) *</label>
+                  <input 
+                    type="number" 
+                    className="form-input" 
+                    placeholder="Poids à la 1ère séance"
+                    value={newClientForm.poidsInitial}
+                    onChange={(e) => {
+                      const poids = e.target.value;
+                      setNewClientForm(prev => ({ 
+                        ...prev, 
+                        poidsInitial: poids,
+                        // Si pas de poids actuel, le synchroniser
+                        poidsActuel: prev.poidsActuel || poids
+                      }));
+                    }}
+                  />
+                </div>
+                <div className="form-group">
                   <label className="form-label">Poids actuel (kg)</label>
                   <input 
                     type="number" 
@@ -9461,14 +9512,38 @@ export default function SlimTouchApp() {
                     onChange={(e) => setNewClientForm(prev => ({ ...prev, poidsActuel: e.target.value }))}
                   />
                 </div>
-                <div className="form-group">
+              </div>
+              <div className="form-row">
+                <div className="form-group" style={{ flex: 2 }}>
                   <label className="form-label">Objectif (kg)</label>
-                  <input 
-                    type="number" 
-                    className="form-input" 
-                    value={newClientForm.objectif}
-                    onChange={(e) => setNewClientForm(prev => ({ ...prev, objectif: e.target.value }))}
-                  />
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <input 
+                      type="number" 
+                      className="form-input" 
+                      style={{ flex: 1 }}
+                      value={newClientForm.objectif}
+                      onChange={(e) => setNewClientForm(prev => ({ ...prev, objectif: e.target.value }))}
+                    />
+                    <button 
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ whiteSpace: 'nowrap' }}
+                      onClick={() => {
+                        const poids = parseFloat(newClientForm.poidsInitial) || parseFloat(newClientForm.poidsActuel);
+                        if (poids) {
+                          const suggestion = suggestObjectif(poids, newClientForm.forfait);
+                          setNewClientForm(prev => ({ ...prev, objectif: suggestion.toString() }));
+                        } else {
+                          alert('Entrez d\'abord le poids initial');
+                        }
+                      }}
+                    >
+                      💡 Suggérer
+                    </button>
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                    📊 Perte estimée avec {newClientForm.forfait} : <strong style={{ color: 'var(--accent)' }}>{getPerteEstimee(newClientForm.forfait)}</strong>
+                  </div>
                 </div>
               </div>
               <div className="form-row">
@@ -9530,6 +9605,7 @@ export default function SlimTouchApp() {
                       telephone: newClientForm.telephone,
                       email: newClientForm.email,
                       adresse: newClientForm.adresse,
+                      poids_initial: parseInt(newClientForm.poidsInitial) || editingClient.poidsInitial,
                       poids_actuel: parseInt(newClientForm.poidsActuel) || editingClient.poidsActuel,
                       objectif_poids: parseInt(newClientForm.objectif) || editingClient.objectif,
                       forfait: newClientForm.forfait,
@@ -9550,6 +9626,7 @@ export default function SlimTouchApp() {
                         telephone: newClientForm.telephone,
                         email: newClientForm.email,
                         adresse: newClientForm.adresse,
+                        poidsInitial: parseInt(newClientForm.poidsInitial) || c.poidsInitial,
                         poidsActuel: parseInt(newClientForm.poidsActuel) || c.poidsActuel,
                         objectif: parseInt(newClientForm.objectif) || c.objectif,
                         forfait: newClientForm.forfait,
