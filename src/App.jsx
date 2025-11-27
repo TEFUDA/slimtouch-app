@@ -3011,9 +3011,10 @@ export default function SlimTouchApp() {
   const [showRdvModal, setShowRdvModal] = useState(false);
   const [editingSuivi, setEditingSuivi] = useState(null);
   const [editingMesure, setEditingMesure] = useState(null);
+  const [selectedRdvForSuivi, setSelectedRdvForSuivi] = useState(null); // RDV lié au suivi
   
   // Formulaire suivi
-  const [suiviForm, setSuiviForm] = useState({ date: new Date().toISOString().split('T')[0], duree: '45', note: '' });
+  const [suiviForm, setSuiviForm] = useState({ date: new Date().toISOString().split('T')[0], duree: '45', note: '', rdvId: null });
   
   // Formulaire mensuration
   const [mesureForm, setMesureForm] = useState({ date: new Date().toISOString().split('T')[0], tour_taille: '', tour_hanches: '', tour_cuisses: '' });
@@ -3346,13 +3347,16 @@ export default function SlimTouchApp() {
   
   // Fonction pour ajouter un suivi
   const handleAddSuivi = async () => {
+    if (!selectedRdvForSuivi) { alert('Veuillez sélectionner un RDV réalisé'); return; }
     if (!suiviForm.note.trim()) { alert('Veuillez entrer une note'); return; }
+    
     const newSuivi = {
       id: Date.now(),
-      date: suiviForm.date,
-      duree: parseInt(suiviForm.duree),
+      rdvId: selectedRdvForSuivi.id, // Lier au RDV
+      date: selectedRdvForSuivi.date, // Date du RDV
+      duree: selectedRdvForSuivi.duree || parseInt(suiviForm.duree), // Durée du RDV
       note: suiviForm.note,
-      employeeId: currentUser.id
+      employeeId: selectedRdvForSuivi.employeeId || currentUser.id
     };
     
     // Sauvegarder dans Airtable
@@ -3375,7 +3379,8 @@ export default function SlimTouchApp() {
     ));
     setSelectedClient(prev => ({ ...prev, suivis: [newSuivi, ...prev.suivis] }));
     setShowSuiviModal(false);
-    setSuiviForm({ date: new Date().toISOString().split('T')[0], duree: '45', note: '' });
+    setSelectedRdvForSuivi(null);
+    setSuiviForm({ date: new Date().toISOString().split('T')[0], duree: '45', note: '', rdvId: null });
   };
   
   // Fonction pour modifier un suivi
@@ -6383,8 +6388,9 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                   <div className="card-header">
                     <div className="card-title"><Edit /> Suivis de séances</div>
                     <button className="btn btn-secondary btn-sm" onClick={() => {
-                      setSuiviForm({ date: new Date().toISOString().split('T')[0], duree: '45', note: '' });
+                      setSuiviForm({ date: new Date().toISOString().split('T')[0], duree: '45', note: '', rdvId: null });
                       setEditingSuivi(null);
+                      setSelectedRdvForSuivi(null);
                       setShowSuiviModal(true);
                     }}><Plus size={16} /> Ajouter</button>
                   </div>
@@ -9763,37 +9769,125 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
       
       {/* Modal Ajouter/Modifier Suivi */}
       {showSuiviModal && (
-        <div className="modal-overlay" onClick={() => { setShowSuiviModal(false); setEditingSuivi(null); }}>
+        <div className="modal-overlay" onClick={() => { setShowSuiviModal(false); setEditingSuivi(null); setSelectedRdvForSuivi(null); }}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">{editingSuivi ? 'Modifier le suivi' : 'Ajouter un suivi de séance'}</h3>
-              <button className="btn btn-ghost" onClick={() => { setShowSuiviModal(false); setEditingSuivi(null); }}><X size={20} /></button>
+              <button className="btn btn-ghost" onClick={() => { setShowSuiviModal(false); setEditingSuivi(null); setSelectedRdvForSuivi(null); }}><X size={20} /></button>
             </div>
             <div className="modal-body">
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">Date</label>
-                  <input 
-                    type="date" 
-                    className="form-input" 
-                    value={suiviForm.date}
-                    onChange={(e) => setSuiviForm(prev => ({ ...prev, date: e.target.value }))}
-                  />
+              {!editingSuivi && (
+                <>
+                  <div className="form-group">
+                    <label className="form-label">Sélectionner le RDV réalisé *</label>
+                    {(() => {
+                      // Récupérer les RDV réalisés de cette cliente sans suivi
+                      const today = new Date().toISOString().split('T')[0];
+                      const clientRdvs = rdvs.filter(r => 
+                        r.clientId === selectedClient?.id && 
+                        r.date <= today && 
+                        r.statut === 'confirmé'
+                      );
+                      // Exclure les RDV qui ont déjà un suivi
+                      const rdvsWithSuivi = selectedClient?.suivis?.map(s => s.rdvId) || [];
+                      const rdvsSansSuivi = clientRdvs.filter(r => !rdvsWithSuivi.includes(r.id));
+                      
+                      if (rdvsSansSuivi.length === 0) {
+                        return (
+                          <div style={{ 
+                            padding: '1.5rem', 
+                            textAlign: 'center', 
+                            color: 'var(--text-muted)',
+                            background: 'var(--bg)',
+                            borderRadius: '8px',
+                            border: '1px solid var(--border)'
+                          }}>
+                            <Calendar size={32} style={{ marginBottom: '0.5rem', opacity: 0.5 }} />
+                            <div>Aucun RDV réalisé en attente de suivi</div>
+                            <div style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>
+                              Les suivis sont ajoutés après chaque séance terminée
+                            </div>
+                          </div>
+                        );
+                      }
+                      
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          {rdvsSansSuivi.map(rdv => {
+                            const employee = employees.find(e => e.id === rdv.employeeId);
+                            const isSelected = selectedRdvForSuivi?.id === rdv.id;
+                            return (
+                              <div 
+                                key={rdv.id}
+                                onClick={() => setSelectedRdvForSuivi(rdv)}
+                                style={{
+                                  padding: '1rem',
+                                  background: isSelected ? 'rgba(201, 169, 98, 0.15)' : 'var(--bg)',
+                                  border: isSelected ? '2px solid var(--accent)' : '1px solid var(--border)',
+                                  borderRadius: '8px',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s'
+                                }}
+                              >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <div>
+                                    <strong>{new Date(rdv.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</strong>
+                                    <span style={{ marginLeft: '0.5rem', color: 'var(--text-muted)' }}>à {rdv.heure}</span>
+                                  </div>
+                                  <span className="badge badge-success">{rdv.duree} min</span>
+                                </div>
+                                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                                  {rdv.type} • {employee?.nom || 'Non assigné'}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                  
+                  {selectedRdvForSuivi && (
+                    <div style={{ 
+                      padding: '0.75rem', 
+                      background: 'rgba(34, 197, 94, 0.1)', 
+                      borderRadius: '8px',
+                      marginBottom: '1rem',
+                      fontSize: '0.9rem'
+                    }}>
+                      ✅ RDV sélectionné : <strong>{new Date(selectedRdvForSuivi.date).toLocaleDateString('fr-FR')}</strong> à {selectedRdvForSuivi.heure} ({selectedRdvForSuivi.duree} min)
+                    </div>
+                  )}
+                </>
+              )}
+              
+              {editingSuivi && (
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Date</label>
+                    <input 
+                      type="date" 
+                      className="form-input" 
+                      value={suiviForm.date}
+                      onChange={(e) => setSuiviForm(prev => ({ ...prev, date: e.target.value }))}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Durée (min)</label>
+                    <select 
+                      className="form-input"
+                      value={suiviForm.duree}
+                      onChange={(e) => setSuiviForm(prev => ({ ...prev, duree: e.target.value }))}
+                    >
+                      <option value="30">30</option>
+                      <option value="45">45</option>
+                      <option value="60">60</option>
+                      <option value="90">90</option>
+                    </select>
+                  </div>
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Durée (min)</label>
-                  <select 
-                    className="form-input"
-                    value={suiviForm.duree}
-                    onChange={(e) => setSuiviForm(prev => ({ ...prev, duree: e.target.value }))}
-                  >
-                    <option value="30">30</option>
-                    <option value="45">45</option>
-                    <option value="60">60</option>
-                    <option value="90">90</option>
-                  </select>
-                </div>
-              </div>
+              )}
+              
               <div className="form-group">
                 <label className="form-label">Notes de séance *</label>
                 <textarea 
@@ -9802,12 +9896,17 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                   placeholder="Décrivez la séance, les zones travaillées, le ressenti de la cliente..."
                   value={suiviForm.note}
                   onChange={(e) => setSuiviForm(prev => ({ ...prev, note: e.target.value }))}
+                  disabled={!editingSuivi && !selectedRdvForSuivi}
                 ></textarea>
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => { setShowSuiviModal(false); setEditingSuivi(null); }}>Annuler</button>
-              <button className="btn btn-primary" onClick={editingSuivi ? handleUpdateSuivi : handleAddSuivi}>
+              <button className="btn btn-secondary" onClick={() => { setShowSuiviModal(false); setEditingSuivi(null); setSelectedRdvForSuivi(null); }}>Annuler</button>
+              <button 
+                className="btn btn-primary" 
+                onClick={editingSuivi ? handleUpdateSuivi : handleAddSuivi}
+                disabled={!editingSuivi && !selectedRdvForSuivi}
+              >
                 <Save size={18} /> Enregistrer
               </button>
             </div>
