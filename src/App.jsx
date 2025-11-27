@@ -5665,37 +5665,140 @@ export default function SlimTouchApp() {
     }
   };
   
-  const [notifications, setNotifications] = useState([
-    { id: 1, type: 'schedule', message: 'Nouveau RDV ajouté : Marie Dupont - 26/11 à 14h', time: '5 min', read: false, forEmployee: 2 },
-    { id: 2, type: 'warning', message: 'Stock bas : Crème amincissante', time: '30 min', read: false, forEmployee: 2 },
-    { id: 3, type: 'success', message: 'Paiement reçu : Marie Dupont - 750€', time: '1h', read: true, forEmployee: null },
-    { id: 4, type: 'info', message: 'Nouvelle cliente assignée : Claire Moreau', time: '2h', read: false, forEmployee: 3 },
-    { id: 5, type: 'schedule', message: 'RDV modifié : Sophie Martin déplacé au 27/11 à 10h', time: '3h', read: false, forEmployee: 2 }
-  ]);
+  const [notifications, setNotifications] = useState([]);
+  const [toastNotification, setToastNotification] = useState(null);
+  const [notificationSound] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH2Onp6WjoR5bV1VXGNueYONkpSVlI+KhH53cGtpamxwdHl+gIOFhoeHh4aFhIN/fXp4dnRzcnFwcG9vb29vb29vb29wcHBxcnJzdHV2d3h5ent8fX5/gIGCg4SFhoeIiYqLjI2Oj5CRkpOUlZaXmJmam5ydnp+goaKjpKWmp6ipqqusra6vsLGys7S1tre4ubq7vL2+v8DBwsPExcbHyMnKy8zNzs/Q0dLT1NXW19jZ2tvc3d7f4OHi4+Tl5ufo6err7O3u7/Dx8vP09fb3+Pn6+/z9/v8AAQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=');
+      audio.volume = 0.3;
+      return audio;
+    }
+    return null;
+  });
 
   const toggleTheme = () => setIsDark(!isDark);
   
   const handleLogin = (user) => {
     setCurrentUser(user);
     setCurrentView('dashboard');
+    // Charger les notifications depuis Airtable au login
+    loadNotifications(user.id, user.isDirector);
   };
   
   const handleLogout = () => {
     setCurrentUser(null);
     setCurrentView('dashboard');
     setSidebarOpen(false);
+    setNotifications([]);
+  };
+
+  // Charger les notifications depuis Airtable
+  const loadNotifications = async (userId, isDirector) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/app-get-notifications?userId=${userId}&isDirector=${isDirector}`);
+      const data = await response.json();
+      if (data.success && data.data) {
+        setNotifications(data.data);
+      }
+    } catch (error) {
+      console.log('Notifications locales uniquement');
+    }
   };
 
   // Filtrer les notifications pour l'utilisateur courant
   const userNotifications = currentUser?.isDirector 
     ? notifications 
-    : notifications.filter(n => n.forEmployee === currentUser?.id || n.forEmployee === null);
+    : notifications.filter(n => n.forEmployee === currentUser?.id || String(n.forEmployee) === String(currentUser?.id) || n.forEmployee === null);
 
   const unreadCount = userNotifications.filter(n => !n.read).length;
 
-  // Fonction pour ajouter une notification (utilisée lors des changements de planning)
-  const addNotification = (notif) => {
-    setNotifications(prev => [{ ...notif, id: Date.now(), time: 'À l\'instant', read: false }, ...prev]);
+  // Fonction pour ajouter une notification avec toast et son
+  const addNotification = async (notif) => {
+    const newNotif = { 
+      ...notif, 
+      id: Date.now(), 
+      time: 'À l\'instant', 
+      read: false,
+      createdAt: new Date().toISOString()
+    };
+    
+    setNotifications(prev => [newNotif, ...prev]);
+    
+    // Afficher le toast si la notification est pour l'utilisateur courant
+    const isForCurrentUser = currentUser?.isDirector || 
+      notif.forEmployee === currentUser?.id || 
+      String(notif.forEmployee) === String(currentUser?.id) ||
+      notif.forEmployee === null;
+    
+    if (isForCurrentUser) {
+      // Jouer le son
+      if (notificationSound) {
+        try { notificationSound.play(); } catch (e) { }
+      }
+      
+      // Afficher le toast
+      setToastNotification(newNotif);
+      setTimeout(() => setToastNotification(null), 5000);
+      
+      // Notification navigateur (si permission accordée)
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+        new Notification('SLIM TOUCH', {
+          body: notif.message,
+          icon: '/favicon.ico',
+          tag: 'slimtouch-' + newNotif.id
+        });
+      }
+    }
+    
+    // Sauvegarder dans Airtable (async, non-bloquant)
+    try {
+      await fetch(`${API_BASE_URL}/app-create-notification`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newNotif)
+      });
+    } catch (error) {
+      console.log('Notification locale uniquement');
+    }
+  };
+
+  // Marquer une notification comme lue
+  const markNotificationAsRead = (notifId) => {
+    setNotifications(prev => prev.map(n => 
+      n.id === notifId ? { ...n, read: true } : n
+    ));
+  };
+
+  // Marquer toutes les notifications comme lues
+  const markAllNotificationsAsRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  };
+
+  // Supprimer une notification
+  const deleteNotification = (notifId) => {
+    setNotifications(prev => prev.filter(n => n.id !== notifId));
+  };
+
+  // Demander la permission pour les notifications navigateur
+  const requestNotificationPermission = async () => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      const permission = await Notification.requestPermission();
+      return permission === 'granted';
+    }
+    return false;
+  };
+
+  // Types de notifications avec icônes
+  const NOTIFICATION_TYPES = {
+    schedule: { icon: '📅', color: 'var(--accent)', label: 'RDV' },
+    warning: { icon: '⚠️', color: 'var(--warning)', label: 'Alerte' },
+    success: { icon: '✅', color: 'var(--success)', label: 'Succès' },
+    info: { icon: '💬', color: 'var(--primary)', label: 'Info' },
+    goal: { icon: '🎯', color: 'var(--success)', label: 'Objectif' },
+    client: { icon: '👤', color: 'var(--primary)', label: 'Cliente' },
+    reminder: { icon: '⏰', color: 'var(--warning)', label: 'Rappel' },
+    absent: { icon: '❌', color: 'var(--danger)', label: 'Absence' },
+    payment: { icon: '💰', color: 'var(--success)', label: 'Paiement' }
   };
 
   // Menu items selon le rôle
@@ -5814,6 +5917,65 @@ export default function SlimTouchApp() {
   return (
     <div className="app-container">
       <style>{getStyles(isDark)}</style>
+      
+      {/* Toast Notification Pop-up */}
+      {toastNotification && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            zIndex: 10000,
+            background: 'var(--card)',
+            borderRadius: '12px',
+            padding: '1rem 1.25rem',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+            border: `2px solid ${NOTIFICATION_TYPES[toastNotification.type]?.color || 'var(--accent)'}`,
+            maxWidth: '350px',
+            animation: 'slideIn 0.3s ease-out'
+          }}
+          onClick={() => setToastNotification(null)}
+        >
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+            <span style={{ fontSize: '1.5rem' }}>
+              {NOTIFICATION_TYPES[toastNotification.type]?.icon || '🔔'}
+            </span>
+            <div style={{ flex: 1 }}>
+              <div style={{ 
+                fontWeight: '600', 
+                color: NOTIFICATION_TYPES[toastNotification.type]?.color || 'var(--accent)',
+                marginBottom: '0.25rem',
+                fontSize: '0.85rem'
+              }}>
+                {NOTIFICATION_TYPES[toastNotification.type]?.label || 'Notification'}
+              </div>
+              <div style={{ color: 'var(--text)', fontSize: '0.9rem' }}>
+                {toastNotification.message}
+              </div>
+            </div>
+            <button 
+              onClick={(e) => { e.stopPropagation(); setToastNotification(null); }}
+              style={{ 
+                background: 'transparent', 
+                border: 'none', 
+                color: 'var(--text-muted)', 
+                cursor: 'pointer',
+                padding: '0.25rem'
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {/* Animation keyframes pour le toast */}
+      <style>{`
+        @keyframes slideIn {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+      `}</style>
       
       {/* Overlay pour fermer sidebar mobile */}
       <div 
@@ -5935,34 +6097,130 @@ export default function SlimTouchApp() {
               {showNotifications && (
                 <div className="notifications-dropdown">
                   <div className="notifications-header">
-                    <h4>Notifications</h4>
-                    <button className="mark-all-read" onClick={() => setNotifications(prev => prev.map(n => ({...n, read: true})))}>
-                      Tout marquer lu
-                    </button>
+                    <h4>🔔 Notifications ({unreadCount} non lues)</h4>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      {unreadCount > 0 && (
+                        <button 
+                          className="mark-all-read" 
+                          onClick={markAllNotificationsAsRead}
+                          style={{ fontSize: '0.75rem' }}
+                        >
+                          ✓ Tout marquer lu
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  {userNotifications.length === 0 ? (
-                    <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '1rem' }}>
-                      Aucune notification
-                    </p>
-                  ) : (
-                    userNotifications.slice(0, 8).map(notif => (
-                      <div 
-                        key={notif.id} 
-                        className={`notification-item ${!notif.read ? 'unread' : ''}`}
-                        onClick={() => setNotifications(prev => prev.map(n => n.id === notif.id ? {...n, read: true} : n))}
+                  
+                  {/* Bouton permission notifications */}
+                  {typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default' && (
+                    <div style={{ 
+                      padding: '0.75rem', 
+                      background: 'rgba(201, 169, 98, 0.1)', 
+                      borderBottom: '1px solid var(--border)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      fontSize: '0.8rem'
+                    }}>
+                      <span>📱</span>
+                      <span style={{ flex: 1 }}>Activer les notifications push ?</span>
+                      <button 
+                        onClick={requestNotificationPermission}
+                        style={{ 
+                          padding: '0.25rem 0.5rem', 
+                          background: 'var(--accent)', 
+                          color: 'var(--bg)',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '0.75rem'
+                        }}
                       >
-                        <div className={`notification-icon ${notif.type}`}>
-                          {notif.type === 'warning' && <AlertCircle size={18} />}
-                          {notif.type === 'info' && <Bell size={18} />}
-                          {notif.type === 'success' && <CheckCircle size={18} />}
-                          {notif.type === 'schedule' && <Calendar size={18} />}
-                        </div>
-                        <div className="notification-content">
-                          <h5>{notif.message}</h5>
-                          <span>Il y a {notif.time}</span>
-                        </div>
-                      </div>
-                    ))
+                        Activer
+                      </button>
+                    </div>
+                  )}
+                  
+                  <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                    {userNotifications.length === 0 ? (
+                      <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
+                        🎉 Aucune notification
+                      </p>
+                    ) : (
+                      userNotifications.slice(0, 15).map(notif => {
+                        const notifType = NOTIFICATION_TYPES[notif.type] || NOTIFICATION_TYPES.info;
+                        return (
+                          <div 
+                            key={notif.id} 
+                            className={`notification-item ${!notif.read ? 'unread' : ''}`}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'flex-start',
+                              gap: '0.75rem',
+                              padding: '0.75rem',
+                              borderBottom: '1px solid var(--border)',
+                              background: !notif.read ? 'rgba(201, 169, 98, 0.05)' : 'transparent',
+                              cursor: 'pointer'
+                            }}
+                            onClick={() => markNotificationAsRead(notif.id)}
+                          >
+                            <span style={{ fontSize: '1.25rem' }}>{notifType.icon}</span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ 
+                                fontWeight: !notif.read ? '600' : '400',
+                                color: 'var(--text)',
+                                fontSize: '0.85rem',
+                                marginBottom: '0.25rem'
+                              }}>
+                                {notif.message}
+                              </div>
+                              <div style={{ 
+                                fontSize: '0.7rem', 
+                                color: 'var(--text-muted)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem'
+                              }}>
+                                <span style={{ 
+                                  color: notifType.color,
+                                  fontWeight: '600'
+                                }}>
+                                  {notifType.label}
+                                </span>
+                                <span>•</span>
+                                <span>{notif.time}</span>
+                              </div>
+                            </div>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); deleteNotification(notif.id); }}
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: 'var(--text-muted)',
+                                cursor: 'pointer',
+                                padding: '0.25rem',
+                                opacity: 0.5
+                              }}
+                              title="Supprimer"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                  
+                  {userNotifications.length > 15 && (
+                    <div style={{ 
+                      padding: '0.75rem', 
+                      textAlign: 'center', 
+                      color: 'var(--text-muted)',
+                      fontSize: '0.8rem',
+                      borderTop: '1px solid var(--border)'
+                    }}>
+                      +{userNotifications.length - 15} autres notifications
+                    </div>
                   )}
                 </div>
               )}
