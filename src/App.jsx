@@ -7197,7 +7197,6 @@ export default function SlimTouchApp() {
                               >
                                 <span style={{ fontWeight: '600' }}>{rdv.heure}</span> {client?.nom?.split(' ')[0] || '?'}
                               </div>
-                              </div>
                             );
                           })}
                           {dayRdvs.length > 3 && (
