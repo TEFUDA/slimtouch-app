@@ -3281,10 +3281,15 @@ export default function SlimTouchApp() {
       alert('Veuillez remplir tous les champs obligatoires');
       return;
     }
+    
+    // Gérer les IDs (peuvent être des strings Airtable ou des numbers)
+    const clientId = planningRdvForm.clientId;
+    const employeeId = planningRdvForm.employeeId;
+    
     const newRdv = {
       id: Date.now(),
-      clientId: parseInt(planningRdvForm.clientId),
-      employeeId: parseInt(planningRdvForm.employeeId),
+      clientId: clientId,
+      employeeId: employeeId,
       date: planningRdvForm.date,
       heure: planningRdvForm.heure,
       duree: parseInt(planningRdvForm.duree),
@@ -3292,13 +3297,19 @@ export default function SlimTouchApp() {
       statut: 'en attente'
     };
     
+    // Trouver le client (comparaison flexible)
+    const client = clients.find(c => 
+      c.id === clientId || 
+      c.id === parseInt(clientId) || 
+      c.airtable_id === clientId
+    );
+    
     // Envoyer à Airtable
     try {
-      const client = clients.find(c => c.id === parseInt(planningRdvForm.clientId));
       const result = await apiCreateRdv({
-        client_id: newRdv.clientId,
+        client_id: client?.airtable_id || clientId,
         client_nom: client?.nom || '',
-        employee_id: newRdv.employeeId,
+        employee_id: employeeId,
         date: newRdv.date,
         heure: newRdv.heure,
         duree: newRdv.duree,
@@ -3316,8 +3327,7 @@ export default function SlimTouchApp() {
     setRdvs(prev => [...prev, newRdv]);
     setShowPlanningRdvModal(false);
     setPlanningRdvForm({ clientId: '', date: '', heure: '', duree: '45', type: 'Séance G5', employeeId: '' });
-    const client = clients.find(c => c.id === parseInt(planningRdvForm.clientId));
-    addNotification({ type: 'schedule', message: `Nouveau RDV : ${client?.nom} - ${planningRdvForm.date}`, forEmployee: parseInt(planningRdvForm.employeeId) });
+    addNotification({ type: 'schedule', message: `Nouveau RDV : ${client?.nom} - ${planningRdvForm.date}`, forEmployee: employeeId });
   };
   
   // Modifier un RDV
@@ -3746,10 +3756,49 @@ export default function SlimTouchApp() {
     addNotification({ type: 'schedule', message: `Nouveau RDV : ${selectedClient.nom} - ${rdvForm.date}`, forEmployee: selectedClient.assignedTo });
   };
   
+  // ============================================
+  // FONCTIONS UTILITAIRES POUR TROUVER CLIENT/EMPLOYEE
+  // ============================================
+  
+  // Trouver un client de façon flexible (ID peut être string ou number)
+  const findClient = (clientId) => {
+    if (!clientId) return null;
+    return clients.find(c => 
+      c.id === clientId || 
+      c.id === String(clientId) ||
+      c.id === parseInt(clientId) ||
+      c.airtable_id === clientId ||
+      c.airtable_id === String(clientId)
+    );
+  };
+  
+  // Trouver un employé de façon flexible (ID peut être string ou number)
+  const findEmployee = (employeeId) => {
+    if (!employeeId) return null;
+    return employees.find(e => 
+      e.id === employeeId || 
+      e.id === String(employeeId) ||
+      e.id === parseInt(employeeId) ||
+      e.airtable_id === employeeId ||
+      e.airtable_id === String(employeeId)
+    );
+  };
+  
+  // Obtenir la couleur d'un employé de façon sécurisée
+  const getEmployeeColorSafe = (employeeId) => {
+    const emp = findEmployee(employeeId);
+    if (!emp) return { bg: 'rgba(201, 169, 98, 0.2)', border: '#c9a962', text: '#c9a962' };
+    return EMPLOYEE_COLORS[emp.id] || getEmployeeColor(emp.id);
+  };
+  
   // Calculer séances effectuées depuis les RDV passés
   const getSeancesEffectuees = (clientId) => {
     const today = new Date().toISOString().split('T')[0];
-    return rdvs.filter(r => r.clientId === clientId && r.date < today && r.statut === 'confirmé').length;
+    return rdvs.filter(r => {
+      const client = findClient(r.clientId);
+      const targetClient = findClient(clientId);
+      return client?.id === targetClient?.id && r.date < today && r.statut === 'confirmé';
+    }).length;
   };
   
   // ============================================
@@ -3811,7 +3860,7 @@ export default function SlimTouchApp() {
     updateClientStatus(rdv.clientId);
     
     // Notifier
-    const client = clients.find(c => c.id === rdv.clientId);
+    const client = findClient(rdv.clientId);
     addNotification({
       type: 'success',
       message: `Séance confirmée : ${client?.nom}`,
@@ -5005,7 +5054,7 @@ export default function SlimTouchApp() {
     const rdv = rdvs.find(r => r.id === rdvId);
     if (!rdv) return;
     
-    const client = clients.find(c => c.id === rdv.clientId);
+    const client = findClient(rdv.clientId);
     if (!client) return;
     
     const rdvDate = new Date(rdv.date + 'T' + rdv.heure);
@@ -5107,7 +5156,7 @@ export default function SlimTouchApp() {
     const rdv = rdvs.find(r => r.id === rdvId);
     if (!rdv) return;
     
-    const client = clients.find(c => c.id === rdv.clientId);
+    const client = findClient(rdv.clientId);
     
     // Sauvegarder dans Airtable
     try {
@@ -5157,7 +5206,7 @@ export default function SlimTouchApp() {
     const rdv = rdvs.find(r => r.id === rdvId);
     if (!rdv) return;
     
-    const client = clients.find(c => c.id === rdv.clientId);
+    const client = findClient(rdv.clientId);
     const oldDate = rdv.date;
     
     // Sauvegarder dans Airtable
@@ -6059,8 +6108,8 @@ export default function SlimTouchApp() {
                   </div>
                   
                   {visibleRdvs.slice(0, 4).map(rdv => {
-                    const client = clients.find(c => c.id === rdv.clientId);
-                    const employee = employees.find(e => e.id === rdv.employeeId);
+                    const client = findClient(rdv.clientId);
+                    const employee = findEmployee(rdv.employeeId);
                     return (
                       <div key={rdv.id} className="rdv-item">
                         <div className="rdv-time">
@@ -7095,8 +7144,9 @@ export default function SlimTouchApp() {
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                           {dayRdvs.slice(0, 3).map(rdv => {
-                            const client = clients.find(c => c.id === rdv.clientId);
-                            const colors = EMPLOYEE_COLORS[rdv.employeeId] || { bg: 'rgba(201,169,98,0.2)', border: '#c9a962', text: '#c9a962' };
+                            const client = findClient(rdv.clientId);
+                            const employee = findEmployee(rdv.employeeId);
+                            const colors = getEmployeeColorSafe(rdv.employeeId);
                             return (
                               <div 
                                 key={rdv.id}
@@ -7104,30 +7154,31 @@ export default function SlimTouchApp() {
                                   e.stopPropagation();
                                   setEditingRdv(rdv);
                                   setPlanningRdvForm({
-                                    clientId: rdv.clientId.toString(),
+                                    clientId: rdv.clientId?.toString() || '',
                                     date: rdv.date,
                                     heure: rdv.heure,
-                                    duree: rdv.duree.toString(),
+                                    duree: rdv.duree?.toString() || '45',
                                     type: rdv.type,
-                                    employeeId: rdv.employeeId.toString()
+                                    employeeId: rdv.employeeId?.toString() || ''
                                   });
                                   setShowPlanningRdvModal(true);
                                 }}
                                 style={{
                                   fontSize: '0.7rem',
-                                  padding: '2px 4px',
-                                  borderRadius: '3px',
+                                  padding: '3px 5px',
+                                  borderRadius: '4px',
                                   background: colors.bg,
-                                  borderLeft: `3px solid ${colors.border}`,
-                                  color: colors.text,
+                                  borderLeft: `4px solid ${colors.border}`,
+                                  color: 'var(--text)',
                                   whiteSpace: 'nowrap',
                                   overflow: 'hidden',
                                   textOverflow: 'ellipsis',
                                   cursor: 'pointer'
                                 }}
-                                title={`${rdv.heure} - ${client?.nom}`}
+                                title={`${rdv.heure} - ${client?.nom || 'Client?'} - ${employee?.nom?.split(' ')[0] || 'Praticienne?'}`}
                               >
-                                {rdv.heure} {client?.nom.split(' ')[0]}
+                                <span style={{ fontWeight: '600' }}>{rdv.heure}</span> {client?.nom?.split(' ')[0] || '?'}
+                              </div>
                               </div>
                             );
                           })}
@@ -7298,9 +7349,9 @@ export default function SlimTouchApp() {
                             </div>
                           ) : (
                             dayRdvs.map(rdv => {
-                              const client = clients.find(c => c.id === rdv.clientId);
-                              const employee = employees.find(e => e.id === rdv.employeeId);
-                              const colors = EMPLOYEE_COLORS[rdv.employeeId] || { bg: 'rgba(201,169,98,0.2)', border: '#c9a962', text: '#c9a962' };
+                              const client = findClient(rdv.clientId);
+                              const employee = findEmployee(rdv.employeeId);
+                              const colors = getEmployeeColorSafe(rdv.employeeId);
                               
                               return (
                                 <div 
@@ -7308,12 +7359,12 @@ export default function SlimTouchApp() {
                                   onClick={() => {
                                     setEditingRdv(rdv);
                                     setPlanningRdvForm({
-                                      clientId: rdv.clientId.toString(),
+                                      clientId: rdv.clientId?.toString() || '',
                                       date: rdv.date,
                                       heure: rdv.heure,
-                                      duree: rdv.duree.toString(),
+                                      duree: rdv.duree?.toString() || '45',
                                       type: rdv.type,
-                                      employeeId: rdv.employeeId.toString()
+                                      employeeId: rdv.employeeId?.toString() || ''
                                     });
                                     setShowPlanningRdvModal(true);
                                   }}
@@ -7338,8 +7389,8 @@ export default function SlimTouchApp() {
                                   </div>
                                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                                     {rdv.type} • {rdv.duree} min
-                                    {currentUser.isDirector && employee && (
-                                      <> • <span style={{ color: colors.border, fontWeight: '600' }}>{employee.nom.split(' ')[0]}</span></>
+                                    {employee && (
+                                      <> • <span style={{ color: colors.border, fontWeight: '600' }}>{employee.nom?.split(' ')[0]}</span></>
                                     )}
                                   </div>
                                   {client && (
@@ -7403,9 +7454,9 @@ export default function SlimTouchApp() {
                 </div>
                 
                 {getFilteredRdvs().sort((a, b) => new Date(a.date + 'T' + a.heure) - new Date(b.date + 'T' + b.heure)).map(rdv => {
-                  const client = clients.find(c => c.id === rdv.clientId);
-                  const employee = employees.find(e => e.id === rdv.employeeId);
-                  const colors = EMPLOYEE_COLORS[rdv.employeeId] || { bg: 'rgba(201,169,98,0.2)', border: '#c9a962' };
+                  const client = findClient(rdv.clientId);
+                  const employee = findEmployee(rdv.employeeId);
+                  const colors = getEmployeeColorSafe(rdv.employeeId);
                   return (
                     <div 
                       key={rdv.id} 
@@ -9039,9 +9090,9 @@ export default function SlimTouchApp() {
                   {getRdvsPending().length > 0 ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                       {getRdvsPending().map(rdv => {
-                        const client = clients.find(c => c.id === rdv.clientId);
-                        const emp = employees.find(e => e.id === rdv.employeeId);
-                        const colors = EMPLOYEE_COLORS[rdv.employeeId] || {};
+                        const client = findClient(rdv.clientId);
+                        const emp = findEmployee(rdv.employeeId);
+                        const colors = getEmployeeColorSafe(rdv.employeeId);
                         const status = getRdvConfirmationStatus(rdv.id);
                         const statusInfo = RDV_STATUS[status] || RDV_STATUS.pending;
                         
@@ -9062,12 +9113,19 @@ export default function SlimTouchApp() {
                             onClick={() => setShowRdvConfirmModal(rdv)}
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                              <div className="client-avatar" style={{ width: '40px', height: '40px', fontSize: '0.9rem', flexShrink: 0 }}>
-                                {client?.nom.charAt(0)}
+                              <div className="client-avatar" style={{ 
+                                width: '40px', 
+                                height: '40px', 
+                                fontSize: '0.9rem', 
+                                flexShrink: 0,
+                                background: colors.bg,
+                                border: `2px solid ${colors.border}`
+                              }}>
+                                {client?.nom?.charAt(0) || '?'}
                               </div>
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontWeight: '600', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{client?.nom}</span>
+                                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{client?.nom || 'Client inconnu'}</span>
                                   <span className="badge" style={{ 
                                     background: `${statusInfo.color}20`, 
                                     color: statusInfo.color,
@@ -9079,7 +9137,7 @@ export default function SlimTouchApp() {
                                   </span>
                                 </div>
                                 <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                  {new Date(rdv.date).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short' })} à {rdv.heure} • <span style={{ color: colors.text }}>{emp?.nom.split(' ')[0]}</span>
+                                  {new Date(rdv.date).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short' })} à {rdv.heure} • <span style={{ color: colors.border, fontWeight: '600' }}>{emp?.nom?.split(' ')[0] || 'Praticienne?'}</span>
                                 </div>
                               </div>
                             </div>
@@ -10356,7 +10414,7 @@ export default function SlimTouchApp() {
                       return (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                           {rdvsSansSuivi.map(rdv => {
-                            const employee = employees.find(e => e.id === rdv.employeeId);
+                            const employee = findEmployee(rdv.employeeId);
                             const isSelected = selectedRdvForSuivi?.id === rdv.id;
                             return (
                               <div 
@@ -11414,8 +11472,8 @@ export default function SlimTouchApp() {
             <div className="modal-body">
               {(() => {
                 const rdv = showRdvConfirmModal;
-                const client = clients.find(c => c.id === rdv.clientId);
-                const emp = employees.find(e => e.id === rdv.employeeId);
+                const client = findClient(rdv.clientId);
+                const emp = findEmployee(rdv.employeeId);
                 const history = getRdvConfirmationHistory(rdv.id);
                 const status = getRdvConfirmationStatus(rdv.id);
                 const statusInfo = RDV_STATUS[status] || RDV_STATUS.pending;
