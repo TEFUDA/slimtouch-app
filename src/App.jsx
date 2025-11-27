@@ -2893,21 +2893,30 @@ function LoginPage({ onLogin, isDark, toggleTheme }) {
             </p>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
               <button 
-                onClick={() => { setLoginForm({ email: 'ines@slimtouch.fr', password: 'inesamiens' }); }}
+                onClick={() => {
+                  const user = DEMO_EMPLOYEES.find(emp => emp.email === 'ines@slimtouch.fr');
+                  if (user) onLogin(user);
+                }}
                 className="btn btn-ghost"
                 style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}
               >
                 👑 Directrice
               </button>
               <button 
-                onClick={() => { setLoginForm({ email: 'julie@slimtouch.fr', password: 'julie123' }); }}
+                onClick={() => {
+                  const user = DEMO_EMPLOYEES.find(emp => emp.email === 'julie@slimtouch.fr');
+                  if (user) onLogin(user);
+                }}
                 className="btn btn-ghost"
                 style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}
               >
                 💆 Julie
               </button>
               <button 
-                onClick={() => { setLoginForm({ email: 'emma@slimtouch.fr', password: 'emma123' }); }}
+                onClick={() => {
+                  const user = DEMO_EMPLOYEES.find(emp => emp.email === 'emma@slimtouch.fr');
+                  if (user) onLogin(user);
+                }}
                 className="btn btn-ghost"
                 style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}
               >
@@ -7041,17 +7050,6 @@ export default function SlimTouchApp() {
           {/* ============================================ */}
           {currentView === 'planning' && (
             <div className="animate-in">
-              {/* DEBUG - À SUPPRIMER */}
-              <div style={{ background: 'rgba(255,0,0,0.1)', padding: '1rem', marginBottom: '1rem', borderRadius: '8px', fontSize: '0.7rem', fontFamily: 'monospace' }}>
-                <strong>🔧 DEBUG INFO:</strong><br/>
-                Clients: {clients.length} | Premier client ID: {clients[0]?.id} | Type: {typeof clients[0]?.id}<br/>
-                Employees: {employees.length} | Premier emp ID: {employees.filter(e => !e.isDirector)[0]?.id} | Type: {typeof employees.filter(e => !e.isDirector)[0]?.id}<br/>
-                RDVs: {rdvs.length} | Dernier RDV clientId: {rdvs[rdvs.length-1]?.clientId} | empId: {rdvs[rdvs.length-1]?.employeeId}<br/>
-                Test findClient("{rdvs[rdvs.length-1]?.clientId}"): {findClient(rdvs[rdvs.length-1]?.clientId)?.nom || 'NOT FOUND'}<br/>
-                Test findEmployee("{rdvs[rdvs.length-1]?.employeeId}"): {findEmployee(rdvs[rdvs.length-1]?.employeeId)?.nom || 'NOT FOUND'}
-              </div>
-              {/* FIN DEBUG */}
-              
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1rem' }}>
                 {currentUser.isDirector && (
                   <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', margin: '0 -0.5rem', padding: '0 0.5rem' }}>
