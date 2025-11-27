@@ -3277,6 +3277,8 @@ export default function SlimTouchApp() {
   
   // Créer un RDV depuis le planning
   const handleCreatePlanningRdv = async () => {
+    console.log('🆕 Création RDV - Form:', planningRdvForm);
+    
     if (!planningRdvForm.clientId || !planningRdvForm.date || !planningRdvForm.heure || !planningRdvForm.employeeId) {
       alert('Veuillez remplir tous les champs obligatoires');
       return;
@@ -3285,6 +3287,9 @@ export default function SlimTouchApp() {
     // Gérer les IDs (peuvent être des strings Airtable ou des numbers)
     const clientId = planningRdvForm.clientId;
     const employeeId = planningRdvForm.employeeId;
+    
+    console.log('📌 clientId sélectionné:', clientId);
+    console.log('📌 employeeId sélectionné:', employeeId);
     
     const newRdv = {
       id: Date.now(),
@@ -3296,6 +3301,8 @@ export default function SlimTouchApp() {
       type: planningRdvForm.type,
       statut: 'en attente'
     };
+    
+    console.log('📅 Nouveau RDV créé:', newRdv);
     
     // Trouver le client (comparaison flexible)
     const client = clients.find(c => 
@@ -3352,7 +3359,7 @@ export default function SlimTouchApp() {
     
     setRdvs(prev => prev.map(r => 
       r.id === editingRdv.id 
-        ? { ...r, clientId: parseInt(planningRdvForm.clientId), employeeId: parseInt(planningRdvForm.employeeId), date: planningRdvForm.date, heure: planningRdvForm.heure, duree: parseInt(planningRdvForm.duree), type: planningRdvForm.type }
+        ? { ...r, clientId: planningRdvForm.clientId, employeeId: planningRdvForm.employeeId, date: planningRdvForm.date, heure: planningRdvForm.heure, duree: parseInt(planningRdvForm.duree), type: planningRdvForm.type }
         : r
     ));
     setShowPlanningRdvModal(false);
@@ -3763,25 +3770,43 @@ export default function SlimTouchApp() {
   // Trouver un client de façon flexible (ID peut être string ou number)
   const findClient = (clientId) => {
     if (!clientId) return null;
-    return clients.find(c => 
+    
+    // Debug
+    console.log('🔍 findClient cherche:', clientId, 'type:', typeof clientId);
+    console.log('📋 Clients disponibles:', clients.map(c => ({ id: c.id, airtable_id: c.airtable_id, nom: c.nom })));
+    
+    const found = clients.find(c => 
       c.id === clientId || 
       c.id === String(clientId) ||
       c.id === parseInt(clientId) ||
       c.airtable_id === clientId ||
-      c.airtable_id === String(clientId)
+      c.airtable_id === String(clientId) ||
+      String(c.id) === String(clientId)
     );
+    
+    console.log('✅ Trouvé:', found?.nom || 'RIEN');
+    return found;
   };
   
   // Trouver un employé de façon flexible (ID peut être string ou number)
   const findEmployee = (employeeId) => {
     if (!employeeId) return null;
-    return employees.find(e => 
+    
+    // Debug
+    console.log('🔍 findEmployee cherche:', employeeId, 'type:', typeof employeeId);
+    console.log('👥 Employees disponibles:', employees.map(e => ({ id: e.id, airtable_id: e.airtable_id, nom: e.nom })));
+    
+    const found = employees.find(e => 
       e.id === employeeId || 
       e.id === String(employeeId) ||
       e.id === parseInt(employeeId) ||
       e.airtable_id === employeeId ||
-      e.airtable_id === String(employeeId)
+      e.airtable_id === String(employeeId) ||
+      String(e.id) === String(employeeId)
     );
+    
+    console.log('✅ Trouvé:', found?.nom || 'RIEN');
+    return found;
   };
   
   // Obtenir la couleur d'un employé de façon sécurisée
