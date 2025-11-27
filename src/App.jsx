@@ -4671,7 +4671,10 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
   const getClientMeasurementsData = (client) => {
     if (!client || !client.mesures.length) return [];
     
-    return client.mesures.map(m => ({
+    // Trier par date croissante (anciennes à gauche, récentes à droite)
+    const sortedMesures = [...client.mesures].sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    return sortedMesures.map(m => ({
       date: new Date(m.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }),
       taille: m.tour_taille,
       hanches: m.tour_hanches,
