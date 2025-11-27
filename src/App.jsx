@@ -5306,7 +5306,7 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
       seancesRestantes: forfaitInfo.seances,
       seancesTotal: forfaitInfo.seances,
       prochainRdv: null,
-      assignedTo: parseInt(newClientForm.assignedTo),
+      assignedTo: newClientForm.assignedTo,
       photos: [],
       mesures: [],
       notes: newClientForm.notes || '',
@@ -9333,7 +9333,7 @@ Vous aussi, transformez votre corps avec notre méthode G5 garantie !
                   <select 
                     className="form-input"
                     value={newClientForm.assignedTo}
-                    onChange={(e) => setNewClientForm(prev => ({ ...prev, assignedTo: parseInt(e.target.value) }))}
+                    onChange={(e) => setNewClientForm(prev => ({ ...prev, assignedTo: e.target.value }))}
                   >
                     {employees.filter(e => !e.isDirector).map(emp => (
                       <option key={emp.id} value={emp.id}>{emp.nom}</option>
