@@ -2945,6 +2945,9 @@ export default function SlimTouchApp() {
           paiements: Array.isArray(c.paiements) ? c.paiements : []
         }));
         
+        console.log('📋 CLIENTS CHARGÉS:', sanitizedClientes.map(c => ({ id: c.id, airtable_id: c.airtable_id, nom: c.nom })));
+        console.log('👥 EMPLOYEES CHARGÉS:', equipeData.map(e => ({ id: e.id, airtable_id: e.airtable_id, nom: e.nom })));
+        
         setClients(sanitizedClientes);
         setRdvs(rdvsData);
         setEmployees(equipeData.length > 0 ? equipeData : DEMO_EMPLOYEES); // Fallback sur démo si vide
