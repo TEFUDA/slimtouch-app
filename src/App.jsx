@@ -3064,7 +3064,7 @@ export default function SlimTouchApp() {
     };
     
     if (currentUser) loadData();
-  }, [currentUser]);
+  }, [currentUser?.email]); // Ne déclencher que sur changement d'email (login/logout)
   
   // Fonction pour rafraîchir les données manuellement
   const refreshData = async () => {
