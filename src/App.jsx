@@ -458,8 +458,8 @@ const DEMO_EMPLOYEES = [
     nom: 'Inès Gros-Flandre', 
     role: 'Directrice', 
     email: 'ines@slimtouch.fr', 
-    telephone: '06 XX XX XX XX',
-    password: 'inesamiens',
+    telephone: '33600000000',
+    password: 'ines2025',
     actif: true, 
     isDirector: true,
     dateEmbauche: '2025-01-01',
@@ -467,27 +467,40 @@ const DEMO_EMPLOYEES = [
   },
   { 
     id: 2, 
-    nom: 'Julie Martin', 
+    nom: 'Emma Dubois', 
     role: 'Praticienne', 
-    email: 'julie@slimtouch.fr',
-    telephone: '06 11 22 33 44', 
-    password: 'julie123',
+    email: 'emma@slimtouch.fr',
+    telephone: '33655667788', 
+    password: 'emma2025',
     actif: true, 
     isDirector: false,
-    dateEmbauche: '2025-03-15',
+    dateEmbauche: '2025-06-01',
     onboardingComplete: true,
     photo: null
   },
   { 
     id: 3, 
-    nom: 'Emma Dubois', 
+    nom: 'Sophie Leroy', 
     role: 'Praticienne', 
-    email: 'emma@slimtouch.fr',
-    telephone: '06 55 66 77 88', 
-    password: 'emma123',
+    email: 'sophie@slimtouch.fr',
+    telephone: '33677889900', 
+    password: 'sophie2025',
     actif: true, 
     isDirector: false,
-    dateEmbauche: '2025-06-01',
+    dateEmbauche: '2025-11-26',
+    onboardingComplete: false,
+    photo: null
+  },
+  { 
+    id: 4, 
+    nom: 'Loic Gros-Flandre', 
+    role: 'Praticienne', 
+    email: 'loicgrosflandredigital@gmail.com',
+    telephone: '33601059353', 
+    password: 'loic2025',
+    actif: true, 
+    isDirector: false,
+    dateEmbauche: '2025-11-26',
     onboardingComplete: false,
     photo: null
   },
@@ -2900,17 +2913,7 @@ function LoginPage({ onLogin, isDark, toggleTheme }) {
                 className="btn btn-ghost"
                 style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}
               >
-                👑 Directrice
-              </button>
-              <button 
-                onClick={() => {
-                  const user = DEMO_EMPLOYEES.find(emp => emp.email === 'julie@slimtouch.fr');
-                  if (user) onLogin(user);
-                }}
-                className="btn btn-ghost"
-                style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}
-              >
-                💆 Julie
+                👑 Inès
               </button>
               <button 
                 onClick={() => {
@@ -2921,6 +2924,26 @@ function LoginPage({ onLogin, isDark, toggleTheme }) {
                 style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}
               >
                 💆 Emma
+              </button>
+              <button 
+                onClick={() => {
+                  const user = DEMO_EMPLOYEES.find(emp => emp.email === 'sophie@slimtouch.fr');
+                  if (user) onLogin(user);
+                }}
+                className="btn btn-ghost"
+                style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}
+              >
+                💆 Sophie
+              </button>
+              <button 
+                onClick={() => {
+                  const user = DEMO_EMPLOYEES.find(emp => emp.email === 'loicgrosflandredigital@gmail.com');
+                  if (user) onLogin(user);
+                }}
+                className="btn btn-ghost"
+                style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}
+              >
+                💆 Loic
               </button>
             </div>
           </div>
@@ -3004,6 +3027,22 @@ export default function SlimTouchApp() {
         setParrainages(parrainagesData);
         setObjectives(objectifsData);
         setVentes(ventesData);
+        
+        // Mettre à jour currentUser avec les vraies données Airtable
+        if (currentUser && equipeData.length > 0) {
+          const airtableUser = equipeData.find(e => 
+            e.email === currentUser.email || 
+            e.nom === currentUser.nom
+          );
+          if (airtableUser) {
+            setCurrentUser(prev => ({
+              ...prev,
+              ...airtableUser,
+              isDirector: airtableUser.role === 'Directrice' || airtableUser.isDirector
+            }));
+            console.log('✅ Utilisateur synchronisé avec Airtable:', airtableUser.nom, airtableUser.id);
+          }
+        }
         
         console.log('✅ Toutes les données chargées !');
       } catch (error) {
