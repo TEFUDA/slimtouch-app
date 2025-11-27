@@ -2936,7 +2936,16 @@ export default function SlimTouchApp() {
           fetchVentes()
         ]);
         
-        setClients(clientesData);
+        // Sanitiser les données pour s'assurer que suivis est toujours un tableau
+        const sanitizedClientes = clientesData.map(c => ({
+          ...c,
+          suivis: Array.isArray(c.suivis) ? c.suivis : [],
+          mesures: Array.isArray(c.mesures) ? c.mesures : [],
+          photos: Array.isArray(c.photos) ? c.photos : [],
+          paiements: Array.isArray(c.paiements) ? c.paiements : []
+        }));
+        
+        setClients(sanitizedClientes);
         setRdvs(rdvsData);
         setEmployees(equipeData.length > 0 ? equipeData : DEMO_EMPLOYEES); // Fallback sur démo si vide
         setMessages(messagesData);
@@ -2984,7 +2993,16 @@ export default function SlimTouchApp() {
         fetchVentes()
       ]);
       
-      setClients(clientesData);
+      // Sanitiser les données pour s'assurer que suivis est toujours un tableau
+      const sanitizedClientes = clientesData.map(c => ({
+        ...c,
+        suivis: Array.isArray(c.suivis) ? c.suivis : [],
+        mesures: Array.isArray(c.mesures) ? c.mesures : [],
+        photos: Array.isArray(c.photos) ? c.photos : [],
+        paiements: Array.isArray(c.paiements) ? c.paiements : []
+      }));
+      
+      setClients(sanitizedClientes);
       setRdvs(rdvsData);
       if (equipeData.length > 0) setEmployees(equipeData);
       setMessages(messagesData);
