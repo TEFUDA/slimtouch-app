@@ -5681,8 +5681,6 @@ export default function SlimTouchApp() {
   const handleLogin = (user) => {
     setCurrentUser(user);
     setCurrentView('dashboard');
-    // Charger les notifications depuis Airtable au login
-    loadNotifications(user.id, user.isDirector);
   };
   
   const handleLogout = () => {
@@ -5698,12 +5696,74 @@ export default function SlimTouchApp() {
       const response = await fetch(`${API_BASE_URL}/app-get-notifications?userId=${userId}&isDirector=${isDirector}`);
       const data = await response.json();
       if (data.success && data.data) {
-        setNotifications(data.data);
+        return data.data;
       }
+      return [];
     } catch (error) {
       console.log('Notifications locales uniquement');
+      return [];
     }
   };
+
+  // Polling des notifications toutes les 30 secondes
+  useEffect(() => {
+    if (!currentUser) return;
+    
+    // Charger les notifications au démarrage
+    const fetchNotifications = async () => {
+      const newNotifs = await loadNotifications(currentUser.id, currentUser.isDirector);
+      
+      // Comparer avec les notifications actuelles pour détecter les nouvelles
+      setNotifications(prev => {
+        const prevIds = new Set(prev.map(n => n.id));
+        const newOnes = newNotifs.filter(n => !prevIds.has(n.id));
+        
+        // Si nouvelles notifications, afficher toast et jouer son
+        if (newOnes.length > 0) {
+          // Filtrer celles qui sont pour l'utilisateur courant
+          const forCurrentUser = newOnes.filter(n => 
+            currentUser.isDirector || 
+            n.forEmployee === currentUser.id || 
+            String(n.forEmployee) === String(currentUser.id) ||
+            !n.forEmployee
+          );
+          
+          if (forCurrentUser.length > 0) {
+            // Jouer le son
+            if (notificationSound) {
+              try { notificationSound.play(); } catch (e) { }
+            }
+            
+            // Afficher toast pour la première nouvelle notification
+            setToastNotification(forCurrentUser[0]);
+            setTimeout(() => setToastNotification(null), 5000);
+            
+            // Notification navigateur
+            if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+              forCurrentUser.forEach(notif => {
+                new Notification('SLIM TOUCH', {
+                  body: notif.message,
+                  icon: '/favicon.ico',
+                  tag: 'slimtouch-' + notif.id
+                });
+              });
+            }
+          }
+        }
+        
+        // Retourner les notifications fusionnées (nouvelles + existantes non dupliquées)
+        return newNotifs;
+      });
+    };
+    
+    // Fetch initial
+    fetchNotifications();
+    
+    // Polling toutes les 30 secondes
+    const interval = setInterval(fetchNotifications, 30000);
+    
+    return () => clearInterval(interval);
+  }, [currentUser?.id, currentUser?.isDirector]);
 
   // Filtrer les notifications pour l'utilisateur courant
   const userNotifications = currentUser?.isDirector 
