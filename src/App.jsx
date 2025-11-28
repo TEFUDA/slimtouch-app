@@ -12972,21 +12972,42 @@ export default function SlimTouchApp() {
               {(() => {
                 // Récupérer tous les produits disponibles
                 const allProducts = {};
-                Object.values(stocks).flat().forEach(s => {
-                  if (!allProducts[s.nom]) {
+                const stockValues = Object.values(stocks || {});
+                
+                // Si pas de stocks, afficher message
+                if (stockValues.length === 0 || stockValues.flat().length === 0) {
+                  return (
+                    <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                      Aucun produit en stock. Créez d'abord des produits.
+                    </div>
+                  );
+                }
+                
+                stockValues.flat().forEach(s => {
+                  if (s && s.nom && !allProducts[s.nom]) {
                     allProducts[s.nom] = { ...s, disponible: (s.stockTotal || 0) };
                   }
                 });
                 
                 // Calculer ce qui est déjà distribué
-                Object.values(stocks).flat().forEach(s => {
-                  if (allProducts[s.nom]) {
-                    allProducts[s.nom].distribue = (allProducts[s.nom].distribue || 0) + s.quantite;
+                stockValues.flat().forEach(s => {
+                  if (s && s.nom && allProducts[s.nom]) {
+                    allProducts[s.nom].distribue = (allProducts[s.nom].distribue || 0) + (s.quantite || 0);
                   }
                 });
                 
-                return Object.values(allProducts).map(product => {
-                  const disponible = product.disponible - (product.distribue || 0);
+                const productsList = Object.values(allProducts);
+                
+                if (productsList.length === 0) {
+                  return (
+                    <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                      Aucun produit disponible.
+                    </div>
+                  );
+                }
+                
+                return productsList.map(product => {
+                  const disponible = (product.disponible || 0) - (product.distribue || 0);
                   return (
                     <div key={product.nom} style={{ 
                       display: 'flex', 
@@ -13000,20 +13021,20 @@ export default function SlimTouchApp() {
                       <div>
                         <strong>{product.nom}</strong>
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                          Disponible : {disponible} {product.unite}
+                          Disponible : {disponible} {product.unite || 'unités'}
                         </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <input 
                           type="number" 
                           min="0"
-                          max={disponible}
+                          max={Math.max(0, disponible)}
                           defaultValue="0"
                           className="form-input"
                           style={{ width: '70px', textAlign: 'center' }}
                           id={`distribute-${product.nom.replace(/\s/g, '-')}`}
                         />
-                        <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{product.unite}</span>
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{product.unite || 'unités'}</span>
                       </div>
                     </div>
                   );
@@ -13022,49 +13043,81 @@ export default function SlimTouchApp() {
             </div>
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => setShowModal(null)}>Annuler</button>
-              <button className="btn btn-primary" onClick={() => {
+              <button className="btn btn-primary" onClick={async () => {
                 const employee = showModal.employee;
+                const empId = employee.airtable_id || employee.id;
                 
                 // Récupérer tous les produits
                 const allProducts = {};
-                Object.values(stocks).flat().forEach(s => {
-                  if (!allProducts[s.nom]) allProducts[s.nom] = s;
+                const stockValues = Object.values(stocks || {});
+                stockValues.flat().forEach(s => {
+                  if (s && s.nom && !allProducts[s.nom]) allProducts[s.nom] = s;
                 });
                 
                 // Distribuer les quantités
-                setStocks(prev => {
-                  const updated = { ...prev };
-                  if (!updated[employee.id]) updated[employee.id] = [];
+                const productsToDistribute = [];
+                
+                Object.values(allProducts).forEach(product => {
+                  const inputId = `distribute-${product.nom.replace(/\s/g, '-')}`;
+                  const input = document.getElementById(inputId);
+                  const qty = parseInt(input?.value) || 0;
                   
-                  Object.values(allProducts).forEach(product => {
-                    const inputId = `distribute-${product.nom.replace(/\s/g, '-')}`;
-                    const input = document.getElementById(inputId);
-                    const qty = parseInt(input?.value) || 0;
+                  if (qty > 0) {
+                    productsToDistribute.push({ product, qty });
+                  }
+                });
+                
+                if (productsToDistribute.length === 0) {
+                  alert('Veuillez sélectionner au moins un produit');
+                  return;
+                }
+                
+                try {
+                  // Créer les stocks dans Airtable pour cet employé
+                  for (const { product, qty } of productsToDistribute) {
+                    await apiCreateStock({
+                      nom: product.nom,
+                      produit: product.nom,
+                      quantite: qty,
+                      seuilAlerte: product.seuil || 5,
+                      unite: product.unite || 'unités',
+                      prixUnitaire: product.prix || 0,
+                      employe: employee.nom,
+                      employeId: empId
+                    });
+                  }
+                  
+                  // Mettre à jour localement
+                  setStocks(prev => {
+                    const updated = { ...prev };
+                    if (!updated[empId]) updated[empId] = [];
                     
-                    if (qty > 0) {
-                      // Vérifier si l'employé a déjà ce produit
-                      const existing = updated[employee.id].find(s => s.nom === product.nom);
+                    productsToDistribute.forEach(({ product, qty }) => {
+                      const existing = updated[empId].find(s => s.nom === product.nom);
                       if (existing) {
                         existing.quantite += qty;
                       } else {
-                        updated[employee.id].push({
+                        updated[empId].push({
                           id: Date.now() + Math.random(),
                           nom: product.nom,
                           quantite: qty,
-                          stockTotal: product.stockTotal,
-                          unite: product.unite,
-                          seuil: product.seuil,
-                          prix: product.prix
+                          stockTotal: product.stockTotal || 0,
+                          unite: product.unite || 'unités',
+                          seuil: product.seuil || 5,
+                          prix: product.prix || 0
                         });
                       }
-                    }
+                    });
+                    
+                    return updated;
                   });
                   
-                  return updated;
-                });
-                
-                addNotification({ type: 'success', message: `Stock distribué à ${employee.nom}` });
-                setShowModal(null);
+                  addNotification({ type: 'success', message: `Stock distribué à ${employee.nom}` });
+                  setShowModal(null);
+                } catch (error) {
+                  console.error('Erreur distribution stock:', error);
+                  alert('Erreur lors de la distribution');
+                }
               }}>
                 <Check size={18} /> Distribuer
               </button>
