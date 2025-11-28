@@ -13179,25 +13179,50 @@ export default function SlimTouchApp() {
             </div>
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => setShowModal(null)}>Annuler</button>
-              <button className="btn btn-primary" onClick={() => {
+              <button className="btn btn-primary" onClick={async () => {
                 const oldNom = showModal.stock.nom;
                 const newNom = document.getElementById('edit-stock-nom').value;
                 const seuil = parseInt(document.getElementById('edit-stock-seuil').value) || 5;
                 const prix = parseFloat(document.getElementById('edit-stock-prix').value) || 0;
                 const unite = document.getElementById('edit-stock-unite').value;
                 
-                setStocks(prev => {
-                  const updated = { ...prev };
-                  Object.keys(updated).forEach(empId => {
-                    updated[empId] = updated[empId].map(s => 
-                      s.nom === oldNom ? { ...s, nom: newNom, seuil, prix, unite } : s
-                    );
+                try {
+                  // Mettre à jour tous les stocks avec ce nom dans Airtable
+                  const stocksToUpdate = [];
+                  Object.values(stocks || {}).flat().forEach(s => {
+                    if (s && s.nom === oldNom && s.airtable_id) {
+                      stocksToUpdate.push(s.airtable_id);
+                    }
                   });
-                  return updated;
-                });
-                
-                addNotification({ type: 'success', message: `Produit mis à jour` });
-                setShowModal(null);
+                  
+                  // Appeler l'API pour chaque stock
+                  for (const stockId of stocksToUpdate) {
+                    await apiUpdateStock(stockId, {
+                      nom: newNom,
+                      produit: newNom,
+                      seuilAlerte: seuil,
+                      prixUnitaire: prix,
+                      unite: unite
+                    });
+                  }
+                  
+                  // Mettre à jour localement
+                  setStocks(prev => {
+                    const updated = { ...prev };
+                    Object.keys(updated).forEach(empId => {
+                      updated[empId] = (updated[empId] || []).map(s => 
+                        s.nom === oldNom ? { ...s, nom: newNom, seuil, prix, unite } : s
+                      );
+                    });
+                    return updated;
+                  });
+                  
+                  addNotification({ type: 'success', message: `Produit "${newNom}" mis à jour` });
+                  setShowModal(null);
+                } catch (error) {
+                  console.error('Erreur mise à jour stock:', error);
+                  alert('Erreur lors de la mise à jour');
+                }
               }}>
                 <Save size={18} /> Enregistrer
               </button>
