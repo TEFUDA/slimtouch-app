@@ -5690,7 +5690,10 @@ export default function SlimTouchApp() {
     objectif: '',
     forfait: 'Sculptage Zones',
     assignedTo: 2,
-    notes: ''
+    notes: '',
+    certificatMedical: null, // Photo du certificat
+    certificatDate: '', // Date du certificat
+    dateConversion: null // Date de conversion découverte -> forfait
   });
   
   // Calcul de l'objectif suggéré basé sur le forfait et le poids initial
@@ -5724,6 +5727,33 @@ export default function SlimTouchApp() {
     return pertes[forfait] || '5-8 kg';
   };
   
+  // Vérifier si le certificat médical est valide (moins de 6 mois)
+  const isCertificatValid = (client) => {
+    if (!client?.certificatMedical || !client?.certificatDate) return false;
+    const certDate = new Date(client.certificatDate);
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    return certDate >= sixMonthsAgo;
+  };
+  
+  // Vérifier si la cliente peut avoir des séances (après découverte, certificat obligatoire)
+  const canHaveSession = (client) => {
+    // Si c'est un forfait découverte, pas besoin de certificat
+    if (client?.forfait === 'Découverte' || client?.forfait === 'Séance découverte') return true;
+    // Si cliente a déjà eu au moins 1 séance et pas de certificat valide -> bloquée
+    const nbSeancesEffectuees = (client?.seancesTotal || 0) - (client?.seancesRestantes || 0);
+    if (nbSeancesEffectuees >= 1 && !isCertificatValid(client)) return false;
+    return true;
+  };
+  
+  // Obtenir le statut du certificat
+  const getCertificatStatus = (client) => {
+    if (!client?.certificatMedical) return { status: 'missing', label: '⚠️ Certificat manquant', color: 'var(--danger)' };
+    if (!client?.certificatDate) return { status: 'nodate', label: '⚠️ Date manquante', color: 'var(--warning)' };
+    if (!isCertificatValid(client)) return { status: 'expired', label: '⚠️ Certificat expiré', color: 'var(--danger)' };
+    return { status: 'valid', label: '✅ Certificat valide', color: 'var(--success)' };
+  };
+  
   // Fonction pour créer une nouvelle cliente
   const handleCreateClient = async () => {
     if (!newClientForm.nom || !newClientForm.telephone) {
@@ -5753,7 +5783,10 @@ export default function SlimTouchApp() {
       notes: newClientForm.notes || '',
       suivis: [],
       paiements: [],
-      statut: 'prospect'
+      statut: 'prospect',
+      certificatMedical: newClientForm.certificatMedical || null,
+      certificatDate: newClientForm.certificatDate || null,
+      dateConversion: null
     };
     
     // Envoyer à Airtable
@@ -7003,6 +7036,75 @@ export default function SlimTouchApp() {
                   </button>
                 </div>
               </div>
+              
+              {/* Alerte Certificat Médical */}
+              {(() => {
+                const certStatus = getCertificatStatus(selectedClient);
+                const blocked = !canHaveSession(selectedClient);
+                
+                if (blocked || certStatus.status !== 'valid') {
+                  return (
+                    <div style={{ 
+                      marginBottom: '1.5rem', 
+                      padding: '1rem', 
+                      background: blocked ? 'rgba(239, 68, 68, 0.1)' : 'rgba(251, 191, 36, 0.1)',
+                      border: `1px solid ${blocked ? 'var(--danger)' : 'var(--warning)'}`,
+                      borderRadius: '12px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: blocked ? '0.75rem' : '0' }}>
+                        <AlertTriangle size={24} style={{ color: blocked ? 'var(--danger)' : 'var(--warning)' }} />
+                        <div>
+                          <div style={{ fontWeight: '600', color: blocked ? 'var(--danger)' : 'var(--warning)' }}>
+                            {blocked ? '🚫 Séances bloquées - Certificat médical requis' : certStatus.label}
+                          </div>
+                          {blocked && (
+                            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                              Après la séance découverte, un certificat médical de moins de 6 mois est obligatoire.
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      {blocked && (
+                        <button 
+                          className="btn btn-primary btn-sm"
+                          onClick={() => setShowModal({ type: 'uploadCertificat', client: selectedClient })}
+                        >
+                          <Upload size={16} /> Ajouter le certificat médical
+                        </button>
+                      )}
+                    </div>
+                  );
+                }
+                
+                // Certificat valide - afficher en vert
+                return (
+                  <div style={{ 
+                    marginBottom: '1.5rem', 
+                    padding: '0.75rem 1rem', 
+                    background: 'rgba(34, 197, 94, 0.1)',
+                    border: '1px solid var(--success)',
+                    borderRadius: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '0.5rem'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <CheckCircle size={18} style={{ color: 'var(--success)' }} />
+                      <span style={{ color: 'var(--success)', fontWeight: '500' }}>
+                        Certificat médical valide jusqu'au {new Date(new Date(selectedClient.certificatDate).setMonth(new Date(selectedClient.certificatDate).getMonth() + 6)).toLocaleDateString('fr-FR')}
+                      </span>
+                    </div>
+                    <button 
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => setShowModal({ type: 'viewCertificat', client: selectedClient })}
+                    >
+                      <Eye size={14} /> Voir
+                    </button>
+                  </div>
+                );
+              })()}
               
               {/* Progress cards */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
@@ -9604,7 +9706,7 @@ export default function SlimTouchApp() {
                           <div className="progress-fill" style={{ width: `${kilosProgress}%`, background: kilosProgress >= 100 ? 'var(--success)' : colors.border }} />
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                          <span>{kilosProgress >= 100 ? '✅ Objectif atteint !' : `${(obj.objectifKilos - obj.kilosActuels).toFixed(1)} kg restants`}</span>
+                          <span>{kilosProgress >= 100 ? '✅ Objectif atteint !' : `${((obj.objectifKilos || 0) - (obj.kilosActuels || 0)).toFixed(1)} kg restants`}</span>
                           <span style={{ color: 'var(--accent)' }}>Prime: {obj.primeKilos || 0}€</span>
                         </div>
                       </div>
@@ -9621,7 +9723,7 @@ export default function SlimTouchApp() {
                           <div className="progress-fill" style={{ width: `${satisfactionProgress}%`, background: satisfactionProgress >= 100 ? 'var(--success)' : colors.border }} />
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                          <span>{satisfactionProgress >= 100 ? '✅ Objectif atteint !' : `${(obj.objectifSatisfaction - obj.satisfactionActuelle).toFixed(1)} pts restants`}</span>
+                          <span>{satisfactionProgress >= 100 ? '✅ Objectif atteint !' : `${((obj.objectifSatisfaction || 0) - (obj.satisfactionActuelle || 0)).toFixed(1)} pts restants`}</span>
                           <span style={{ color: 'var(--accent)' }}>Prime: {obj.primeSatisfaction || 0}€</span>
                         </div>
                       </div>
@@ -11394,6 +11496,167 @@ export default function SlimTouchApp() {
                 setShowModal(null);
               }}>
                 <Save size={18} /> Enregistrer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Upload Certificat Médical */}
+      {showModal?.type === 'uploadCertificat' && (
+        <div className="modal-overlay" onClick={() => setShowModal(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">📄 Certificat médical - {showModal.client?.nom}</h3>
+              <button className="btn btn-ghost" onClick={() => setShowModal(null)}><X size={20} /></button>
+            </div>
+            <div className="modal-body">
+              <div style={{ 
+                padding: '1rem', 
+                background: 'rgba(251, 191, 36, 0.1)', 
+                border: '1px solid var(--warning)', 
+                borderRadius: '8px',
+                marginBottom: '1.5rem'
+              }}>
+                <strong style={{ color: 'var(--warning)' }}>⚠️ Important</strong>
+                <p style={{ fontSize: '0.9rem', margin: '0.5rem 0 0 0', color: 'var(--text-muted)' }}>
+                  Le certificat médical est obligatoire après la séance découverte. Il doit dater de moins de 6 mois et autoriser la pratique du massage G5.
+                </p>
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label">Date du certificat *</label>
+                <input 
+                  type="date" 
+                  className="form-input" 
+                  id="certificat-date"
+                  max={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label">Photo du certificat *</label>
+                <div style={{ 
+                  border: '2px dashed var(--border)', 
+                  borderRadius: '12px', 
+                  padding: '2rem', 
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                  background: 'var(--bg)'
+                }}
+                onClick={() => document.getElementById('certificat-photo-input')?.click()}
+                >
+                  <input 
+                    type="file" 
+                    id="certificat-photo-input" 
+                    accept="image/*" 
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          document.getElementById('certificat-preview').src = reader.result;
+                          document.getElementById('certificat-preview').style.display = 'block';
+                          document.getElementById('certificat-placeholder').style.display = 'none';
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  <div id="certificat-placeholder">
+                    <Camera size={48} style={{ color: 'var(--text-muted)', marginBottom: '0.5rem' }} />
+                    <p style={{ color: 'var(--text-muted)', margin: 0 }}>Cliquez pour prendre une photo ou sélectionner un fichier</p>
+                  </div>
+                  <img 
+                    id="certificat-preview" 
+                    style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px', display: 'none' }} 
+                    alt="Aperçu certificat"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setShowModal(null)}>Annuler</button>
+              <button className="btn btn-primary" onClick={async () => {
+                const dateInput = document.getElementById('certificat-date')?.value;
+                const photoPreview = document.getElementById('certificat-preview')?.src;
+                
+                if (!dateInput) {
+                  alert('Veuillez indiquer la date du certificat');
+                  return;
+                }
+                if (!photoPreview || photoPreview === '') {
+                  alert('Veuillez ajouter la photo du certificat');
+                  return;
+                }
+                
+                // Mettre à jour la cliente
+                const updatedClient = {
+                  ...showModal.client,
+                  certificatMedical: photoPreview,
+                  certificatDate: dateInput
+                };
+                
+                setClients(prev => prev.map(c => c.id === showModal.client.id ? updatedClient : c));
+                if (selectedClient?.id === showModal.client.id) {
+                  setSelectedClient(updatedClient);
+                }
+                
+                // Sauvegarder dans Airtable
+                try {
+                  await fetch(`${API_BASE_URL}/app-update-client`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      id: showModal.client.airtable_id || showModal.client.id,
+                      CertificatMedical: photoPreview,
+                      CertificatDate: dateInput
+                    })
+                  });
+                } catch (e) {
+                  console.error('Erreur sauvegarde certificat:', e);
+                }
+                
+                addNotification({ type: 'success', message: `Certificat médical ajouté pour ${showModal.client.nom}` });
+                setShowModal(null);
+              }}>
+                <Save size={18} /> Enregistrer le certificat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Voir Certificat Médical */}
+      {showModal?.type === 'viewCertificat' && (
+        <div className="modal-overlay" onClick={() => setShowModal(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">📄 Certificat médical - {showModal.client?.nom}</h3>
+              <button className="btn btn-ghost" onClick={() => setShowModal(null)}><X size={20} /></button>
+            </div>
+            <div className="modal-body">
+              <div style={{ marginBottom: '1rem' }}>
+                <strong>Date du certificat :</strong> {new Date(showModal.client?.certificatDate).toLocaleDateString('fr-FR')}
+                <br />
+                <strong>Valide jusqu'au :</strong> {new Date(new Date(showModal.client?.certificatDate).setMonth(new Date(showModal.client?.certificatDate).getMonth() + 6)).toLocaleDateString('fr-FR')}
+              </div>
+              {showModal.client?.certificatMedical && (
+                <img 
+                  src={showModal.client.certificatMedical} 
+                  alt="Certificat médical"
+                  style={{ width: '100%', borderRadius: '8px' }}
+                />
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setShowModal(null)}>Fermer</button>
+              <button 
+                className="btn btn-primary"
+                onClick={() => setShowModal({ type: 'uploadCertificat', client: showModal.client })}
+              >
+                <Upload size={18} /> Mettre à jour
               </button>
             </div>
           </div>
