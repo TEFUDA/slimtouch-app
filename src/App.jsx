@@ -9461,8 +9461,18 @@ export default function SlimTouchApp() {
                   <div className="card-title"><Trophy size={18} /> Classement du mois</div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {employees.filter(e => !e.isDirector).map((emp, index) => {
-                    const obj = objectives.find(o => String(o.employeeId) === String(emp.id)) || {};
+                  {employees.filter(e => !e.isDirector)
+                    .map(emp => {
+                      const obj = objectives.find(o => String(o.employeeId) === String(emp.id)) || {};
+                      return { 
+                        ...emp, 
+                        obj,
+                        score: (obj.kilosActuels || 0) + (obj.satisfactionActuelle || 0) * 10 + (obj.conversionsActuelles || 0) * 5
+                      };
+                    })
+                    .sort((a, b) => b.score - a.score)
+                    .map((emp, index) => {
+                    const obj = emp.obj;
                     const colors = EMPLOYEE_COLORS[String(emp.id)] || getEmployeeColor(emp.id);
                     const totalProgress = (
                       (obj.objectifKilos > 0 ? Math.min(100, (obj.kilosActuels / obj.objectifKilos) * 100) : 0) +
@@ -9532,10 +9542,6 @@ export default function SlimTouchApp() {
                         </div>
                       </div>
                     );
-                  }).sort((a, b) => {
-                    const objA = objectives.find(o => String(o.employeeId) === String(a.key)) || {};
-                    const objB = objectives.find(o => String(o.employeeId) === String(b.key)) || {};
-                    return ((objB.kilosActuels || 0) + (objB.satisfactionActuelle || 0) * 10) - ((objA.kilosActuels || 0) + (objA.satisfactionActuelle || 0) * 10);
                   })}
                 </div>
               </div>
@@ -9582,7 +9588,7 @@ export default function SlimTouchApp() {
                           className="btn btn-secondary btn-sm"
                           onClick={() => setShowModal({ type: 'editObjectif', employee: emp, objectif: obj })}
                         >
-                          <Edit3 size={16} />
+                          <Edit size={16} />
                         </button>
                       </div>
                       
