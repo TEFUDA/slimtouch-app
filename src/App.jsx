@@ -7143,15 +7143,16 @@ export default function SlimTouchApp() {
                   <button className="btn btn-secondary" style={{ flex: 1, minWidth: '100px' }} onClick={() => {
                     setEditingClient(selectedClient);
                     setNewClientForm({
-                      nom: selectedClient.nom,
-                      telephone: selectedClient.telephone,
-                      email: selectedClient.email,
-                      adresse: selectedClient.adresse,
-                      poidsActuel: selectedClient.poidsActuel.toString(),
-                      objectif: selectedClient.objectif.toString(),
-                      forfait: selectedClient.forfait,
-                      assignedTo: selectedClient.assignedTo,
-                      notes: selectedClient.notes
+                      nom: selectedClient.nom || '',
+                      telephone: selectedClient.telephone || '',
+                      email: selectedClient.email || '',
+                      adresse: selectedClient.adresse || '',
+                      poidsInitial: (selectedClient.poidsInitial || '').toString(),
+                      poidsActuel: (selectedClient.poidsActuel || '').toString(),
+                      objectif: (selectedClient.objectif || '').toString(),
+                      forfait: selectedClient.forfait || 'Découverte',
+                      assignedTo: selectedClient.assignedTo || '',
+                      notes: selectedClient.notes || ''
                     });
                     setShowModal('editClient');
                   }}><Edit size={16} /> Modifier</button>
@@ -11430,6 +11431,22 @@ export default function SlimTouchApp() {
                 const seancesEffectuees = editingClient.seancesTotal - editingClient.seancesRestantes;
                 const newSeancesRestantes = Math.max(0, newSeancesTotal - seancesEffectuees);
                 
+                // Préparer les données mises à jour
+                const updatedData = {
+                  nom: newClientForm.nom,
+                  telephone: newClientForm.telephone,
+                  email: newClientForm.email,
+                  adresse: newClientForm.adresse,
+                  poidsInitial: parseInt(newClientForm.poidsInitial) || editingClient.poidsInitial,
+                  poidsActuel: parseInt(newClientForm.poidsActuel) || editingClient.poidsActuel,
+                  objectif: parseInt(newClientForm.objectif) || editingClient.objectif,
+                  forfait: newClientForm.forfait,
+                  seancesTotal: newSeancesTotal,
+                  seancesRestantes: newSeancesRestantes,
+                  assignedTo: newClientForm.assignedTo,
+                  notes: newClientForm.notes
+                };
+                
                 // Sauvegarder dans Airtable
                 try {
                   if (editingClient.airtable_id) {
@@ -11438,9 +11455,9 @@ export default function SlimTouchApp() {
                       telephone: newClientForm.telephone,
                       email: newClientForm.email,
                       adresse: newClientForm.adresse,
-                      poids_initial: parseInt(newClientForm.poidsInitial) || editingClient.poidsInitial,
-                      poids_actuel: parseInt(newClientForm.poidsActuel) || editingClient.poidsActuel,
-                      objectif_poids: parseInt(newClientForm.objectif) || editingClient.objectif,
+                      poids_initial: updatedData.poidsInitial,
+                      poids_actuel: updatedData.poidsActuel,
+                      objectif_poids: updatedData.objectif,
                       forfait: newClientForm.forfait,
                       assigned_to: newClientForm.assignedTo,
                       notes: newClientForm.notes
@@ -11451,25 +11468,18 @@ export default function SlimTouchApp() {
                   console.error('⚠️ Erreur modification cliente Airtable:', error);
                 }
                 
+                // Mettre à jour la liste des clients
                 setClients(prev => prev.map(c => 
                   c.id === editingClient.id 
-                    ? {
-                        ...c,
-                        nom: newClientForm.nom,
-                        telephone: newClientForm.telephone,
-                        email: newClientForm.email,
-                        adresse: newClientForm.adresse,
-                        poidsInitial: parseInt(newClientForm.poidsInitial) || c.poidsInitial,
-                        poidsActuel: parseInt(newClientForm.poidsActuel) || c.poidsActuel,
-                        objectif: parseInt(newClientForm.objectif) || c.objectif,
-                        forfait: newClientForm.forfait,
-                        seancesTotal: newSeancesTotal,
-                        seancesRestantes: newSeancesRestantes,
-                        assignedTo: newClientForm.assignedTo,
-                        notes: newClientForm.notes
-                      }
+                    ? { ...c, ...updatedData }
                     : c
                 ));
+                
+                // Mettre à jour selectedClient si c'est la même cliente
+                if (selectedClient && selectedClient.id === editingClient.id) {
+                  setSelectedClient(prev => ({ ...prev, ...updatedData }));
+                }
+                
                 setShowModal(null);
                 setEditingClient(null);
                 addNotification({
