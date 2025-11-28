@@ -8596,7 +8596,7 @@ export default function SlimTouchApp() {
                           onClick={() => {
                             if (confirm(`Supprimer ${employee.nom} de l'équipe ?`)) {
                               // Appel API pour supprimer
-                              fetch(`${API_BASE_URL}/app-delete-employee`, {
+                              fetch('https://n8n.srv819641.hstgr.cloud/webhook/app-delete-employe', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ id: employee.airtable_id || employee.id })
