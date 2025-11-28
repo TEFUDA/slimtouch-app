@@ -333,10 +333,59 @@ const fetchStocks = async () => {
   try {
     const response = await fetch(`${API_BASE_URL}/app-get-stocks`);
     const data = await response.json();
-    return data.data || [];
+    const stocksArray = data.data || [];
+    
+    // Grouper les stocks par employé
+    const stocksByEmployee = {};
+    stocksArray.forEach(stock => {
+      const empId = stock.employeId || stock.employe || 'global';
+      if (!stocksByEmployee[empId]) {
+        stocksByEmployee[empId] = [];
+      }
+      stocksByEmployee[empId].push({
+        id: stock.id,
+        nom: stock.nom || stock.produit,
+        quantite: stock.quantite || 0,
+        seuil: stock.seuilAlerte || stock.seuil || 5,
+        unite: stock.unite || 'unités',
+        prix: stock.prixUnitaire || stock.prix || 0,
+        stockTotal: stock.stockTotal || 0,
+        airtable_id: stock.id
+      });
+    });
+    
+    return stocksByEmployee;
   } catch (error) {
     console.error('Erreur fetchStocks:', error);
-    return [];
+    return {};
+  }
+};
+
+const apiCreateStock = async (stockData) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/app-create-stock`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(stockData),
+    });
+    return await response.json();
+  } catch (error) {
+    console.error('Erreur apiCreateStock:', error);
+    throw error;
+  }
+};
+
+const apiDeleteStock = async (stockId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/app-delete-stock`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: stockId }),
+    });
+    return await response.json();
+  } catch (error) {
+    console.error('Erreur apiDeleteStock:', error);
+    throw error;
   }
 };
 
@@ -3016,7 +3065,7 @@ export default function SlimTouchApp() {
   const [clients, setClients] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [rdvs, setRdvs] = useState([]);
-  const [stocks, setStocks] = useState([]);
+  const [stocks, setStocks] = useState({});
   const [employees, setEmployees] = useState([]);
   const [produits, setProduits] = useState([]);
   const [ventes, setVentes] = useState([]);
@@ -4034,12 +4083,15 @@ export default function SlimTouchApp() {
   
   // Modifier les stocks (utilisable par tous)
   const updateStock = async (employeeId, stockId, newQuantity) => {
+    // Trouver le stock
+    const stock = stocks[employeeId]?.find(s => s.id === stockId || s.airtable_id === stockId);
+    
     // Sauvegarder dans Airtable
     try {
-      const stock = stocks[employeeId]?.find(s => s.id === stockId);
-      if (stock?.airtable_id) {
-        await apiUpdateStock(stock.airtable_id, { quantite: newQuantity });
-        console.log('✅ Stock mis à jour dans Airtable');
+      const airtableId = stock?.airtable_id || stock?.id;
+      if (airtableId && typeof airtableId === 'string' && airtableId.startsWith('rec')) {
+        await apiUpdateStock(airtableId, { quantite: newQuantity });
+        console.log('✅ Stock mis à jour dans Airtable:', airtableId);
       }
     } catch (error) {
       console.error('⚠️ Erreur update stock Airtable:', error);
@@ -4047,13 +4099,12 @@ export default function SlimTouchApp() {
     
     setStocks(prev => ({
       ...prev,
-      [employeeId]: prev[employeeId].map(s => 
-        s.id === stockId ? { ...s, quantite: newQuantity } : s
+      [employeeId]: (prev[employeeId] || []).map(s => 
+        (s.id === stockId || s.airtable_id === stockId) ? { ...s, quantite: newQuantity } : s
       )
     }));
     
     // Alerter si stock bas
-    const stock = stocks[employeeId]?.find(s => s.id === stockId);
     if (stock && newQuantity <= stock.seuil) {
       addNotification({
         type: 'warning',
@@ -8720,102 +8771,280 @@ export default function SlimTouchApp() {
           {/* ============================================ */}
           {currentView === 'stocks' && (
             <div className="animate-in">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
                 <h3 style={{ fontFamily: 'Playfair Display, serif' }}>
-                  {currentUser.isDirector ? 'Stocks de l\'équipe' : 'Mes Stocks'}
+                  {currentUser.isDirector ? 'Gestion des Stocks' : 'Mes Stocks'}
                 </h3>
-                {stats.stocksAlerte > 0 && (
-                  <span className="badge badge-danger" style={{ padding: '8px 16px', fontSize: '0.9rem' }}>
-                    <AlertCircle size={16} style={{ marginRight: '6px' }} />
-                    {stats.stocksAlerte} produit(s) en alerte
-                  </span>
+                {currentUser.isDirector && (
+                  <button className="btn btn-primary" onClick={() => setShowModal('newStock')}>
+                    <Plus size={18} /> Nouveau produit
+                  </button>
                 )}
               </div>
               
               {currentUser.isDirector ? (
-                // Vue directrice : stocks de chaque employée
-                employees.filter(e => !e.isDirector).map(employee => {
-                  const empStocks = stocks[employee.id] || [];
-                  const empStats = getEmployeeStats(employee.id);
-                  
-                  return (
-                    <div key={employee.id} className="card" style={{ marginBottom: '1rem' }}>
-                      <div className="card-header">
-                        <div className="card-title">
-                          <div className="client-avatar" style={{ width: '36px', height: '36px', fontSize: '1rem', background: EMPLOYEE_COLORS[employee.id]?.bg, border: `2px solid ${EMPLOYEE_COLORS[employee.id]?.border}` }}>
-                            {employee.nom.charAt(0)}
-                          </div>
-                          <span>{employee.nom}</span>
-                          {empStats.stocksAlerte > 0 && (
-                            <span className="badge badge-danger" style={{ marginLeft: '10px' }}>
-                              {empStats.stocksAlerte} alerte(s)
-                            </span>
-                          )}
-                        </div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                          {empStats.clientsActifs} clientes • {empStats.rdvsAVenir} RDV à venir
-                        </div>
-                      </div>
-                      <div className="table-container" style={{ margin: '0 -0.75rem' }}>
-                        <table>
-                          <thead>
-                            <tr>
-                              <th>Produit</th>
-                              <th>Quantité</th>
-                              <th className="hide-mobile">Seuil</th>
-                              <th>Statut</th>
-                              <th className="hide-mobile">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {empStocks.map(stock => (
-                              <tr key={stock.id} style={{ background: stock.quantite <= stock.seuil ? 'rgba(248, 113, 113, 0.1)' : 'transparent' }}>
-                                <td><strong style={{ fontSize: '0.85rem' }}>{stock.nom}</strong></td>
-                                <td>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    <button 
-                                      className="btn btn-ghost" 
-                                      style={{ padding: '4px 8px', minWidth: '32px', minHeight: '32px' }}
-                                      onClick={() => updateStock(employee.id, stock.id, Math.max(0, stock.quantite - 1))}
-                                    >−</button>
-                                    <span style={{ minWidth: '30px', textAlign: 'center', fontWeight: '600' }}>{stock.quantite}</span>
-                                    <button 
-                                      className="btn btn-ghost" 
-                                      style={{ padding: '4px 8px', minWidth: '32px', minHeight: '32px' }}
-                                      onClick={() => updateStock(employee.id, stock.id, stock.quantite + 1)}
-                                    >+</button>
-                                  </div>
-                                </td>
-                                <td className="hide-mobile">{stock.seuil} {stock.unite}</td>
-                                <td>
-                                  <span className={`badge ${stock.quantite <= stock.seuil ? 'badge-danger' : 'badge-success'}`} style={{ fontSize: '0.7rem', padding: '3px 6px' }}>
-                                    {stock.quantite <= stock.seuil ? '⚠️' : '✓'}
-                                  </span>
-                                </td>
-                                <td className="hide-mobile">
-                                  <button 
-                                    className="btn btn-secondary btn-sm"
-                                    onClick={() => updateStock(employee.id, stock.id, stock.seuil + 5)}
-                                    title="Réapprovisionner"
-                                  >
-                                    <RefreshCw size={14} /> +5
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                <>
+                  {/* Section Stock Global */}
+                  <div className="card" style={{ marginBottom: '1.5rem' }}>
+                    <div className="card-header">
+                      <div className="card-title"><Package size={20} /> Stock Global (Inventaire Total)</div>
                     </div>
-                  );
-                })
+                    <div className="table-container">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Produit</th>
+                            <th>Stock Total</th>
+                            <th>Distribué</th>
+                            <th>Disponible</th>
+                            <th>Seuil</th>
+                            <th>Prix Unit.</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(() => {
+                            // Calculer le stock global à partir de tous les stocks employés
+                            const globalStocks = {};
+                            Object.values(stocks).flat().forEach(stock => {
+                              if (!globalStocks[stock.nom]) {
+                                globalStocks[stock.nom] = {
+                                  nom: stock.nom,
+                                  unite: stock.unite,
+                                  seuil: stock.seuil,
+                                  prix: stock.prix || 0,
+                                  totalDistribue: 0,
+                                  stockTotal: stock.stockTotal || 0,
+                                  id: stock.nom
+                                };
+                              }
+                              globalStocks[stock.nom].totalDistribue += stock.quantite;
+                            });
+                            
+                            // Si pas de stocks, afficher les produits par défaut
+                            const defaultProducts = ['Huile de massage', 'Serviettes', 'Gants', 'Produit nettoyage machine', 'Rouleau papier'];
+                            if (Object.keys(globalStocks).length === 0) {
+                              defaultProducts.forEach(p => {
+                                globalStocks[p] = { nom: p, unite: 'unités', seuil: 5, prix: 0, totalDistribue: 0, stockTotal: 0, id: p };
+                              });
+                            }
+                            
+                            return Object.values(globalStocks).map(stock => {
+                              const disponible = stock.stockTotal - stock.totalDistribue;
+                              const isLow = disponible <= stock.seuil;
+                              return (
+                                <tr key={stock.id} style={{ background: isLow ? 'rgba(248, 113, 113, 0.1)' : 'transparent' }}>
+                                  <td><strong>{stock.nom}</strong></td>
+                                  <td>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                      <button 
+                                        className="btn btn-ghost" 
+                                        style={{ padding: '4px 8px', minWidth: '28px', minHeight: '28px' }}
+                                        onClick={() => {
+                                          const newTotal = Math.max(stock.totalDistribue, (stock.stockTotal || 0) - 1);
+                                          // Mettre à jour le stock total
+                                          setStocks(prev => {
+                                            const updated = { ...prev };
+                                            Object.keys(updated).forEach(empId => {
+                                              updated[empId] = updated[empId].map(s => 
+                                                s.nom === stock.nom ? { ...s, stockTotal: newTotal } : s
+                                              );
+                                            });
+                                            return updated;
+                                          });
+                                        }}
+                                      >−</button>
+                                      <input 
+                                        type="number" 
+                                        value={stock.stockTotal || 0}
+                                        onChange={(e) => {
+                                          const newTotal = Math.max(stock.totalDistribue, parseInt(e.target.value) || 0);
+                                          setStocks(prev => {
+                                            const updated = { ...prev };
+                                            Object.keys(updated).forEach(empId => {
+                                              updated[empId] = updated[empId].map(s => 
+                                                s.nom === stock.nom ? { ...s, stockTotal: newTotal } : s
+                                              );
+                                            });
+                                            return updated;
+                                          });
+                                        }}
+                                        style={{ width: '60px', textAlign: 'center', padding: '4px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg)' }}
+                                      />
+                                      <button 
+                                        className="btn btn-ghost" 
+                                        style={{ padding: '4px 8px', minWidth: '28px', minHeight: '28px' }}
+                                        onClick={() => {
+                                          const newTotal = (stock.stockTotal || 0) + 1;
+                                          setStocks(prev => {
+                                            const updated = { ...prev };
+                                            Object.keys(updated).forEach(empId => {
+                                              updated[empId] = updated[empId].map(s => 
+                                                s.nom === stock.nom ? { ...s, stockTotal: newTotal } : s
+                                              );
+                                            });
+                                            return updated;
+                                          });
+                                        }}
+                                      >+</button>
+                                      <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{stock.unite}</span>
+                                    </div>
+                                  </td>
+                                  <td style={{ color: 'var(--accent)', fontWeight: '600' }}>{stock.totalDistribue}</td>
+                                  <td>
+                                    <span style={{ 
+                                      color: disponible < 0 ? 'var(--danger)' : disponible <= stock.seuil ? 'var(--warning)' : 'var(--success)',
+                                      fontWeight: '600'
+                                    }}>
+                                      {disponible}
+                                    </span>
+                                  </td>
+                                  <td>{stock.seuil}</td>
+                                  <td>{stock.prix?.toFixed(2) || '0.00'}€</td>
+                                  <td>
+                                    <div style={{ display: 'flex', gap: '4px' }}>
+                                      <button 
+                                        className="btn btn-secondary btn-sm"
+                                        onClick={() => setShowModal({ type: 'editStock', stock })}
+                                        title="Modifier"
+                                      >
+                                        <Edit size={14} />
+                                      </button>
+                                      <button 
+                                        className="btn btn-danger btn-sm"
+                                        onClick={() => {
+                                          if (confirm(`Supprimer ${stock.nom} de l'inventaire ?`)) {
+                                            setStocks(prev => {
+                                              const updated = { ...prev };
+                                              Object.keys(updated).forEach(empId => {
+                                                updated[empId] = updated[empId].filter(s => s.nom !== stock.nom);
+                                              });
+                                              return updated;
+                                            });
+                                            addNotification({ type: 'success', message: `${stock.nom} supprimé` });
+                                          }
+                                        }}
+                                        title="Supprimer"
+                                      >
+                                        <Trash2 size={14} />
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            });
+                          })()}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  
+                  {/* Section Répartition par Employé */}
+                  <h4 style={{ marginBottom: '1rem', color: 'var(--text-muted)' }}>📦 Répartition par membre de l'équipe</h4>
+                  
+                  {[...employees.filter(e => !e.isDirector), currentUser].map(employee => {
+                    const empStocks = stocks[employee.id] || [];
+                    const alertCount = empStocks.filter(s => s.quantite <= s.seuil).length;
+                    const colors = EMPLOYEE_COLORS[employee.id] || { bg: 'var(--bg)', border: 'var(--border)', text: 'var(--text)' };
+                    
+                    return (
+                      <div key={employee.id} className="card" style={{ marginBottom: '1rem', borderLeft: `4px solid ${colors.border}` }}>
+                        <div className="card-header">
+                          <div className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ 
+                              width: '36px', height: '36px', borderRadius: '50%', 
+                              background: colors.bg, border: `2px solid ${colors.border}`,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontWeight: '600', color: colors.text
+                            }}>
+                              {employee.nom?.charAt(0)}
+                            </div>
+                            <span>{employee.nom} {employee.id === currentUser.id ? '(Moi)' : ''}</span>
+                            {alertCount > 0 && (
+                              <span className="badge badge-danger">{alertCount} alerte(s)</span>
+                            )}
+                          </div>
+                          <button 
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => setShowModal({ type: 'distributeStock', employee })}
+                          >
+                            <Plus size={14} /> Distribuer
+                          </button>
+                        </div>
+                        <div className="table-container" style={{ margin: '0' }}>
+                          <table>
+                            <thead>
+                              <tr>
+                                <th>Produit</th>
+                                <th>Quantité</th>
+                                <th>Seuil</th>
+                                <th>Statut</th>
+                                <th>Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {empStocks.length === 0 ? (
+                                <tr>
+                                  <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
+                                    Aucun stock assigné
+                                  </td>
+                                </tr>
+                              ) : empStocks.map(stock => (
+                                <tr key={stock.id} style={{ background: stock.quantite <= stock.seuil ? 'rgba(248, 113, 113, 0.1)' : 'transparent' }}>
+                                  <td><strong style={{ fontSize: '0.85rem' }}>{stock.nom}</strong></td>
+                                  <td>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                      <button 
+                                        className="btn btn-ghost" 
+                                        style={{ padding: '2px 6px', minWidth: '24px', minHeight: '24px', fontSize: '0.9rem' }}
+                                        onClick={() => updateStock(employee.id, stock.id, Math.max(0, stock.quantite - 1))}
+                                      >−</button>
+                                      <span style={{ minWidth: '25px', textAlign: 'center', fontWeight: '600' }}>{stock.quantite}</span>
+                                      <button 
+                                        className="btn btn-ghost" 
+                                        style={{ padding: '2px 6px', minWidth: '24px', minHeight: '24px', fontSize: '0.9rem' }}
+                                        onClick={() => updateStock(employee.id, stock.id, stock.quantite + 1)}
+                                      >+</button>
+                                      <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{stock.unite}</span>
+                                    </div>
+                                  </td>
+                                  <td style={{ fontSize: '0.85rem' }}>{stock.seuil}</td>
+                                  <td>
+                                    <span className={`badge ${stock.quantite <= stock.seuil ? 'badge-danger' : 'badge-success'}`} style={{ fontSize: '0.7rem', padding: '2px 6px' }}>
+                                      {stock.quantite <= stock.seuil ? '⚠️ Bas' : '✓ OK'}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <button 
+                                      className="btn btn-danger btn-sm"
+                                      style={{ padding: '4px 8px' }}
+                                      onClick={() => {
+                                        setStocks(prev => ({
+                                          ...prev,
+                                          [employee.id]: prev[employee.id].filter(s => s.id !== stock.id)
+                                        }));
+                                      }}
+                                      title="Retirer"
+                                    >
+                                      <Trash2 size={12} />
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
               ) : (
                 // Vue employée : ses propres stocks
                 <div className="card">
                   {(stocks[currentUser.id] || []).filter(s => s.quantite <= s.seuil).length > 0 && (
-                    <div className="stock-alert">
-                      <AlertCircle size={20} />
-                      <span>
+                    <div className="stock-alert" style={{ background: 'rgba(248, 113, 113, 0.1)', border: '1px solid var(--danger)', borderRadius: '12px', padding: '1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <AlertCircle size={20} style={{ color: 'var(--danger)' }} />
+                      <span style={{ color: 'var(--danger)' }}>
                         <strong>{(stocks[currentUser.id] || []).filter(s => s.quantite <= s.seuil).length} produit(s)</strong> nécessitent un réapprovisionnement
                       </span>
                     </div>
@@ -8826,14 +9055,19 @@ export default function SlimTouchApp() {
                       <thead>
                         <tr>
                           <th>Produit</th>
-                          <th>Quantité</th>
+                          <th>Ma Quantité</th>
                           <th>Seuil d'alerte</th>
-                          <th>Prix unitaire</th>
                           <th>Statut</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {(stocks[currentUser.id] || []).map(stock => (
+                        {(stocks[currentUser.id] || []).length === 0 ? (
+                          <tr>
+                            <td colSpan="4" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
+                              Aucun stock assigné. Contactez votre responsable.
+                            </td>
+                          </tr>
+                        ) : (stocks[currentUser.id] || []).map(stock => (
                           <tr key={stock.id} style={{ background: stock.quantite <= stock.seuil ? 'rgba(248, 113, 113, 0.1)' : 'transparent' }}>
                             <td><strong>{stock.nom}</strong></td>
                             <td>
@@ -8853,10 +9087,9 @@ export default function SlimTouchApp() {
                               </div>
                             </td>
                             <td>{stock.seuil} {stock.unite}</td>
-                            <td>{stock.prix.toFixed(2)}€</td>
                             <td>
                               <span className={`badge ${stock.quantite <= stock.seuil ? 'badge-danger' : 'badge-success'}`}>
-                                {stock.quantite <= stock.seuil ? '⚠️ Stock bas' : '✓ OK'}
+                                {stock.quantite <= stock.seuil ? '⚠️ Stock bas - Demander réappro' : '✓ OK'}
                               </span>
                             </td>
                           </tr>
@@ -12583,6 +12816,338 @@ export default function SlimTouchApp() {
                   </button>
                 );
               })()}
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Modal Nouveau Produit Stock */}
+      {showModal === 'newStock' && (
+        <div className="modal-overlay" onClick={() => setShowModal(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title"><Package size={20} /> Nouveau produit</h3>
+              <button className="btn btn-ghost" onClick={() => setShowModal(null)}><X size={20} /></button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label className="form-label">Nom du produit *</label>
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  placeholder="Ex: Huile de massage"
+                  id="new-stock-nom"
+                />
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Stock total initial</label>
+                  <input 
+                    type="number" 
+                    className="form-input" 
+                    placeholder="0"
+                    defaultValue="0"
+                    id="new-stock-total"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Unité</label>
+                  <select className="form-input" id="new-stock-unite">
+                    <option value="unités">unités</option>
+                    <option value="L">litres (L)</option>
+                    <option value="ml">millilitres (ml)</option>
+                    <option value="rouleaux">rouleaux</option>
+                    <option value="paires">paires</option>
+                    <option value="boîtes">boîtes</option>
+                  </select>
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Seuil d'alerte</label>
+                  <input 
+                    type="number" 
+                    className="form-input" 
+                    placeholder="5"
+                    defaultValue="5"
+                    id="new-stock-seuil"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Prix unitaire (€)</label>
+                  <input 
+                    type="number" 
+                    step="0.01"
+                    className="form-input" 
+                    placeholder="0.00"
+                    defaultValue="0"
+                    id="new-stock-prix"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setShowModal(null)}>Annuler</button>
+              <button className="btn btn-primary" onClick={async () => {
+                const nom = document.getElementById('new-stock-nom').value;
+                const stockTotal = parseInt(document.getElementById('new-stock-total').value) || 0;
+                const unite = document.getElementById('new-stock-unite').value;
+                const seuil = parseInt(document.getElementById('new-stock-seuil').value) || 5;
+                const prix = parseFloat(document.getElementById('new-stock-prix').value) || 0;
+                
+                if (!nom) {
+                  alert('Le nom du produit est obligatoire');
+                  return;
+                }
+                
+                try {
+                  // Créer le stock dans Airtable pour chaque employé
+                  const allMembers = [...employees.filter(e => !e.isDirector), currentUser];
+                  
+                  for (const emp of allMembers) {
+                    await apiCreateStock({
+                      nom: nom,
+                      produit: nom,
+                      quantite: 0,
+                      seuilAlerte: seuil,
+                      seuil: seuil,
+                      unite: unite,
+                      prixUnitaire: prix,
+                      prix: prix,
+                      employe: emp.nom,
+                      employeId: emp.airtable_id || emp.id
+                    });
+                  }
+                  
+                  // Mettre à jour localement
+                  const newStockItem = {
+                    id: Date.now(),
+                    nom,
+                    quantite: 0,
+                    stockTotal,
+                    unite,
+                    seuil,
+                    prix
+                  };
+                  
+                  setStocks(prev => {
+                    const updated = { ...prev };
+                    allMembers.forEach(emp => {
+                      const empId = emp.airtable_id || emp.id;
+                      if (!updated[empId]) updated[empId] = [];
+                      if (!updated[empId].find(s => s.nom === nom)) {
+                        updated[empId].push({ ...newStockItem, id: Date.now() + Math.random() });
+                      }
+                    });
+                    return updated;
+                  });
+                  
+                  addNotification({ type: 'success', message: `Produit "${nom}" ajouté à l'inventaire` });
+                  setShowModal(null);
+                } catch (error) {
+                  console.error('Erreur création stock:', error);
+                  alert('Erreur lors de la création du produit');
+                }
+              }}>
+                <Plus size={18} /> Ajouter le produit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Modal Distribuer Stock */}
+      {showModal?.type === 'distributeStock' && showModal.employee && (
+        <div className="modal-overlay" onClick={() => setShowModal(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title"><Package size={20} /> Distribuer à {showModal.employee.nom}</h3>
+              <button className="btn btn-ghost" onClick={() => setShowModal(null)}><X size={20} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>
+                Sélectionnez les produits et quantités à distribuer :
+              </p>
+              
+              {(() => {
+                // Récupérer tous les produits disponibles
+                const allProducts = {};
+                Object.values(stocks).flat().forEach(s => {
+                  if (!allProducts[s.nom]) {
+                    allProducts[s.nom] = { ...s, disponible: (s.stockTotal || 0) };
+                  }
+                });
+                
+                // Calculer ce qui est déjà distribué
+                Object.values(stocks).flat().forEach(s => {
+                  if (allProducts[s.nom]) {
+                    allProducts[s.nom].distribue = (allProducts[s.nom].distribue || 0) + s.quantite;
+                  }
+                });
+                
+                return Object.values(allProducts).map(product => {
+                  const disponible = product.disponible - (product.distribue || 0);
+                  return (
+                    <div key={product.nom} style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'space-between',
+                      padding: '0.75rem',
+                      background: 'var(--bg)',
+                      borderRadius: '8px',
+                      marginBottom: '0.5rem'
+                    }}>
+                      <div>
+                        <strong>{product.nom}</strong>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                          Disponible : {disponible} {product.unite}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input 
+                          type="number" 
+                          min="0"
+                          max={disponible}
+                          defaultValue="0"
+                          className="form-input"
+                          style={{ width: '70px', textAlign: 'center' }}
+                          id={`distribute-${product.nom.replace(/\s/g, '-')}`}
+                        />
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{product.unite}</span>
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setShowModal(null)}>Annuler</button>
+              <button className="btn btn-primary" onClick={() => {
+                const employee = showModal.employee;
+                
+                // Récupérer tous les produits
+                const allProducts = {};
+                Object.values(stocks).flat().forEach(s => {
+                  if (!allProducts[s.nom]) allProducts[s.nom] = s;
+                });
+                
+                // Distribuer les quantités
+                setStocks(prev => {
+                  const updated = { ...prev };
+                  if (!updated[employee.id]) updated[employee.id] = [];
+                  
+                  Object.values(allProducts).forEach(product => {
+                    const inputId = `distribute-${product.nom.replace(/\s/g, '-')}`;
+                    const input = document.getElementById(inputId);
+                    const qty = parseInt(input?.value) || 0;
+                    
+                    if (qty > 0) {
+                      // Vérifier si l'employé a déjà ce produit
+                      const existing = updated[employee.id].find(s => s.nom === product.nom);
+                      if (existing) {
+                        existing.quantite += qty;
+                      } else {
+                        updated[employee.id].push({
+                          id: Date.now() + Math.random(),
+                          nom: product.nom,
+                          quantite: qty,
+                          stockTotal: product.stockTotal,
+                          unite: product.unite,
+                          seuil: product.seuil,
+                          prix: product.prix
+                        });
+                      }
+                    }
+                  });
+                  
+                  return updated;
+                });
+                
+                addNotification({ type: 'success', message: `Stock distribué à ${employee.nom}` });
+                setShowModal(null);
+              }}>
+                <Check size={18} /> Distribuer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Modal Modifier Stock Global */}
+      {showModal?.type === 'editStock' && showModal.stock && (
+        <div className="modal-overlay" onClick={() => setShowModal(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title"><Edit size={20} /> Modifier {showModal.stock.nom}</h3>
+              <button className="btn btn-ghost" onClick={() => setShowModal(null)}><X size={20} /></button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label className="form-label">Nom du produit</label>
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  defaultValue={showModal.stock.nom}
+                  id="edit-stock-nom"
+                />
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Seuil d'alerte</label>
+                  <input 
+                    type="number" 
+                    className="form-input" 
+                    defaultValue={showModal.stock.seuil}
+                    id="edit-stock-seuil"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Prix unitaire (€)</label>
+                  <input 
+                    type="number" 
+                    step="0.01"
+                    className="form-input" 
+                    defaultValue={showModal.stock.prix || 0}
+                    id="edit-stock-prix"
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Unité</label>
+                <select className="form-input" id="edit-stock-unite" defaultValue={showModal.stock.unite}>
+                  <option value="unités">unités</option>
+                  <option value="L">litres (L)</option>
+                  <option value="ml">millilitres (ml)</option>
+                  <option value="rouleaux">rouleaux</option>
+                  <option value="paires">paires</option>
+                  <option value="boîtes">boîtes</option>
+                </select>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setShowModal(null)}>Annuler</button>
+              <button className="btn btn-primary" onClick={() => {
+                const oldNom = showModal.stock.nom;
+                const newNom = document.getElementById('edit-stock-nom').value;
+                const seuil = parseInt(document.getElementById('edit-stock-seuil').value) || 5;
+                const prix = parseFloat(document.getElementById('edit-stock-prix').value) || 0;
+                const unite = document.getElementById('edit-stock-unite').value;
+                
+                setStocks(prev => {
+                  const updated = { ...prev };
+                  Object.keys(updated).forEach(empId => {
+                    updated[empId] = updated[empId].map(s => 
+                      s.nom === oldNom ? { ...s, nom: newNom, seuil, prix, unite } : s
+                    );
+                  });
+                  return updated;
+                });
+                
+                addNotification({ type: 'success', message: `Produit mis à jour` });
+                setShowModal(null);
+              }}>
+                <Save size={18} /> Enregistrer
+              </button>
             </div>
           </div>
         </div>
