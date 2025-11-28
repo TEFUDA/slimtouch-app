@@ -3242,6 +3242,7 @@ export default function SlimTouchApp() {
   // State pour le modal paiement
   const [showPaiementModal, setShowPaiementModal] = useState(false);
   const [paiementForm, setPaiementForm] = useState({ clientId: '', montant: '', methode: 'CB' });
+  const [paiementFilter, setPaiementFilter] = useState('tous');
   
   // State pour le filtre des suivis
   const [suiviFilter, setSuiviFilter] = useState('all');
@@ -4786,21 +4787,67 @@ export default function SlimTouchApp() {
   // GESTION DES PAIEMENTS AVANCÉE
   // ============================================
   
-  // Obtenir tous les paiements avec infos clients
+  // Obtenir tous les paiements (depuis les ventes Stripe + paiements clients legacy)
   const getAllPaiements = () => {
     const allPaiements = [];
-    clients.forEach(client => {
-      client.paiements.forEach(p => {
+    
+    // 1. Ajouter les ventes depuis Stripe/Airtable
+    if (ventes && ventes.length > 0) {
+      ventes.forEach(v => {
+        // Trouver la cliente associée par email ou ID
+        const client = clients.find(c => 
+          c.email === v.clientEmail || 
+          c.id === v.clientId ||
+          c.airtable_id === v.clientId
+        );
+        
         allPaiements.push({
-          ...p,
-          clientId: client.id,
-          clientNom: client.nom,
-          clientEmail: client.email,
-          clientTelephone: client.telephone,
-          forfait: client.forfait
+          id: v.id || v.stripe_id,
+          stripe_id: v.stripe_id,
+          date: v.date,
+          montant: parseFloat(v.montant) || 0,
+          montantTotal: parseFloat(v.montantTotal) || parseFloat(v.montant) || 0,
+          statut: v.statut === 'succeeded' ? 'payé' : v.statut,
+          type: v.type,
+          methode: v.methode,
+          source: v.source,
+          clientId: client?.id || v.clientId,
+          clientNom: client?.nom || v.clientNom || 'Cliente inconnue',
+          clientEmail: v.clientEmail || client?.email,
+          forfait: v.forfait || client?.forfait || '',
+          description: v.description,
+          echeancesPaid: v.echeancesPaid || 1,
+          receipt_url: v.receipt_url,
+          employeeId: client?.assignedTo
         });
       });
+    }
+    
+    // 2. Ajouter les paiements legacy des clients (si pas déjà dans ventes)
+    clients.forEach(client => {
+      if (client.paiements && client.paiements.length > 0) {
+        client.paiements.forEach(p => {
+          // Éviter les doublons (vérifier si pas déjà ajouté via stripe_id)
+          const alreadyExists = allPaiements.some(ap => 
+            ap.stripe_id === p.stripe_id || 
+            (ap.date === p.date && ap.montant === p.montant && ap.clientId === client.id)
+          );
+          
+          if (!alreadyExists) {
+            allPaiements.push({
+              ...p,
+              clientId: client.id,
+              clientNom: client.nom,
+              clientEmail: client.email,
+              clientTelephone: client.telephone,
+              forfait: p.forfait || client.forfait,
+              employeeId: client.assignedTo
+            });
+          }
+        });
+      }
     });
+    
     return allPaiements.sort((a, b) => new Date(b.date) - new Date(a.date));
   };
   
@@ -4811,32 +4858,43 @@ export default function SlimTouchApp() {
     const thisMonth = today.getMonth();
     const thisYear = today.getFullYear();
     
+    // Helper pour vérifier si payé (gère les deux formats)
+    const isPaid = (p) => p.statut === 'payé' || p.statut === 'succeeded';
+    const isFailed = (p) => p.statut === 'echoue' || p.statut === 'failed';
+    const isPending = (p) => p.statut === 'en_attente' || p.statut === 'pending';
+    const isKlarna = (p) => p.type === 'klarna_3x' || p.type === 'klarna_4x';
+    
     // CA Total (paiements payés uniquement)
-    const caTotal = allPaiements.filter(p => p.statut === 'payé').reduce((acc, p) => acc + p.montant, 0);
+    const caTotal = allPaiements.filter(isPaid).reduce((acc, p) => acc + (parseFloat(p.montant) || 0), 0);
     
     // CA ce mois
     const caMois = allPaiements.filter(p => {
       const pDate = new Date(p.date);
-      return p.statut === 'payé' && pDate.getMonth() === thisMonth && pDate.getFullYear() === thisYear;
-    }).reduce((acc, p) => acc + p.montant, 0);
+      return isPaid(p) && pDate.getMonth() === thisMonth && pDate.getFullYear() === thisYear;
+    }).reduce((acc, p) => acc + (parseFloat(p.montant) || 0), 0);
     
-    // En attente
-    const enAttente = allPaiements.filter(p => p.statut === 'en_attente').reduce((acc, p) => acc + p.montant, 0);
+    // Klarna en cours (échéances restantes)
+    const klarnaEnCours = allPaiements.filter(p => isKlarna(p) && !isFailed(p))
+      .reduce((acc, p) => {
+        const totalEcheances = p.type === 'klarna_3x' ? 3 : 4;
+        const restant = (parseFloat(p.montantTotal) || 0) - (parseFloat(p.montant) || 0);
+        return acc + restant;
+      }, 0);
     
-    // En relance
-    const enRelance = allPaiements.filter(p => p.statut === 'relance').reduce((acc, p) => acc + p.montant, 0);
+    // Échoués
+    const echoues = allPaiements.filter(isFailed).reduce((acc, p) => acc + (parseFloat(p.montant) || 0), 0);
     
     // Nombre de paiements par statut
-    const nbPaye = allPaiements.filter(p => p.statut === 'payé').length;
-    const nbAttente = allPaiements.filter(p => p.statut === 'en_attente').length;
-    const nbRelance = allPaiements.filter(p => p.statut === 'relance').length;
+    const nbPaye = allPaiements.filter(isPaid).length;
+    const nbKlarna = allPaiements.filter(isKlarna).length;
+    const nbEchoue = allPaiements.filter(isFailed).length;
     
     // CA par praticienne
     const caParPraticienne = {};
     employees.filter(e => !e.isDirector).forEach(emp => {
       caParPraticienne[emp.id] = allPaiements
-        .filter(p => p.statut === 'payé' && p.employeeId === emp.id)
-        .reduce((acc, p) => acc + p.montant, 0);
+        .filter(p => isPaid(p) && p.employeeId === emp.id)
+        .reduce((acc, p) => acc + (parseFloat(p.montant) || 0), 0);
     });
     
     // CA par mois (6 derniers mois)
@@ -4846,22 +4904,22 @@ export default function SlimTouchApp() {
       const month = date.toLocaleDateString('fr-FR', { month: 'short' });
       const ca = allPaiements.filter(p => {
         const pDate = new Date(p.date);
-        return p.statut === 'payé' && pDate.getMonth() === date.getMonth() && pDate.getFullYear() === date.getFullYear();
-      }).reduce((acc, p) => acc + p.montant, 0);
+        return isPaid(p) && pDate.getMonth() === date.getMonth() && pDate.getFullYear() === date.getFullYear();
+      }).reduce((acc, p) => acc + (parseFloat(p.montant) || 0), 0);
       caParMois.push({ mois: month, ca, objectif: 3000 });
     }
     
     return {
       caTotal,
       caMois,
-      enAttente,
-      enRelance,
+      enAttente: klarnaEnCours, // Remplacé par Klarna en cours
+      enRelance: echoues, // Remplacé par échoués
       nbPaye,
-      nbAttente,
-      nbRelance,
+      nbAttente: nbKlarna, // Remplacé par nb Klarna
+      nbRelance: nbEchoue, // Remplacé par nb échoués
       caParPraticienne,
       caParMois,
-      tauxRecouvrement: Math.round((caTotal / (caTotal + enAttente + enRelance)) * 100) || 100
+      tauxRecouvrement: Math.round((caTotal / Math.max(caTotal + klarnaEnCours, 1)) * 100) || 100
     };
   };
   
@@ -9258,7 +9316,7 @@ export default function SlimTouchApp() {
           )}
 
           {/* ============================================ */}
-          {/* PAIEMENTS (Directrice) */}
+          {/* PAIEMENTS (Directrice) - Lecture seule Stripe */}
           {/* ============================================ */}
           {currentView === 'paiements' && currentUser.isDirector && (
             <div className="animate-in">
@@ -9269,7 +9327,7 @@ export default function SlimTouchApp() {
                     <div className="stat-icon green"><Euro size={24} /></div>
                   </div>
                   <div className="stat-value">{getPaiementStats().caTotal.toLocaleString()}€</div>
-                  <div className="stat-label">CA Total (payé)</div>
+                  <div className="stat-label">CA Total encaissé</div>
                 </div>
                 <div className="stat-card">
                   <div className="stat-header">
@@ -9278,19 +9336,19 @@ export default function SlimTouchApp() {
                   <div className="stat-value">{getPaiementStats().caMois.toLocaleString()}€</div>
                   <div className="stat-label">CA ce mois</div>
                 </div>
-                <div className="stat-card" style={{ background: 'rgba(251, 191, 36, 0.1)', border: '1px solid var(--warning)' }}>
+                <div className="stat-card" style={{ background: 'rgba(255, 179, 199, 0.1)', border: '1px solid #FFB3C7' }}>
                   <div className="stat-header">
-                    <div className="stat-icon" style={{ color: 'var(--warning)' }}><Clock size={24} /></div>
+                    <div className="stat-icon" style={{ color: '#FFB3C7' }}><Repeat size={24} /></div>
                   </div>
-                  <div className="stat-value" style={{ color: 'var(--warning)' }}>{getPaiementStats().enAttente.toLocaleString()}€</div>
-                  <div className="stat-label">En attente ({getPaiementStats().nbAttente})</div>
+                  <div className="stat-value" style={{ color: '#FFB3C7' }}>{getPaiementStats().enAttente.toLocaleString()}€</div>
+                  <div className="stat-label">Klarna en cours ({getPaiementStats().nbAttente})</div>
                 </div>
                 <div className="stat-card" style={{ background: 'rgba(248, 113, 113, 0.1)', border: '1px solid var(--danger)' }}>
                   <div className="stat-header">
                     <div className="stat-icon" style={{ color: 'var(--danger)' }}><AlertTriangle size={24} /></div>
                   </div>
                   <div className="stat-value" style={{ color: 'var(--danger)' }}>{getPaiementStats().enRelance.toLocaleString()}€</div>
-                  <div className="stat-label">En relance ({getPaiementStats().nbRelance})</div>
+                  <div className="stat-label">Échoués ({getPaiementStats().nbRelance})</div>
                 </div>
               </div>
               
@@ -9420,32 +9478,28 @@ export default function SlimTouchApp() {
                 </div>
               </div>
               
-              {/* Tableau des paiements amélioré */}
+              {/* Tableau des paiements - Lecture seule depuis Stripe */}
               <div className="card">
                 <div className="card-header" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '0.75rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    <div className="card-title" style={{ fontSize: '0.95rem' }}><CreditCard size={18} /> Paiements</div>
-                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      <button className="btn btn-secondary btn-sm" onClick={() => setShowModal('newPaiement3x')}>
-                        <Repeat size={14} /> <span className="desktop-only">Paiement</span> 3x
-                      </button>
-                      <button className="btn btn-primary btn-sm" onClick={() => {
-                        setPaiementForm({ clientId: '', montant: '', methode: 'CB' });
-                        setShowPaiementModal(true);
-                      }}>
-                        <Plus size={14} /> <span className="desktop-only">Simple</span>
-                      </button>
-                    </div>
+                    <div className="card-title" style={{ fontSize: '0.95rem' }}><CreditCard size={18} /> Paiements <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'normal' }}>(sync Stripe)</span></div>
+                    <button 
+                      className="btn btn-ghost btn-sm" 
+                      onClick={() => loadInitialData()}
+                      title="Actualiser les paiements"
+                    >
+                      <RefreshCw size={14} /> Actualiser
+                    </button>
                   </div>
                 </div>
                 
                 {/* Filtres scrollables */}
                 <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', marginBottom: '0.75rem' }}>
                   <div className="tabs" style={{ minWidth: 'max-content' }}>
-                    <div className="tab active">Tous</div>
-                    <div className="tab">✓ Payés</div>
-                    <div className="tab">⏳ Attente</div>
-                    <div className="tab">⚠️ Relance</div>
+                    <div className={`tab ${paiementFilter === 'tous' ? 'active' : ''}`} onClick={() => setPaiementFilter('tous')}>Tous</div>
+                    <div className={`tab ${paiementFilter === 'paye' ? 'active' : ''}`} onClick={() => setPaiementFilter('paye')}>✓ Payés</div>
+                    <div className={`tab ${paiementFilter === 'en_cours' ? 'active' : ''}`} onClick={() => setPaiementFilter('en_cours')}>🔄 Klarna en cours</div>
+                    <div className={`tab ${paiementFilter === 'echoue' ? 'active' : ''}`} onClick={() => setPaiementFilter('echoue')}>❌ Échoués</div>
                   </div>
                 </div>
                 
@@ -9453,127 +9507,153 @@ export default function SlimTouchApp() {
                   <table>
                     <thead>
                       <tr>
-                        <th className="hide-mobile">Facture</th>
                         <th className="hide-mobile">Date</th>
                         <th>Cliente</th>
-                        <th className="hide-mobile">Type</th>
+                        <th>Forfait</th>
                         <th>Montant</th>
-                        <th className="hide-mobile">Méthode</th>
+                        <th className="hide-mobile">Mode</th>
                         <th>Statut</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {getAllPaiements().map((p, i) => {
-                        const emp = employees.find(e => e.id === p.employeeId);
+                      {getAllPaiements()
+                        .filter(p => {
+                          if (paiementFilter === 'tous') return true;
+                          if (paiementFilter === 'paye') return p.statut === 'payé' || p.statut === 'succeeded';
+                          if (paiementFilter === 'en_cours') return p.type === 'klarna_3x' || p.type === 'klarna_4x';
+                          if (paiementFilter === 'echoue') return p.statut === 'echoue' || p.statut === 'failed';
+                          return true;
+                        })
+                        .map((p, i) => {
+                        const client = clients.find(c => c.id === p.clientId);
+                        
+                        // Déterminer le mode de paiement affiché
+                        const getModeLabel = () => {
+                          if (p.type === 'klarna_3x') return { label: 'Klarna 3x', color: '#FFB3C7', icon: '🔄' };
+                          if (p.type === 'klarna_4x') return { label: 'Klarna 4x', color: '#FFB3C7', icon: '🔄' };
+                          if (p.methode === 'tap_to_pay' || p.source === 'terminal') return { label: 'Tap to Pay', color: '#3b82f6', icon: '📱' };
+                          if (p.methode === 'card' || p.methode === 'CB') return { label: 'CB en ligne', color: '#22c55e', icon: '💳' };
+                          return { label: p.methode || 'CB', color: '#888', icon: '💳' };
+                        };
+                        const mode = getModeLabel();
+                        
+                        // Statut avec gestion Klarna
+                        const getStatutBadge = () => {
+                          if (p.statut === 'payé' || p.statut === 'succeeded') {
+                            return <span className="badge badge-success">✓ Payé</span>;
+                          }
+                          if (p.statut === 'echoue' || p.statut === 'failed') {
+                            return <span className="badge badge-danger">❌ Échoué</span>;
+                          }
+                          if (p.type === 'klarna_3x' || p.type === 'klarna_4x') {
+                            const echeancesPayees = p.echeancesPaid || 1;
+                            const totalEcheances = p.type === 'klarna_3x' ? 3 : 4;
+                            return (
+                              <span className="badge" style={{ background: 'rgba(255, 179, 199, 0.2)', color: '#FFB3C7', border: '1px solid #FFB3C7' }}>
+                                🔄 {echeancesPayees}/{totalEcheances} payé
+                              </span>
+                            );
+                          }
+                          if (p.statut === 'pending' || p.statut === 'en_attente') {
+                            return <span className="badge" style={{ background: 'rgba(251, 191, 36, 0.2)', color: 'var(--warning)', border: '1px solid var(--warning)' }}>⏳ En attente</span>;
+                          }
+                          return <span className="badge">{p.statut}</span>;
+                        };
+                        
                         return (
-                          <tr key={p.id || i} style={{ 
-                            background: p.statut === 'relance' ? 'rgba(248, 113, 113, 0.05)' : 
-                                        p.statut === 'en_attente' ? 'rgba(251, 191, 36, 0.05)' : 'transparent'
+                          <tr key={p.id || p.stripe_id || i} style={{ 
+                            background: (p.statut === 'echoue' || p.statut === 'failed') ? 'rgba(248, 113, 113, 0.05)' : 'transparent'
                           }}>
                             <td className="hide-mobile">
-                              <button 
-                                className="btn btn-ghost btn-sm"
-                                onClick={() => {
-                                  const client = clients.find(c => c.id === p.clientId);
-                                  if (client) generateFacturePDF(p, client);
-                                }}
-                                title="Télécharger la facture"
-                              >
-                                <FileText size={14} /> {p.factureNumero || 'N/A'}
-                              </button>
+                              <div style={{ fontSize: '0.85rem' }}>{new Date(p.date).toLocaleDateString('fr-FR')}</div>
+                              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                                {new Date(p.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                              </div>
                             </td>
-                            <td className="hide-mobile">{new Date(p.date).toLocaleDateString('fr-FR')}</td>
                             <td>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div 
+                                style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: client ? 'pointer' : 'default' }}
+                                onClick={() => client && setSelectedClient(client)}
+                              >
                                 <div className="client-avatar" style={{ width: '32px', height: '32px', fontSize: '0.85rem' }}>
-                                  {p.clientNom?.charAt(0)}
+                                  {p.clientNom?.charAt(0) || '?'}
                                 </div>
                                 <div>
-                                  <div>{p.clientNom}</div>
-                                  <div style={{ fontSize: '0.75rem', color: EMPLOYEE_COLORS[p.employeeId]?.text }}>
-                                    {emp?.nom.split(' ')[0]}
+                                  <div style={{ fontWeight: '500' }}>{p.clientNom || 'Cliente inconnue'}</div>
+                                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                                    {p.clientEmail || ''}
                                   </div>
                                 </div>
                               </div>
                             </td>
-                            <td className="hide-mobile">
-                              {p.type === '3x' ? (
-                                <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6', border: '1px solid #3b82f6' }}>
-                                  <Repeat size={12} /> {p.echeance}/{p.totalEcheances}
-                                </span>
-                              ) : (
-                                <span className="badge badge-gold">Complet</span>
-                              )}
+                            <td>
+                              <span className="badge badge-gold" style={{ fontSize: '0.7rem' }}>
+                                {p.forfait || p.description || 'Forfait'}
+                              </span>
                             </td>
                             <td>
                               <strong style={{ 
-                                color: p.statut === 'payé' ? 'var(--success)' : 
-                                       p.statut === 'relance' ? 'var(--danger)' : 'var(--warning)' 
+                                color: (p.statut === 'payé' || p.statut === 'succeeded') ? 'var(--success)' : 
+                                       (p.statut === 'echoue' || p.statut === 'failed') ? 'var(--danger)' : 'var(--text)' 
                               }}>
                                 {p.montant}€
                               </strong>
-                              {p.type === '3x' && (
+                              {(p.type === 'klarna_3x' || p.type === 'klarna_4x') && p.montantTotal && (
                                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
                                   sur {p.montantTotal}€
                                 </div>
                               )}
                             </td>
-                            <td className="hide-mobile">{p.methode}</td>
-                            <td>
-                              {p.statut === 'payé' && (
-                                <span className="badge badge-success">✓ Payé</span>
-                              )}
-                              {p.statut === 'en_attente' && (
-                                <span className="badge" style={{ background: 'rgba(251, 191, 36, 0.2)', color: 'var(--warning)', border: '1px solid var(--warning)' }}>
-                                  ⏳ En attente
-                                </span>
-                              )}
-                              {p.statut === 'relance' && (
-                                <span className="badge badge-danger">
-                                  ⚠️ Relance {p.relanceCount > 1 ? `(${p.relanceCount})` : ''}
-                                </span>
-                              )}
+                            <td className="hide-mobile">
+                              <span style={{ 
+                                display: 'inline-flex', 
+                                alignItems: 'center', 
+                                gap: '4px',
+                                padding: '4px 8px',
+                                borderRadius: '6px',
+                                background: `${mode.color}20`,
+                                color: mode.color,
+                                fontSize: '0.75rem',
+                                fontWeight: '500'
+                              }}>
+                                {mode.icon} {mode.label}
+                              </span>
                             </td>
+                            <td>{getStatutBadge()}</td>
                             <td>
                               <div style={{ display: 'flex', gap: '0.25rem' }}>
-                                {p.statut !== 'payé' && (
-                                  <>
-                                    <button 
-                                      className="btn btn-ghost btn-sm"
-                                      onClick={() => markPaiementAsPaid(p.clientId, p.id)}
-                                      title="Marquer comme payé"
-                                      style={{ color: 'var(--success)' }}
-                                    >
-                                      <CheckCircle size={16} />
-                                    </button>
-                                    {p.statut !== 'relance' && (
-                                      <button 
-                                        className="btn btn-ghost btn-sm"
-                                        onClick={() => sendRelance(p.clientId, p.id)}
-                                        title="Envoyer une relance"
-                                        style={{ color: 'var(--danger)' }}
-                                      >
-                                        <AlertTriangle size={16} />
-                                      </button>
-                                    )}
-                                  </>
-                                )}
                                 <button 
                                   className="btn btn-ghost btn-sm"
                                   onClick={() => {
-                                    const client = clients.find(c => c.id === p.clientId);
                                     if (client) generateFacturePDF(p, client);
+                                    else alert('Cliente non trouvée');
                                   }}
                                   title="Générer facture PDF"
                                 >
                                   <Receipt size={16} />
                                 </button>
+                                {p.stripe_id && (
+                                  <button 
+                                    className="btn btn-ghost btn-sm"
+                                    onClick={() => window.open(`https://dashboard.stripe.com/payments/${p.stripe_id}`, '_blank')}
+                                    title="Voir sur Stripe"
+                                  >
+                                    <ExternalLink size={16} />
+                                  </button>
+                                )}
                               </div>
                             </td>
                           </tr>
                         );
                       })}
+                      {getAllPaiements().length === 0 && (
+                        <tr>
+                          <td colSpan="7" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                            Aucun paiement enregistré. Les paiements Stripe apparaîtront ici automatiquement.
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
