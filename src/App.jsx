@@ -335,14 +335,15 @@ const fetchStocks = async () => {
     const data = await response.json();
     const stocksArray = data.data || [];
     
-    // Grouper les stocks par employé
+    // Grouper les stocks par nom d'employé (car c'est ce qu'on stocke dans Airtable)
     const stocksByEmployee = {};
     stocksArray.forEach(stock => {
-      const empId = stock.employeId || stock.employe || 'global';
-      if (!stocksByEmployee[empId]) {
-        stocksByEmployee[empId] = [];
+      // Utiliser le nom de l'employé comme clé
+      const empKey = stock.employe || 'global';
+      if (!stocksByEmployee[empKey]) {
+        stocksByEmployee[empKey] = [];
       }
-      stocksByEmployee[empId].push({
+      stocksByEmployee[empKey].push({
         id: stock.id,
         nom: stock.nom || stock.produit,
         quantite: stock.quantite || 0,
@@ -350,10 +351,12 @@ const fetchStocks = async () => {
         unite: stock.unite || 'unités',
         prix: stock.prixUnitaire || stock.prix || 0,
         stockTotal: stock.stockTotal || 0,
-        airtable_id: stock.id
+        airtable_id: stock.id,
+        employe: stock.employe
       });
     });
     
+    console.log('📦 Stocks chargés:', stocksByEmployee);
     return stocksByEmployee;
   } catch (error) {
     console.error('Erreur fetchStocks:', error);
@@ -4083,15 +4086,33 @@ export default function SlimTouchApp() {
   
   // Modifier les stocks (utilisable par tous)
   const updateStock = async (employeeId, stockId, newQuantity) => {
-    // Trouver le stock
-    const stock = stocks[employeeId]?.find(s => s.id === stockId || s.airtable_id === stockId);
+    // Trouver le stock dans tous les groupes (car l'indexation peut varier)
+    let stock = null;
+    let foundEmployeeKey = employeeId;
+    
+    // Chercher d'abord avec l'employeeId fourni
+    stock = stocks[employeeId]?.find(s => s.id === stockId || s.airtable_id === stockId);
+    
+    // Si pas trouvé, chercher dans tous les stocks
+    if (!stock) {
+      for (const [empKey, empStocks] of Object.entries(stocks || {})) {
+        const found = empStocks?.find(s => s.id === stockId || s.airtable_id === stockId);
+        if (found) {
+          stock = found;
+          foundEmployeeKey = empKey;
+          break;
+        }
+      }
+    }
     
     // Sauvegarder dans Airtable
     try {
-      const airtableId = stock?.airtable_id || stock?.id;
+      const airtableId = stock?.airtable_id || stockId;
       if (airtableId && typeof airtableId === 'string' && airtableId.startsWith('rec')) {
         await apiUpdateStock(airtableId, { quantite: newQuantity });
-        console.log('✅ Stock mis à jour dans Airtable:', airtableId);
+        console.log('✅ Stock mis à jour dans Airtable:', airtableId, 'Quantité:', newQuantity);
+      } else {
+        console.warn('⚠️ Pas d\'ID Airtable trouvé pour ce stock:', stockId);
       }
     } catch (error) {
       console.error('⚠️ Erreur update stock Airtable:', error);
@@ -4099,7 +4120,7 @@ export default function SlimTouchApp() {
     
     setStocks(prev => ({
       ...prev,
-      [employeeId]: (prev[employeeId] || []).map(s => 
+      [foundEmployeeKey]: (prev[foundEmployeeKey] || []).map(s => 
         (s.id === stockId || s.airtable_id === stockId) ? { ...s, quantite: newQuantity } : s
       )
     }));
@@ -8961,8 +8982,9 @@ export default function SlimTouchApp() {
                   <h4 style={{ marginBottom: '1rem', color: 'var(--text-muted)' }}>📦 Répartition par membre de l'équipe</h4>
                   
                   {[...employees.filter(e => !e.isDirector), currentUser].map(employee => {
-                    const empId = employee.airtable_id || employee.id;
-                    const empStocks = stocks[empId] || stocks[employee.id] || [];
+                    // Utiliser le nom de l'employé comme clé (c'est ce qu'on stocke dans Airtable)
+                    const empKey = employee.nom;
+                    const empStocks = stocks[empKey] || [];
                     const alertCount = empStocks.filter(s => s.quantite <= s.seuil).length;
                     const colors = EMPLOYEE_COLORS[employee.id] || { bg: 'var(--bg)', border: 'var(--border)', text: 'var(--text)' };
                     
@@ -9016,13 +9038,13 @@ export default function SlimTouchApp() {
                                       <button 
                                         className="btn btn-ghost" 
                                         style={{ padding: '2px 6px', minWidth: '24px', minHeight: '24px', fontSize: '0.9rem' }}
-                                        onClick={() => updateStock(empId, stock.airtable_id || stock.id, Math.max(0, stock.quantite - 1))}
+                                        onClick={() => updateStock(empKey, stock.airtable_id || stock.id, Math.max(0, stock.quantite - 1))}
                                       >−</button>
                                       <span style={{ minWidth: '25px', textAlign: 'center', fontWeight: '600' }}>{stock.quantite}</span>
                                       <button 
                                         className="btn btn-ghost" 
                                         style={{ padding: '2px 6px', minWidth: '24px', minHeight: '24px', fontSize: '0.9rem' }}
-                                        onClick={() => updateStock(empId, stock.airtable_id || stock.id, stock.quantite + 1)}
+                                        onClick={() => updateStock(empKey, stock.airtable_id || stock.id, stock.quantite + 1)}
                                       >+</button>
                                       <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{stock.unite}</span>
                                     </div>
@@ -9044,7 +9066,7 @@ export default function SlimTouchApp() {
                                           }
                                           setStocks(prev => ({
                                             ...prev,
-                                            [empId]: (prev[empId] || []).filter(s => s.id !== stock.id && s.airtable_id !== stock.airtable_id)
+                                            [empKey]: (prev[empKey] || []).filter(s => s.id !== stock.id && s.airtable_id !== stock.airtable_id)
                                           }));
                                           addNotification({ type: 'success', message: `${stock.nom} retiré` });
                                         } catch (error) {
@@ -13072,7 +13094,7 @@ export default function SlimTouchApp() {
               <button className="btn btn-secondary" onClick={() => setShowModal(null)}>Annuler</button>
               <button className="btn btn-primary" onClick={async () => {
                 const employee = showModal.employee;
-                const empId = employee.airtable_id || employee.id;
+                const empKey = employee.nom; // Utiliser le nom comme clé
                 
                 // Récupérer tous les produits
                 const allProducts = {};
@@ -13109,29 +13131,29 @@ export default function SlimTouchApp() {
                       seuilAlerte: product.seuil || 5,
                       unite: product.unite || 'unités',
                       prixUnitaire: product.prix || 0,
-                      employe: employee.nom,
-                      employeId: empId
+                      employe: employee.nom // Utiliser le nom
                     });
                   }
                   
-                  // Mettre à jour localement
+                  // Mettre à jour localement avec le nom comme clé
                   setStocks(prev => {
                     const updated = { ...prev };
-                    if (!updated[empId]) updated[empId] = [];
+                    if (!updated[empKey]) updated[empKey] = [];
                     
                     productsToDistribute.forEach(({ product, qty }) => {
-                      const existing = updated[empId].find(s => s.nom === product.nom);
+                      const existing = updated[empKey].find(s => s.nom === product.nom);
                       if (existing) {
                         existing.quantite += qty;
                       } else {
-                        updated[empId].push({
+                        updated[empKey].push({
                           id: Date.now() + Math.random(),
                           nom: product.nom,
                           quantite: qty,
                           stockTotal: product.stockTotal || 0,
                           unite: product.unite || 'unités',
                           seuil: product.seuil || 5,
-                          prix: product.prix || 0
+                          prix: product.prix || 0,
+                          employe: employee.nom
                         });
                       }
                     });
