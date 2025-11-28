@@ -3685,12 +3685,60 @@ export default function SlimTouchApp() {
   };
   
   // Fonction pour ajouter un suivi
+  // Générer un token unique pour sécuriser le lien satisfaction
+  const generateSatisfactionToken = (suiviId, clientId) => {
+    return btoa(`${suiviId}-${clientId}-${Date.now()}`).replace(/[^a-zA-Z0-9]/g, '').substring(0, 20);
+  };
+  
+  // Envoyer SMS de satisfaction après une séance
+  const sendSatisfactionSMS = async (client, suiviId) => {
+    if (!client?.telephone) {
+      console.warn('⚠️ Pas de téléphone pour envoyer le SMS satisfaction');
+      return;
+    }
+    
+    // Formater le téléphone (ajouter +33 si besoin)
+    let telephone = client.telephone.replace(/\s/g, '');
+    if (telephone.startsWith('0')) {
+      telephone = '+33' + telephone.substring(1);
+    }
+    
+    const token = generateSatisfactionToken(suiviId, client.id);
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/app-send-sms-satisfaction`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          telephone: telephone,
+          clientNom: client.nom?.split(' ')[0] || 'Cliente', // Prénom seulement
+          suiviId: suiviId,
+          token: token
+        })
+      });
+      
+      if (response.ok) {
+        console.log('✅ SMS satisfaction envoyé à', client.nom);
+        addNotification({ 
+          type: 'success', 
+          message: `📱 SMS satisfaction envoyé à ${client.nom}` 
+        });
+      } else {
+        console.error('❌ Erreur envoi SMS satisfaction:', await response.text());
+      }
+    } catch (error) {
+      console.error('❌ Erreur envoi SMS satisfaction:', error);
+      // Ne pas bloquer si le SMS échoue
+    }
+  };
+  
   const handleAddSuivi = async () => {
     if (!selectedRdvForSuivi) { alert('Veuillez sélectionner un RDV réalisé'); return; }
     if (!suiviForm.note.trim()) { alert('Veuillez entrer une note'); return; }
     
+    const suiviId = Date.now();
     const newSuivi = {
-      id: Date.now(),
+      id: suiviId,
       rdvId: selectedRdvForSuivi.id, // Lier au RDV
       date: selectedRdvForSuivi.date, // Date du RDV
       duree: selectedRdvForSuivi.duree || parseInt(suiviForm.duree), // Durée du RDV
@@ -3720,6 +3768,12 @@ export default function SlimTouchApp() {
     setShowSuiviModal(false);
     setSelectedRdvForSuivi(null);
     setSuiviForm({ date: new Date().toISOString().split('T')[0], duree: '45', note: '', rdvId: null });
+    
+    // 📱 Envoyer SMS de satisfaction automatiquement (après 2h délai simulé ici immédiatement)
+    // En production, tu peux ajouter un délai ou déclencher via n8n
+    setTimeout(() => {
+      sendSatisfactionSMS(selectedClient, suiviId);
+    }, 2000); // Délai de 2 secondes pour laisser le temps de voir la notification de suivi ajouté
   };
   
   // Fonction pour modifier un suivi
@@ -7351,6 +7405,57 @@ export default function SlimTouchApp() {
                               <span className="suivi-date">{new Date(suivi.date).toLocaleDateString('fr-FR')} • {suivi.duree} min</span>
                             </div>
                             <p className="suivi-note">{suivi.note}</p>
+                            
+                            {/* Affichage satisfaction si notée */}
+                            {suivi.satisfaction ? (
+                              <div style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '8px', 
+                                marginTop: '8px',
+                                padding: '6px 10px',
+                                background: 'rgba(34, 197, 94, 0.1)',
+                                borderRadius: '8px',
+                                fontSize: '0.85rem'
+                              }}>
+                                <span style={{ color: 'var(--success)' }}>
+                                  {'⭐'.repeat(suivi.satisfaction)}{'☆'.repeat(5 - suivi.satisfaction)}
+                                </span>
+                                <span style={{ color: 'var(--text-muted)' }}>
+                                  ({suivi.satisfaction}/5)
+                                </span>
+                                {suivi.commentaireSatisfaction && (
+                                  <span style={{ color: 'var(--text)', fontStyle: 'italic' }}>
+                                    "{suivi.commentaireSatisfaction}"
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <div style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '8px', 
+                                marginTop: '8px',
+                                fontSize: '0.8rem',
+                                color: 'var(--text-muted)'
+                              }}>
+                                <span>⏳ En attente de notation</span>
+                                <button
+                                  className="btn btn-ghost"
+                                  style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                                  title="Renvoyer SMS satisfaction"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (confirm('Renvoyer le SMS de satisfaction à la cliente ?')) {
+                                      sendSatisfactionSMS(selectedClient, suivi.id);
+                                    }
+                                  }}
+                                >
+                                  📱 Renvoyer SMS
+                                </button>
+                              </div>
+                            )}
+                            
                             <div style={{ position: 'absolute', top: '8px', right: '8px', display: 'flex', gap: '4px' }}>
                               <button 
                                 className="btn btn-ghost" 
