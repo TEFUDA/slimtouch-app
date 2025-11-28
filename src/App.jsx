@@ -35,12 +35,11 @@ const uploadImageToImgBB = async (base64Image) => {
       return result.data.url; // URL permanente de l'image
     } else {
       console.error('❌ Échec upload ImgBB:', result);
-      throw new Error('Échec upload ImgBB');
+      throw new Error('Échec upload ImgBB: ' + (result.error?.message || 'erreur inconnue'));
     }
   } catch (error) {
     console.error('❌ Erreur upload image:', error);
-    // En cas d'erreur, on stocke en local seulement
-    return null;
+    throw error; // Propager l'erreur au lieu de retourner null
   }
 };
 
@@ -11578,7 +11577,7 @@ export default function SlimTouchApp() {
             </div>
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => setShowModal(null)}>Annuler</button>
-              <button className="btn btn-primary" onClick={async () => {
+              <button className="btn btn-primary" id="btn-save-certificat" onClick={async () => {
                 const dateInput = document.getElementById('certificat-date')?.value;
                 const photoPreview = document.getElementById('certificat-preview')?.src;
                 
@@ -11591,35 +11590,52 @@ export default function SlimTouchApp() {
                   return;
                 }
                 
-                // Mettre à jour la cliente
-                const updatedClient = {
-                  ...showModal.client,
-                  certificatMedical: photoPreview,
-                  certificatDate: dateInput
-                };
+                // Désactiver le bouton pendant l'upload
+                const btn = document.getElementById('btn-save-certificat');
+                btn.disabled = true;
+                btn.innerHTML = '⏳ Upload en cours...';
                 
-                setClients(prev => prev.map(c => c.id === showModal.client.id ? updatedClient : c));
-                if (selectedClient?.id === showModal.client.id) {
-                  setSelectedClient(updatedClient);
-                }
-                
-                // Sauvegarder dans Airtable
                 try {
+                  // 1. Uploader l'image vers ImgBB (OBLIGATOIRE)
+                  console.log('📤 Début upload vers ImgBB...');
+                  const imageUrl = await uploadImageToImgBB(photoPreview);
+                  
+                  if (!imageUrl || imageUrl.startsWith('data:')) {
+                    throw new Error('Échec upload image vers ImgBB');
+                  }
+                  console.log('✅ Image uploadée:', imageUrl);
+                  
+                  // 2. Mettre à jour la cliente localement
+                  const updatedClient = {
+                    ...showModal.client,
+                    certificatMedical: imageUrl,
+                    certificatDate: dateInput
+                  };
+                  
+                  setClients(prev => prev.map(c => c.id === showModal.client.id ? updatedClient : c));
+                  if (selectedClient?.id === showModal.client.id) {
+                    setSelectedClient(updatedClient);
+                  }
+                  
+                  // 3. Sauvegarder dans Airtable
                   await fetch(`${API_BASE_URL}/app-update-client`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                       id: showModal.client.airtable_id || showModal.client.id,
-                      CertificatMedical: photoPreview,
+                      CertificatMedical: imageUrl,
                       CertificatDate: dateInput
                     })
                   });
+                  
+                  addNotification({ type: 'success', message: `Certificat médical ajouté pour ${showModal.client.nom}` });
+                  setShowModal(null);
                 } catch (e) {
                   console.error('Erreur sauvegarde certificat:', e);
+                  alert('Erreur lors de la sauvegarde. Veuillez réessayer.');
+                  btn.disabled = false;
+                  btn.innerHTML = '<Save size={18} /> Enregistrer le certificat';
                 }
-                
-                addNotification({ type: 'success', message: `Certificat médical ajouté pour ${showModal.client.nom}` });
-                setShowModal(null);
               }}>
                 <Save size={18} /> Enregistrer le certificat
               </button>
