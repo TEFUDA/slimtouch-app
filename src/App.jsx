@@ -8645,6 +8645,14 @@ export default function SlimTouchApp() {
                     <span><Phone size={16} style={{ display: 'inline', marginRight: '6px', color: 'var(--accent)' }} />{selectedEmployee.telephone}</span>
                     <span><Calendar size={16} style={{ display: 'inline', marginRight: '6px', color: 'var(--accent)' }} />Depuis le {new Date(selectedEmployee.dateEmbauche).toLocaleDateString('fr-FR')}</span>
                   </div>
+                  <div style={{ marginTop: '1rem', display: 'flex', gap: '0.75rem' }}>
+                    <button 
+                      className="btn btn-primary btn-sm"
+                      onClick={() => setShowModal({ type: 'editEmployee', employee: selectedEmployee })}
+                    >
+                      <Edit size={16} /> Modifier
+                    </button>
+                  </div>
                 </div>
               </div>
               
@@ -11226,6 +11234,122 @@ export default function SlimTouchApp() {
               <button className="btn btn-secondary" onClick={() => setShowModal(null)}>Annuler</button>
               <button className="btn btn-primary" onClick={handleCreateEmployee}>
                 <UserPlus size={18} /> Créer le compte
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Modifier Employée */}
+      {showModal?.type === 'editEmployee' && showModal.employee && (
+        <div className="modal-overlay" onClick={() => setShowModal(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Modifier {showModal.employee.nom}</h3>
+              <button className="btn btn-ghost" onClick={() => setShowModal(null)}><X size={20} /></button>
+            </div>
+            <div className="modal-body">
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Prénom *</label>
+                  <input 
+                    type="text" 
+                    className="form-input" 
+                    defaultValue={showModal.employee.prenom || showModal.employee.nom?.split(' ')[0] || ''}
+                    id="edit-employee-prenom"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Nom *</label>
+                  <input 
+                    type="text" 
+                    className="form-input" 
+                    defaultValue={showModal.employee.nomFamille || showModal.employee.nom?.split(' ').slice(1).join(' ') || ''}
+                    id="edit-employee-nom"
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Téléphone</label>
+                <input 
+                  type="tel" 
+                  className="form-input" 
+                  defaultValue={showModal.employee.telephone}
+                  id="edit-employee-telephone"
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Email *</label>
+                <input 
+                  type="email" 
+                  className="form-input" 
+                  defaultValue={showModal.employee.email}
+                  id="edit-employee-email"
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Statut</label>
+                <select 
+                  className="form-input"
+                  defaultValue={showModal.employee.actif ? 'actif' : 'inactif'}
+                  id="edit-employee-statut"
+                >
+                  <option value="actif">Active</option>
+                  <option value="inactif">Inactive</option>
+                </select>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setShowModal(null)}>Annuler</button>
+              <button className="btn btn-primary" onClick={() => {
+                const prenom = document.getElementById('edit-employee-prenom').value;
+                const nomFamille = document.getElementById('edit-employee-nom').value;
+                const telephone = document.getElementById('edit-employee-telephone').value;
+                const email = document.getElementById('edit-employee-email').value;
+                const actif = document.getElementById('edit-employee-statut').value === 'actif';
+                
+                if (!prenom || !nomFamille || !email) {
+                  alert('Prénom, nom et email sont obligatoires');
+                  return;
+                }
+                
+                const nomComplet = `${prenom} ${nomFamille}`;
+                
+                // Appel API pour modifier
+                fetch('https://n8n.srv819641.hstgr.cloud/webhook/app-update-employe', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ 
+                    id: showModal.employee.airtable_id || showModal.employee.id,
+                    prenom,
+                    nomFamille,
+                    telephone,
+                    email,
+                    actif
+                  })
+                })
+                .then(res => res.json())
+                .then(data => {
+                  if (data.success) {
+                    // Mettre à jour localement
+                    setEmployees(prev => prev.map(e => 
+                      e.id === showModal.employee.id 
+                        ? { ...e, nom: nomComplet, prenom, nomFamille, telephone, email, actif }
+                        : e
+                    ));
+                    setSelectedEmployee(prev => prev ? { ...prev, nom: nomComplet, prenom, nomFamille, telephone, email, actif } : null);
+                    addNotification({ type: 'success', message: `${nomComplet} mis(e) à jour !` });
+                    setShowModal(null);
+                  } else {
+                    alert('Erreur lors de la modification');
+                  }
+                })
+                .catch(err => {
+                  console.error('Erreur modification:', err);
+                  alert('Erreur lors de la modification');
+                });
+              }}>
+                <Save size={18} /> Enregistrer
               </button>
             </div>
           </div>
