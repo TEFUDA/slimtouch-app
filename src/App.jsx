@@ -8946,7 +8946,6 @@ export default function SlimTouchApp() {
                                       >
                                         <Trash2 size={14} />
                                       </button>
-                                      </button>
                                     </div>
                                   </td>
                                 </tr>
