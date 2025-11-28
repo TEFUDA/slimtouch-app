@@ -8591,7 +8591,32 @@ export default function SlimTouchApp() {
                         <button className="btn btn-secondary btn-sm" onClick={() => setShowModal({ type: 'assignClients', employee })}>
                           <Users size={16} />
                         </button>
-                        <button className="btn btn-danger btn-sm">
+                        <button 
+                          className="btn btn-danger btn-sm"
+                          onClick={() => {
+                            if (confirm(`Supprimer ${employee.nom} de l'équipe ?`)) {
+                              // Appel API pour supprimer
+                              fetch(`${API_BASE_URL}/app-delete-employee`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ id: employee.airtable_id || employee.id })
+                              })
+                              .then(res => res.json())
+                              .then(data => {
+                                if (data.success) {
+                                  setEmployees(prev => prev.filter(e => e.id !== employee.id));
+                                  addNotification({ type: 'success', message: `${employee.nom} supprimé(e) de l'équipe` });
+                                } else {
+                                  alert('Erreur lors de la suppression');
+                                }
+                              })
+                              .catch(err => {
+                                console.error('Erreur suppression:', err);
+                                alert('Erreur lors de la suppression');
+                              });
+                            }
+                          }}
+                        >
                           <Trash2 size={16} />
                         </button>
                       </div>
