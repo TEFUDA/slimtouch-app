@@ -6072,7 +6072,7 @@ export default function SlimTouchApp() {
         { id: 'parrainage', label: 'Parrainage', icon: Gift, badge: getStatsParrainage().recompensesEnAttente },
         { id: 'suivi', label: 'Suivis en Direct', icon: Camera },
         { id: 'messages', label: 'Messages', icon: MessageCircle, badge: getUnreadCount() },
-        { id: 'objectifs', label: 'Objectifs Équipe', icon: Trophy, section: 'Administration' },
+        // { id: 'objectifs', label: 'Objectifs Équipe', icon: Trophy, section: 'Administration' }, // Masqué temporairement
         { id: 'employees', label: 'Gestion Équipe', icon: User },
         { id: 'stocks', label: 'Stocks Équipe', icon: Package },
         { id: 'paiements', label: 'Paiements', icon: CreditCard },
@@ -6081,7 +6081,7 @@ export default function SlimTouchApp() {
     } else {
       return [
         ...baseItems,
-        { id: 'objectifs', label: 'Mes Objectifs', icon: Trophy, badge: getEmployeeObjectives(currentUser?.id).badges_earned.length },
+        // { id: 'objectifs', label: 'Mes Objectifs', icon: Trophy, badge: getEmployeeObjectives(currentUser?.id).badges_earned.length }, // Masqué temporairement
         { id: 'messages', label: 'Messages', icon: MessageCircle, badge: getUnreadCount() },
         { id: 'onboarding', label: 'Formation', icon: BookOpen, badge: ONBOARDING_VIDEOS.length - completedVideos.length, section: 'Ressources' },
       ];
