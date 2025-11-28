@@ -9442,22 +9442,42 @@ export default function SlimTouchApp() {
           {/* ============================================ */}
           {currentView === 'objectifs' && currentUser.isDirector && (
             <div className="animate-in">
+              {/* Header avec mois en cours */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+                <h2 style={{ fontFamily: 'Playfair Display, serif', margin: 0 }}>
+                  🎯 Objectifs {new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                </h2>
+                <button 
+                  className="btn btn-primary"
+                  onClick={() => setShowModal('defineObjectifs')}
+                >
+                  <Target size={18} /> Définir les objectifs
+                </button>
+              </div>
+
               {/* Leaderboard */}
               <div className="card" style={{ marginBottom: '1.5rem' }}>
                 <div className="card-header">
-                  <div className="card-title"><Trophy size={18} /> Classement de l'équipe</div>
+                  <div className="card-title"><Trophy size={18} /> Classement du mois</div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {getLeaderboard().map((emp, index) => {
-                    const obj = emp.objectives;
-                    const colors = EMPLOYEE_COLORS[emp.id] || { bg: 'rgba(201,169,98,0.2)', border: '#c9a962' };
+                  {employees.filter(e => !e.isDirector).map((emp, index) => {
+                    const obj = objectives.find(o => String(o.employeeId) === String(emp.id)) || {};
+                    const colors = EMPLOYEE_COLORS[String(emp.id)] || getEmployeeColor(emp.id);
+                    const totalProgress = (
+                      (obj.objectifKilos > 0 ? Math.min(100, (obj.kilosActuels / obj.objectifKilos) * 100) : 0) +
+                      (obj.objectifSatisfaction > 0 ? Math.min(100, (obj.satisfactionActuelle / obj.objectifSatisfaction) * 100) : 0) +
+                      (obj.objectifConversions > 0 ? Math.min(100, (obj.conversionsActuelles / obj.objectifConversions) * 100) : 0)
+                    ) / 3;
+                    const primeTotal = (obj.primeKilos || 0) + (obj.primeSatisfaction || 0) + (obj.primeConversions || 0);
+                    
                     return (
                       <div key={emp.id} style={{ 
                         display: 'flex', 
                         flexWrap: 'wrap',
                         alignItems: 'center', 
                         gap: '0.75rem',
-                        padding: '0.75rem 1rem',
+                        padding: '1rem',
                         background: index === 0 ? 'linear-gradient(135deg, rgba(201, 169, 98, 0.2), rgba(201, 169, 98, 0.05))' : 'var(--bg)',
                         border: `1px solid ${index === 0 ? 'var(--accent)' : 'var(--border)'}`,
                         borderRadius: '12px'
@@ -9477,135 +9497,164 @@ export default function SlimTouchApp() {
                         }}>
                           {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
                         </div>
-                        <div className="client-avatar" style={{ width: '40px', height: '40px', background: colors.bg, border: `2px solid ${colors.border}`, color: colors.text, flexShrink: 0 }}>
-                          {emp.nom.charAt(0)}
+                        <div 
+                          style={{ 
+                            width: '45px', 
+                            height: '45px', 
+                            borderRadius: '50%',
+                            background: colors.bg, 
+                            border: `2px solid ${colors.border}`, 
+                            color: colors.text,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: '600',
+                            flexShrink: 0
+                          }}
+                        >
+                          {emp.nom?.charAt(0)}
                         </div>
-                        <div style={{ flex: 1, minWidth: '120px' }}>
-                          <div style={{ fontWeight: '600', marginBottom: '0.25rem', fontSize: '0.9rem' }}>{emp.nom.split(' ')[0]}</div>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                            <span>{obj.monthly_seances_current} séances</span>
-                            <span>🔥 {obj.streak_days}j</span>
+                        <div style={{ flex: 1, minWidth: '150px' }}>
+                          <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>{emp.nom}</div>
+                          <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                            <span>⚖️ {obj.kilosActuels || 0}/{obj.objectifKilos || 0} kg</span>
+                            <span>⭐ {obj.satisfactionActuelle || 0}/{obj.objectifSatisfaction || 0}</span>
+                            <span>🎯 {obj.conversionsActuelles || 0}/{obj.objectifConversions || 0}</span>
                           </div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--accent)' }}>{emp.score} pts</div>
-                          <div style={{ display: 'flex', gap: '2px', justifyContent: 'flex-end' }}>
-                            {obj.badges_earned.slice(0, 3).map(badgeId => (
-                              <span key={badgeId} title={BADGES[badgeId]?.nom} style={{ fontSize: '0.9rem' }}>
-                                {BADGES[badgeId]?.icon}
-                              </span>
-                            ))}
-                            {obj.badges_earned.length > 3 && (
-                              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>+{obj.badges_earned.length - 3}</span>
-                            )}
+                          <div style={{ fontSize: '1.25rem', fontWeight: '700', color: totalProgress >= 100 ? 'var(--success)' : 'var(--accent)' }}>
+                            {totalProgress.toFixed(0)}%
+                          </div>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                            Prime: {primeTotal}€
                           </div>
                         </div>
                       </div>
                     );
+                  }).sort((a, b) => {
+                    const objA = objectives.find(o => String(o.employeeId) === String(a.key)) || {};
+                    const objB = objectives.find(o => String(o.employeeId) === String(b.key)) || {};
+                    return ((objB.kilosActuels || 0) + (objB.satisfactionActuelle || 0) * 10) - ((objA.kilosActuels || 0) + (objA.satisfactionActuelle || 0) * 10);
                   })}
                 </div>
               </div>
               
               {/* Détail par praticienne */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
                 {employees.filter(e => !e.isDirector).map(emp => {
-                  const obj = getEmployeeObjectives(emp.id);
-                  const colors = EMPLOYEE_COLORS[emp.id] || { bg: 'rgba(201,169,98,0.2)', border: '#c9a962', text: '#c9a962' };
-                  const seancesProgress = getProgressPercentage(obj.monthly_seances_current, obj.monthly_seances_target);
-                  const caProgress = getProgressPercentage(obj.monthly_ca_current, obj.monthly_ca_target);
+                  const obj = objectives.find(o => String(o.employeeId) === String(emp.id)) || {};
+                  const colors = EMPLOYEE_COLORS[String(emp.id)] || getEmployeeColor(emp.id);
+                  
+                  const kilosProgress = obj.objectifKilos > 0 ? Math.min(100, (obj.kilosActuels / obj.objectifKilos) * 100) : 0;
+                  const satisfactionProgress = obj.objectifSatisfaction > 0 ? Math.min(100, (obj.satisfactionActuelle / obj.objectifSatisfaction) * 100) : 0;
+                  const conversionsProgress = obj.objectifConversions > 0 ? Math.min(100, (obj.conversionsActuelles / obj.objectifConversions) * 100) : 0;
                   
                   return (
                     <div key={emp.id} className="card">
-                      <div className="card-header" style={{ borderBottom: `2px solid ${colors.border}` }}>
+                      <div className="card-header" style={{ borderBottom: `3px solid ${colors.border}` }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div className="client-avatar" style={{ width: '45px', height: '45px', background: colors.bg, border: `2px solid ${colors.border}`, color: colors.text }}>
-                            {emp.nom.charAt(0)}
+                          <div 
+                            style={{ 
+                              width: '50px', 
+                              height: '50px', 
+                              borderRadius: '50%',
+                              background: colors.bg, 
+                              border: `2px solid ${colors.border}`, 
+                              color: colors.text,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: '600',
+                              fontSize: '1.2rem'
+                            }}
+                          >
+                            {emp.nom?.charAt(0)}
                           </div>
                           <div>
                             <div className="card-title" style={{ marginBottom: '0' }}>{emp.nom}</div>
                             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                              🔥 Série de {obj.streak_days} jours • {obj.total_seances} séances totales
+                              Prime potentielle: <strong style={{ color: 'var(--accent)' }}>{(obj.primeKilos || 0) + (obj.primeSatisfaction || 0) + (obj.primeConversions || 0)}€</strong>
                             </div>
                           </div>
                         </div>
+                        <button 
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => setShowModal({ type: 'editObjectif', employee: emp, objectif: obj })}
+                        >
+                          <Edit3 size={16} />
+                        </button>
                       </div>
                       
-                      {/* Objectif séances */}
+                      {/* Objectif Kilos perdus */}
                       <div style={{ marginBottom: '1.25rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                          <span style={{ fontSize: '0.9rem' }}>📅 Séances ce mois</span>
-                          <span style={{ fontWeight: '600', color: seancesProgress >= 100 ? 'var(--success)' : colors.text }}>
-                            {obj.monthly_seances_current} / {obj.monthly_seances_target}
+                          <span style={{ fontSize: '0.9rem' }}>⚖️ Kilos perdus (clientes)</span>
+                          <span style={{ fontWeight: '600', color: kilosProgress >= 100 ? 'var(--success)' : 'var(--text)' }}>
+                            {obj.kilosActuels || 0} / {obj.objectifKilos || 0} kg
                           </span>
                         </div>
-                        <div className="progress-bar" style={{ height: '10px' }}>
-                          <div className="progress-fill" style={{ width: `${seancesProgress}%`, background: seancesProgress >= 100 ? 'var(--success)' : colors.border }} />
+                        <div className="progress-bar" style={{ height: '12px' }}>
+                          <div className="progress-fill" style={{ width: `${kilosProgress}%`, background: kilosProgress >= 100 ? 'var(--success)' : colors.border }} />
                         </div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                          {seancesProgress >= 100 ? '✓ Objectif atteint !' : `${obj.monthly_seances_target - obj.monthly_seances_current} restantes`}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                          <span>{kilosProgress >= 100 ? '✅ Objectif atteint !' : `${(obj.objectifKilos - obj.kilosActuels).toFixed(1)} kg restants`}</span>
+                          <span style={{ color: 'var(--accent)' }}>Prime: {obj.primeKilos || 0}€</span>
                         </div>
                       </div>
                       
-                      {/* Objectif CA */}
+                      {/* Objectif Satisfaction */}
                       <div style={{ marginBottom: '1.25rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                          <span style={{ fontSize: '0.9rem' }}>💰 CA ce mois</span>
-                          <span style={{ fontWeight: '600', color: caProgress >= 100 ? 'var(--success)' : colors.text }}>
-                            {obj.monthly_ca_current}€ / {obj.monthly_ca_target}€
+                          <span style={{ fontSize: '0.9rem' }}>⭐ Satisfaction moyenne</span>
+                          <span style={{ fontWeight: '600', color: satisfactionProgress >= 100 ? 'var(--success)' : 'var(--text)' }}>
+                            {obj.satisfactionActuelle || 0} / {obj.objectifSatisfaction || 0}
                           </span>
                         </div>
-                        <div className="progress-bar" style={{ height: '10px' }}>
-                          <div className="progress-fill" style={{ width: `${caProgress}%`, background: caProgress >= 100 ? 'var(--success)' : colors.border }} />
+                        <div className="progress-bar" style={{ height: '12px' }}>
+                          <div className="progress-fill" style={{ width: `${satisfactionProgress}%`, background: satisfactionProgress >= 100 ? 'var(--success)' : colors.border }} />
                         </div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                          {caProgress >= 100 ? '✓ Objectif atteint !' : `${obj.monthly_ca_target - obj.monthly_ca_current}€ restants`}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                          <span>{satisfactionProgress >= 100 ? '✅ Objectif atteint !' : `${(obj.objectifSatisfaction - obj.satisfactionActuelle).toFixed(1)} pts restants`}</span>
+                          <span style={{ color: 'var(--accent)' }}>Prime: {obj.primeSatisfaction || 0}€</span>
                         </div>
                       </div>
                       
-                      {/* Graphique historique */}
-                      {obj.monthly_history.length > 0 && (
-                        <div style={{ height: '120px', marginBottom: '1rem' }}>
-                          <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={obj.monthly_history}>
-                              <XAxis dataKey="mois" stroke="#888" fontSize={10} />
-                              <YAxis stroke="#888" fontSize={10} />
-                              <Tooltip contentStyle={{ background: '#1a1a2e', border: '1px solid var(--border)', borderRadius: '8px' }} />
-                              <Bar dataKey="seances" fill={colors.border} radius={[4, 4, 0, 0]} />
-                            </BarChart>
-                          </ResponsiveContainer>
+                      {/* Objectif Conversions */}
+                      <div style={{ marginBottom: '1rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                          <span style={{ fontSize: '0.9rem' }}>🎯 Clientes converties</span>
+                          <span style={{ fontWeight: '600', color: conversionsProgress >= 100 ? 'var(--success)' : 'var(--text)' }}>
+                            {obj.conversionsActuelles || 0} / {obj.objectifConversions || 0}
+                          </span>
+                        </div>
+                        <div className="progress-bar" style={{ height: '12px' }}>
+                          <div className="progress-fill" style={{ width: `${conversionsProgress}%`, background: conversionsProgress >= 100 ? 'var(--success)' : colors.border }} />
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                          <span>{conversionsProgress >= 100 ? '✅ Objectif atteint !' : `${obj.objectifConversions - obj.conversionsActuelles} restantes`}</span>
+                          <span style={{ color: 'var(--accent)' }}>Prime: {obj.primeConversions || 0}€</span>
+                        </div>
+                      </div>
+                      
+                      {/* Statut prime */}
+                      {(kilosProgress >= 100 || satisfactionProgress >= 100 || conversionsProgress >= 100) && (
+                        <div style={{ 
+                          padding: '0.75rem', 
+                          background: 'rgba(34, 197, 94, 0.1)', 
+                          border: '1px solid var(--success)', 
+                          borderRadius: '8px',
+                          textAlign: 'center'
+                        }}>
+                          <span style={{ color: 'var(--success)', fontWeight: '600' }}>
+                            🎉 Prime débloquée : {
+                              (kilosProgress >= 100 ? (obj.primeKilos || 0) : 0) +
+                              (satisfactionProgress >= 100 ? (obj.primeSatisfaction || 0) : 0) +
+                              (conversionsProgress >= 100 ? (obj.primeConversions || 0) : 0)
+                            }€
+                          </span>
                         </div>
                       )}
-                      
-                      {/* Badges */}
-                      <div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
-                          Badges obtenus ({obj.badges_earned.length})
-                        </div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                          {obj.badges_earned.map(badgeId => {
-                            const badge = BADGES[badgeId];
-                            return (
-                              <div 
-                                key={badgeId}
-                                style={{ 
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '6px',
-                                  padding: '6px 12px',
-                                  background: `${badge?.color}20`,
-                                  border: `1px solid ${badge?.color}`,
-                                  borderRadius: '20px',
-                                  fontSize: '0.8rem'
-                                }}
-                                title={badge?.description}
-                              >
-                                <span>{badge?.icon}</span>
-                                <span style={{ color: badge?.color }}>{badge?.nom}</span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
                     </div>
                   );
                 })}
@@ -9617,180 +9666,156 @@ export default function SlimTouchApp() {
           {currentView === 'objectifs' && !currentUser.isDirector && (
             <div className="animate-in">
               {(() => {
-                const obj = getEmployeeObjectives(currentUser?.id);
-                const seancesProgress = getProgressPercentage(obj.monthly_seances_current, obj.monthly_seances_target);
-                const caProgress = getProgressPercentage(obj.monthly_ca_current, obj.monthly_ca_target);
+                const obj = objectives.find(o => String(o.employeeId) === String(currentUser?.id)) || {};
+                const kilosProgress = obj.objectifKilos > 0 ? Math.min(100, (obj.kilosActuels / obj.objectifKilos) * 100) : 0;
+                const satisfactionProgress = obj.objectifSatisfaction > 0 ? Math.min(100, (obj.satisfactionActuelle / obj.objectifSatisfaction) * 100) : 0;
+                const conversionsProgress = obj.objectifConversions > 0 ? Math.min(100, (obj.conversionsActuelles / obj.objectifConversions) * 100) : 0;
+                const primeTotal = (obj.primeKilos || 0) + (obj.primeSatisfaction || 0) + (obj.primeConversions || 0);
+                const primeDebloquee = 
+                  (kilosProgress >= 100 ? (obj.primeKilos || 0) : 0) +
+                  (satisfactionProgress >= 100 ? (obj.primeSatisfaction || 0) : 0) +
+                  (conversionsProgress >= 100 ? (obj.primeConversions || 0) : 0);
                 
                 return (
                   <>
-                    {/* Stats principales */}
-                    <div className="stats-grid" style={{ marginBottom: '1.5rem' }}>
-                      <div className="stat-card" style={{ background: 'linear-gradient(135deg, rgba(201, 169, 98, 0.2), rgba(201, 169, 98, 0.05))', border: '1px solid var(--accent)' }}>
-                        <div className="stat-header">
-                          <div className="stat-icon gold"><Flame size={24} /></div>
+                    {/* Header motivant */}
+                    <div className="card" style={{ 
+                      marginBottom: '1.5rem', 
+                      background: 'linear-gradient(135deg, rgba(201, 169, 98, 0.2), rgba(201, 169, 98, 0.05))',
+                      border: '1px solid var(--accent)'
+                    }}>
+                      <div style={{ textAlign: 'center', padding: '1rem' }}>
+                        <h2 style={{ fontFamily: 'Playfair Display, serif', marginBottom: '0.5rem' }}>
+                          🎯 Mes Objectifs - {new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                        </h2>
+                        <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>
+                          Continue comme ça, tu es sur la bonne voie !
+                        </p>
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', flexWrap: 'wrap' }}>
+                          <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '2rem', fontWeight: '700', color: 'var(--accent)' }}>{primeTotal}€</div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Prime potentielle</div>
+                          </div>
+                          <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '2rem', fontWeight: '700', color: 'var(--success)' }}>{primeDebloquee}€</div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Prime débloquée</div>
+                          </div>
                         </div>
-                        <div className="stat-value" style={{ color: 'var(--accent)' }}>{obj.streak_days} jours</div>
-                        <div className="stat-label">Série en cours</div>
-                      </div>
-                      <div className="stat-card">
-                        <div className="stat-header">
-                          <div className="stat-icon blue"><Target size={24} /></div>
-                        </div>
-                        <div className="stat-value">{obj.total_seances}</div>
-                        <div className="stat-label">Séances totales</div>
-                      </div>
-                      <div className="stat-card">
-                        <div className="stat-header">
-                          <div className="stat-icon green"><Award size={24} /></div>
-                        </div>
-                        <div className="stat-value">{obj.badges_earned.length}</div>
-                        <div className="stat-label">Badges obtenus</div>
-                      </div>
-                      <div className="stat-card">
-                        <div className="stat-header">
-                          <div className="stat-icon"><Trophy size={24} /></div>
-                        </div>
-                        <div className="stat-value">{(obj.monthly_seances_current * 10) + (obj.badges_earned.length * 50)} pts</div>
-                        <div className="stat-label">Score total</div>
                       </div>
                     </div>
                     
+                    {/* Objectifs détaillés */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
-                      {/* Objectifs du mois */}
+                      
+                      {/* Objectif Kilos */}
                       <div className="card">
                         <div className="card-header">
-                          <div className="card-title"><Target size={18} /> Objectifs du mois</div>
+                          <div className="card-title">⚖️ Kilos perdus par mes clientes</div>
                         </div>
-                        
-                        {/* Séances */}
-                        <div style={{ marginBottom: '1.5rem' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                              <span style={{ fontSize: '1.5rem' }}>📅</span>
-                              <span>Séances</span>
+                        <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+                          <div style={{ fontSize: '3rem', fontWeight: '700', color: kilosProgress >= 100 ? 'var(--success)' : 'var(--accent)' }}>
+                            {obj.kilosActuels || 0}
+                          </div>
+                          <div style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>
+                            sur {obj.objectifKilos || 0} kg objectif
+                          </div>
+                          <div className="progress-bar" style={{ height: '16px', marginBottom: '1rem' }}>
+                            <div className="progress-fill" style={{ 
+                              width: `${kilosProgress}%`, 
+                              background: kilosProgress >= 100 ? 'var(--success)' : 'var(--accent)' 
+                            }} />
+                          </div>
+                          {kilosProgress >= 100 ? (
+                            <div style={{ color: 'var(--success)', fontWeight: '600' }}>
+                              🎉 Objectif atteint ! +{obj.primeKilos || 0}€
                             </div>
-                            <span style={{ fontSize: '1.25rem', fontWeight: '700', color: seancesProgress >= 100 ? 'var(--success)' : 'var(--accent)' }}>
-                              {obj.monthly_seances_current}/{obj.monthly_seances_target}
-                            </span>
-                          </div>
-                          <div className="progress-bar" style={{ height: '12px' }}>
-                            <div className="progress-fill" style={{ width: `${seancesProgress}%`, background: seancesProgress >= 100 ? 'var(--success)' : 'var(--accent)' }} />
-                          </div>
-                          {seancesProgress >= 100 && (
-                            <div style={{ marginTop: '0.5rem', color: 'var(--success)', fontSize: '0.85rem' }}>
-                              🎉 Objectif atteint ! Bonus débloqué
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* CA */}
-                        <div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                              <span style={{ fontSize: '1.5rem' }}>💰</span>
-                              <span>Chiffre d'affaires</span>
-                            </div>
-                            <span style={{ fontSize: '1.25rem', fontWeight: '700', color: caProgress >= 100 ? 'var(--success)' : 'var(--accent)' }}>
-                              {obj.monthly_ca_current}€/{obj.monthly_ca_target}€
-                            </span>
-                          </div>
-                          <div className="progress-bar" style={{ height: '12px' }}>
-                            <div className="progress-fill" style={{ width: `${caProgress}%`, background: caProgress >= 100 ? 'var(--success)' : 'var(--accent)' }} />
-                          </div>
-                          {caProgress >= 100 && (
-                            <div style={{ marginTop: '0.5rem', color: 'var(--success)', fontSize: '0.85rem' }}>
-                              🎉 Objectif atteint ! Bonus débloqué
+                          ) : (
+                            <div style={{ color: 'var(--text-muted)' }}>
+                              Encore {((obj.objectifKilos || 0) - (obj.kilosActuels || 0)).toFixed(1)} kg pour débloquer {obj.primeKilos || 0}€
                             </div>
                           )}
                         </div>
                       </div>
                       
-                      {/* Historique */}
+                      {/* Objectif Satisfaction */}
                       <div className="card">
                         <div className="card-header">
-                          <div className="card-title"><BarChart3 size={18} /> Historique mensuel</div>
+                          <div className="card-title">⭐ Satisfaction moyenne</div>
                         </div>
-                        <div style={{ height: '200px' }}>
-                          <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={obj.monthly_history}>
-                              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                              <XAxis dataKey="mois" stroke="#888" fontSize={11} />
-                              <YAxis stroke="#888" fontSize={11} />
-                              <Tooltip contentStyle={{ background: '#1a1a2e', border: '1px solid var(--accent)', borderRadius: '8px' }} />
-                              <Bar dataKey="seances" fill="#c9a962" radius={[4, 4, 0, 0]} name="Séances" />
-                            </BarChart>
-                          </ResponsiveContainer>
+                        <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+                          <div style={{ fontSize: '3rem', fontWeight: '700', color: satisfactionProgress >= 100 ? 'var(--success)' : 'var(--accent)' }}>
+                            {obj.satisfactionActuelle || 0}
+                          </div>
+                          <div style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>
+                            sur {obj.objectifSatisfaction || 0} objectif
+                          </div>
+                          <div className="progress-bar" style={{ height: '16px', marginBottom: '1rem' }}>
+                            <div className="progress-fill" style={{ 
+                              width: `${satisfactionProgress}%`, 
+                              background: satisfactionProgress >= 100 ? 'var(--success)' : 'var(--accent)' 
+                            }} />
+                          </div>
+                          {satisfactionProgress >= 100 ? (
+                            <div style={{ color: 'var(--success)', fontWeight: '600' }}>
+                              🎉 Objectif atteint ! +{obj.primeSatisfaction || 0}€
+                            </div>
+                          ) : (
+                            <div style={{ color: 'var(--text-muted)' }}>
+                              Encore {((obj.objectifSatisfaction || 0) - (obj.satisfactionActuelle || 0)).toFixed(1)} pts pour débloquer {obj.primeSatisfaction || 0}€
+                            </div>
+                          )}
                         </div>
                       </div>
                       
-                      {/* Badges obtenus */}
+                      {/* Objectif Conversions */}
                       <div className="card">
                         <div className="card-header">
-                          <div className="card-title"><Medal size={18} /> Mes badges</div>
+                          <div className="card-title">🎯 Clientes converties</div>
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '1rem' }}>
-                          {obj.badges_earned.map(badgeId => {
-                            const badge = BADGES[badgeId];
-                            return (
-                              <div 
-                                key={badgeId}
-                                style={{ 
-                                  textAlign: 'center',
-                                  padding: '1rem',
-                                  background: `${badge?.color}15`,
-                                  border: `1px solid ${badge?.color}`,
-                                  borderRadius: '12px'
-                                }}
-                              >
-                                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>{badge?.icon}</div>
-                                <div style={{ fontWeight: '600', color: badge?.color, fontSize: '0.85rem' }}>{badge?.nom}</div>
-                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>{badge?.description}</div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                      
-                      {/* Badges à débloquer */}
-                      <div className="card">
-                        <div className="card-header">
-                          <div className="card-title"><Star size={18} /> À débloquer</div>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                          {Object.entries(BADGES).filter(([id]) => !obj.badges_earned.includes(id)).slice(0, 5).map(([badgeId, badge]) => {
-                            const progress = obj.badges_progress[badgeId] || 0;
-                            const target = badgeId.includes('seances_100') ? 100 : 
-                                          badgeId.includes('seances_50') ? 50 : 
-                                          badgeId.includes('ca_5000') ? 5000 : 
-                                          badgeId.includes('ca_3000') ? 3000 :
-                                          badgeId.includes('streak_30') ? 30 : 
-                                          badgeId.includes('streak_7') ? 7 : 10;
-                            const progressPct = Math.min(100, Math.round((progress / target) * 100));
-                            
-                            return (
-                              <div key={badgeId} style={{ 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                gap: '1rem',
-                                padding: '0.75rem',
-                                background: 'var(--bg)',
-                                borderRadius: '10px',
-                                opacity: 0.7
-                              }}>
-                                <span style={{ fontSize: '1.5rem', filter: 'grayscale(100%)' }}>{badge.icon}</span>
-                                <div style={{ flex: 1 }}>
-                                  <div style={{ fontSize: '0.85rem', marginBottom: '4px' }}>{badge.nom}</div>
-                                  <div className="progress-bar" style={{ height: '6px' }}>
-                                    <div className="progress-fill" style={{ width: `${progressPct}%` }} />
-                                  </div>
-                                </div>
-                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{progressPct}%</span>
-                              </div>
-                            );
-                          })}
+                        <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+                          <div style={{ fontSize: '3rem', fontWeight: '700', color: conversionsProgress >= 100 ? 'var(--success)' : 'var(--accent)' }}>
+                            {obj.conversionsActuelles || 0}
+                          </div>
+                          <div style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>
+                            sur {obj.objectifConversions || 0} objectif
+                          </div>
+                          <div className="progress-bar" style={{ height: '16px', marginBottom: '1rem' }}>
+                            <div className="progress-fill" style={{ 
+                              width: `${conversionsProgress}%`, 
+                              background: conversionsProgress >= 100 ? 'var(--success)' : 'var(--accent)' 
+                            }} />
+                          </div>
+                          {conversionsProgress >= 100 ? (
+                            <div style={{ color: 'var(--success)', fontWeight: '600' }}>
+                              🎉 Objectif atteint ! +{obj.primeConversions || 0}€
+                            </div>
+                          ) : (
+                            <div style={{ color: 'var(--text-muted)' }}>
+                              Encore {(obj.objectifConversions || 0) - (obj.conversionsActuelles || 0)} pour débloquer {obj.primeConversions || 0}€
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
+                    
+                    {/* Message de motivation */}
+                    {primeDebloquee > 0 && (
+                      <div className="card" style={{ 
+                        marginTop: '1.5rem',
+                        background: 'rgba(34, 197, 94, 0.1)', 
+                        border: '1px solid var(--success)',
+                        textAlign: 'center',
+                        padding: '1.5rem'
+                      }}>
+                        <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🎉</div>
+                        <div style={{ fontSize: '1.25rem', fontWeight: '600', color: 'var(--success)', marginBottom: '0.5rem' }}>
+                          Félicitations !
+                        </div>
+                        <div style={{ color: 'var(--text)' }}>
+                          Tu as déjà débloqué <strong>{primeDebloquee}€</strong> de prime ce mois-ci !
+                        </div>
+                      </div>
+                    )}
                   </>
                 );
               })()}
