@@ -8912,21 +8912,40 @@ export default function SlimTouchApp() {
                                       </button>
                                       <button 
                                         className="btn btn-danger btn-sm"
-                                        onClick={() => {
+                                        onClick={async () => {
                                           if (confirm(`Supprimer ${stock.nom} de l'inventaire ?`)) {
-                                            setStocks(prev => {
-                                              const updated = { ...prev };
-                                              Object.keys(updated).forEach(empId => {
-                                                updated[empId] = updated[empId].filter(s => s.nom !== stock.nom);
+                                            try {
+                                              // Supprimer tous les stocks avec ce nom dans Airtable
+                                              const stocksToDelete = [];
+                                              Object.values(stocks || {}).flat().forEach(s => {
+                                                if (s && s.nom === stock.nom && s.airtable_id) {
+                                                  stocksToDelete.push(s.airtable_id);
+                                                }
                                               });
-                                              return updated;
-                                            });
-                                            addNotification({ type: 'success', message: `${stock.nom} supprimé` });
+                                              
+                                              for (const stockId of stocksToDelete) {
+                                                await apiDeleteStock(stockId);
+                                              }
+                                              
+                                              // Mettre à jour localement
+                                              setStocks(prev => {
+                                                const updated = { ...prev };
+                                                Object.keys(updated).forEach(empId => {
+                                                  updated[empId] = (updated[empId] || []).filter(s => s.nom !== stock.nom);
+                                                });
+                                                return updated;
+                                              });
+                                              addNotification({ type: 'success', message: `${stock.nom} supprimé` });
+                                            } catch (error) {
+                                              console.error('Erreur suppression stock:', error);
+                                              alert('Erreur lors de la suppression');
+                                            }
                                           }
                                         }}
                                         title="Supprimer"
                                       >
                                         <Trash2 size={14} />
+                                      </button>
                                       </button>
                                     </div>
                                   </td>
@@ -8943,7 +8962,8 @@ export default function SlimTouchApp() {
                   <h4 style={{ marginBottom: '1rem', color: 'var(--text-muted)' }}>📦 Répartition par membre de l'équipe</h4>
                   
                   {[...employees.filter(e => !e.isDirector), currentUser].map(employee => {
-                    const empStocks = stocks[employee.id] || [];
+                    const empId = employee.airtable_id || employee.id;
+                    const empStocks = stocks[empId] || stocks[employee.id] || [];
                     const alertCount = empStocks.filter(s => s.quantite <= s.seuil).length;
                     const colors = EMPLOYEE_COLORS[employee.id] || { bg: 'var(--bg)', border: 'var(--border)', text: 'var(--text)' };
                     
@@ -8997,13 +9017,13 @@ export default function SlimTouchApp() {
                                       <button 
                                         className="btn btn-ghost" 
                                         style={{ padding: '2px 6px', minWidth: '24px', minHeight: '24px', fontSize: '0.9rem' }}
-                                        onClick={() => updateStock(employee.id, stock.id, Math.max(0, stock.quantite - 1))}
+                                        onClick={() => updateStock(empId, stock.airtable_id || stock.id, Math.max(0, stock.quantite - 1))}
                                       >−</button>
                                       <span style={{ minWidth: '25px', textAlign: 'center', fontWeight: '600' }}>{stock.quantite}</span>
                                       <button 
                                         className="btn btn-ghost" 
                                         style={{ padding: '2px 6px', minWidth: '24px', minHeight: '24px', fontSize: '0.9rem' }}
-                                        onClick={() => updateStock(employee.id, stock.id, stock.quantite + 1)}
+                                        onClick={() => updateStock(empId, stock.airtable_id || stock.id, stock.quantite + 1)}
                                       >+</button>
                                       <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{stock.unite}</span>
                                     </div>
@@ -9018,11 +9038,19 @@ export default function SlimTouchApp() {
                                     <button 
                                       className="btn btn-danger btn-sm"
                                       style={{ padding: '4px 8px' }}
-                                      onClick={() => {
-                                        setStocks(prev => ({
-                                          ...prev,
-                                          [employee.id]: prev[employee.id].filter(s => s.id !== stock.id)
-                                        }));
+                                      onClick={async () => {
+                                        try {
+                                          if (stock.airtable_id) {
+                                            await apiDeleteStock(stock.airtable_id);
+                                          }
+                                          setStocks(prev => ({
+                                            ...prev,
+                                            [empId]: (prev[empId] || []).filter(s => s.id !== stock.id && s.airtable_id !== stock.airtable_id)
+                                          }));
+                                          addNotification({ type: 'success', message: `${stock.nom} retiré` });
+                                        } catch (error) {
+                                          console.error('Erreur suppression:', error);
+                                        }
                                       }}
                                       title="Retirer"
                                     >
