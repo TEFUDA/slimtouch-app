@@ -11098,6 +11098,308 @@ export default function SlimTouchApp() {
         </div>
       )}
 
+      {/* Modal Définir Objectifs */}
+      {showModal === 'defineObjectifs' && (
+        <div className="modal-overlay" onClick={() => setShowModal(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+            <div className="modal-header">
+              <h3 className="modal-title">🎯 Définir les objectifs du mois</h3>
+              <button className="btn btn-ghost" onClick={() => setShowModal(null)}><X size={20} /></button>
+            </div>
+            <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+              <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+                Définissez les objectifs et primes pour chaque praticienne pour {new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}.
+              </p>
+              
+              {employees.filter(e => !e.isDirector).map(emp => {
+                const existingObj = objectives.find(o => String(o.employeeId) === String(emp.id)) || {};
+                const colors = EMPLOYEE_COLORS[String(emp.id)] || getEmployeeColor(emp.id);
+                
+                return (
+                  <div key={emp.id} style={{ 
+                    marginBottom: '1.5rem', 
+                    padding: '1rem', 
+                    background: 'var(--bg)', 
+                    borderRadius: '12px',
+                    border: `2px solid ${colors.border}`
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem' }}>
+                      <div style={{ 
+                        width: '35px', 
+                        height: '35px', 
+                        borderRadius: '50%',
+                        background: colors.bg,
+                        border: `2px solid ${colors.border}`,
+                        color: colors.text,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: '600'
+                      }}>
+                        {emp.nom?.charAt(0)}
+                      </div>
+                      <strong>{emp.nom}</strong>
+                    </div>
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                      <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+                        <label className="form-label" style={{ fontSize: '0.8rem' }}>⚖️ Objectif Kilos</label>
+                        <input 
+                          type="number" 
+                          className="form-input" 
+                          placeholder="20"
+                          defaultValue={existingObj.objectifKilos || ''}
+                          id={`obj-kilos-${emp.id}`}
+                        />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+                        <label className="form-label" style={{ fontSize: '0.8rem' }}>💰 Prime Kilos (€)</label>
+                        <input 
+                          type="number" 
+                          className="form-input" 
+                          placeholder="100"
+                          defaultValue={existingObj.primeKilos || ''}
+                          id={`prime-kilos-${emp.id}`}
+                        />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+                        <label className="form-label" style={{ fontSize: '0.8rem' }}>⭐ Objectif Satisfaction</label>
+                        <input 
+                          type="number" 
+                          step="0.1"
+                          className="form-input" 
+                          placeholder="4.5"
+                          defaultValue={existingObj.objectifSatisfaction || ''}
+                          id={`obj-satisfaction-${emp.id}`}
+                        />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+                        <label className="form-label" style={{ fontSize: '0.8rem' }}>💰 Prime Satisfaction (€)</label>
+                        <input 
+                          type="number" 
+                          className="form-input" 
+                          placeholder="50"
+                          defaultValue={existingObj.primeSatisfaction || ''}
+                          id={`prime-satisfaction-${emp.id}`}
+                        />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+                        <label className="form-label" style={{ fontSize: '0.8rem' }}>🎯 Objectif Conversions</label>
+                        <input 
+                          type="number" 
+                          className="form-input" 
+                          placeholder="5"
+                          defaultValue={existingObj.objectifConversions || ''}
+                          id={`obj-conversions-${emp.id}`}
+                        />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+                        <label className="form-label" style={{ fontSize: '0.8rem' }}>💰 Prime Conversions (€)</label>
+                        <input 
+                          type="number" 
+                          className="form-input" 
+                          placeholder="75"
+                          defaultValue={existingObj.primeConversions || ''}
+                          id={`prime-conversions-${emp.id}`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setShowModal(null)}>Annuler</button>
+              <button className="btn btn-primary" onClick={async () => {
+                // Sauvegarder les objectifs pour chaque employé
+                for (const emp of employees.filter(e => !e.isDirector)) {
+                  const existingObj = objectives.find(o => String(o.employeeId) === String(emp.id));
+                  
+                  const objData = {
+                    employeeId: String(emp.id),
+                    mois: new Date().getMonth() + 1,
+                    annee: new Date().getFullYear(),
+                    objectifKilos: parseFloat(document.getElementById(`obj-kilos-${emp.id}`)?.value) || 0,
+                    objectifSatisfaction: parseFloat(document.getElementById(`obj-satisfaction-${emp.id}`)?.value) || 0,
+                    objectifConversions: parseInt(document.getElementById(`obj-conversions-${emp.id}`)?.value) || 0,
+                    primeKilos: parseFloat(document.getElementById(`prime-kilos-${emp.id}`)?.value) || 0,
+                    primeSatisfaction: parseFloat(document.getElementById(`prime-satisfaction-${emp.id}`)?.value) || 0,
+                    primeConversions: parseFloat(document.getElementById(`prime-conversions-${emp.id}`)?.value) || 0
+                  };
+                  
+                  try {
+                    if (existingObj?.id) {
+                      // Mettre à jour l'objectif existant
+                      await fetch(`${API_BASE_URL}/app-update-objectifs`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: existingObj.id, ...objData })
+                      });
+                    } else {
+                      // Créer un nouvel objectif
+                      await fetch(`${API_BASE_URL}/app-create-objectif`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(objData)
+                      });
+                    }
+                  } catch (error) {
+                    console.error('Erreur sauvegarde objectif:', error);
+                  }
+                }
+                
+                // Rafraîchir les objectifs
+                try {
+                  const response = await fetch(`${API_BASE_URL}/app-get-objectifs`);
+                  const data = await response.json();
+                  if (data.data) setObjectives(data.data);
+                } catch (e) {}
+                
+                setShowModal(null);
+                addNotification({ type: 'success', message: 'Objectifs mis à jour !', forEmployee: null });
+              }}>
+                <Save size={18} /> Enregistrer les objectifs
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Éditer Objectif individuel */}
+      {showModal?.type === 'editObjectif' && (
+        <div className="modal-overlay" onClick={() => setShowModal(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Modifier objectifs de {showModal.employee?.nom}</h3>
+              <button className="btn btn-ghost" onClick={() => setShowModal(null)}><X size={20} /></button>
+            </div>
+            <div className="modal-body">
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">⚖️ Objectif Kilos</label>
+                  <input 
+                    type="number" 
+                    className="form-input" 
+                    defaultValue={showModal.objectif?.objectifKilos || ''}
+                    id="edit-obj-kilos"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">💰 Prime (€)</label>
+                  <input 
+                    type="number" 
+                    className="form-input" 
+                    defaultValue={showModal.objectif?.primeKilos || ''}
+                    id="edit-prime-kilos"
+                  />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">⭐ Objectif Satisfaction</label>
+                  <input 
+                    type="number" 
+                    step="0.1"
+                    className="form-input" 
+                    defaultValue={showModal.objectif?.objectifSatisfaction || ''}
+                    id="edit-obj-satisfaction"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">💰 Prime (€)</label>
+                  <input 
+                    type="number" 
+                    className="form-input" 
+                    defaultValue={showModal.objectif?.primeSatisfaction || ''}
+                    id="edit-prime-satisfaction"
+                  />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">🎯 Objectif Conversions</label>
+                  <input 
+                    type="number" 
+                    className="form-input" 
+                    defaultValue={showModal.objectif?.objectifConversions || ''}
+                    id="edit-obj-conversions"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">💰 Prime (€)</label>
+                  <input 
+                    type="number" 
+                    className="form-input" 
+                    defaultValue={showModal.objectif?.primeConversions || ''}
+                    id="edit-prime-conversions"
+                  />
+                </div>
+              </div>
+              
+              <div style={{ marginTop: '1rem', padding: '1rem', background: 'var(--bg)', borderRadius: '8px' }}>
+                <div className="form-label" style={{ marginBottom: '0.5rem' }}>📊 Progression actuelle</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', fontSize: '0.85rem' }}>
+                  <div>Kilos: <strong>{showModal.objectif?.kilosActuels || 0}</strong></div>
+                  <div>Satisfaction: <strong>{showModal.objectif?.satisfactionActuelle || 0}</strong></div>
+                  <div>Conversions: <strong>{showModal.objectif?.conversionsActuelles || 0}</strong></div>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setShowModal(null)}>Annuler</button>
+              <button className="btn btn-primary" onClick={async () => {
+                const objData = {
+                  id: showModal.objectif?.id,
+                  objectifKilos: parseFloat(document.getElementById('edit-obj-kilos')?.value) || 0,
+                  objectifSatisfaction: parseFloat(document.getElementById('edit-obj-satisfaction')?.value) || 0,
+                  objectifConversions: parseInt(document.getElementById('edit-obj-conversions')?.value) || 0,
+                  primeKilos: parseFloat(document.getElementById('edit-prime-kilos')?.value) || 0,
+                  primeSatisfaction: parseFloat(document.getElementById('edit-prime-satisfaction')?.value) || 0,
+                  primeConversions: parseFloat(document.getElementById('edit-prime-conversions')?.value) || 0,
+                  kilosActuels: showModal.objectif?.kilosActuels || 0,
+                  satisfactionActuelle: showModal.objectif?.satisfactionActuelle || 0,
+                  conversionsActuelles: showModal.objectif?.conversionsActuelles || 0
+                };
+                
+                try {
+                  if (showModal.objectif?.id) {
+                    await fetch(`${API_BASE_URL}/app-update-objectifs`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(objData)
+                    });
+                  } else {
+                    await fetch(`${API_BASE_URL}/app-create-objectif`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        ...objData,
+                        employeeId: String(showModal.employee?.id),
+                        mois: new Date().getMonth() + 1,
+                        annee: new Date().getFullYear()
+                      })
+                    });
+                  }
+                  
+                  // Rafraîchir les objectifs
+                  const response = await fetch(`${API_BASE_URL}/app-get-objectifs`);
+                  const data = await response.json();
+                  if (data.data) setObjectives(data.data);
+                  
+                  addNotification({ type: 'success', message: `Objectifs de ${showModal.employee?.nom} mis à jour !` });
+                } catch (error) {
+                  console.error('Erreur:', error);
+                }
+                
+                setShowModal(null);
+              }}>
+                <Save size={18} /> Enregistrer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal Assigner Clientes */}
       {showModal?.type === 'assignClients' && (
         <div className="modal-overlay" onClick={() => setShowModal(null)}>
