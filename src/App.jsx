@@ -7051,27 +7051,27 @@ export default function SlimTouchApp() {
                       border: `1px solid ${blocked ? 'var(--danger)' : 'var(--warning)'}`,
                       borderRadius: '12px'
                     }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: blocked ? '0.75rem' : '0' }}>
-                        <AlertTriangle size={24} style={{ color: blocked ? 'var(--danger)' : 'var(--warning)' }} />
-                        <div>
-                          <div style={{ fontWeight: '600', color: blocked ? 'var(--danger)' : 'var(--warning)' }}>
-                            {blocked ? '🚫 Séances bloquées - Certificat médical requis' : certStatus.label}
-                          </div>
-                          {blocked && (
-                            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                              Après la séance découverte, un certificat médical de moins de 6 mois est obligatoire.
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <AlertTriangle size={24} style={{ color: blocked ? 'var(--danger)' : 'var(--warning)' }} />
+                          <div>
+                            <div style={{ fontWeight: '600', color: blocked ? 'var(--danger)' : 'var(--warning)' }}>
+                              {blocked ? '🚫 Séances bloquées - Certificat médical requis' : certStatus.label}
                             </div>
-                          )}
+                            {blocked && (
+                              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                                Après la séance découverte, un certificat médical de moins de 6 mois est obligatoire.
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                      {blocked && (
                         <button 
                           className="btn btn-primary btn-sm"
                           onClick={() => setShowModal({ type: 'uploadCertificat', client: selectedClient })}
                         >
-                          <Upload size={16} /> Ajouter le certificat médical
+                          <Upload size={16} /> Ajouter le certificat
                         </button>
-                      )}
+                      </div>
                     </div>
                   );
                 }
