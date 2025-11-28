@@ -7029,7 +7029,15 @@ export default function SlimTouchApp() {
                     });
                     setShowModal('editClient');
                   }}><Edit size={16} /> Modifier</button>
-                  <button className="btn btn-primary" style={{ flex: 1, minWidth: '100px' }} onClick={() => setShowRdvModal(true)}><Calendar size={16} /> + RDV</button>
+                  <button 
+                    className="btn btn-primary" 
+                    style={{ flex: 1, minWidth: '100px', opacity: canHaveSession(selectedClient) ? 1 : 0.5 }} 
+                    onClick={() => canHaveSession(selectedClient) && setShowRdvModal(true)}
+                    disabled={!canHaveSession(selectedClient)}
+                    title={!canHaveSession(selectedClient) ? 'Certificat médical requis' : 'Programmer un RDV'}
+                  >
+                    <Calendar size={16} /> + RDV
+                  </button>
                   <button className="btn btn-secondary" onClick={() => setShowExportModal(selectedClient)} style={{ background: 'rgba(34, 197, 94, 0.1)', border: '1px solid var(--success)' }}>
                     <Share2 size={16} style={{ color: 'var(--success)' }} />
                   </button>
@@ -12377,13 +12385,33 @@ export default function SlimTouchApp() {
               {planningRdvForm.clientId && (
                 <div style={{ background: 'var(--bg)', padding: '1rem', borderRadius: '12px', marginTop: '1rem' }}>
                   {(() => {
-                    const client = clients.find(c => c.id === parseInt(planningRdvForm.clientId));
+                    const client = clients.find(c => c.id === planningRdvForm.clientId || c.id === parseInt(planningRdvForm.clientId));
                     if (!client) return null;
+                    const blocked = !canHaveSession(client);
                     return (
-                      <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                        <strong style={{ color: 'var(--accent)' }}>{FORFAITS[client.forfait]?.icon} {client.forfait}</strong> - {FORFAITS[client.forfait]?.prix}€<br />
-                        Séances : {getSeancesEffectuees(client.id)} / {client.seancesTotal}
-                      </p>
+                      <>
+                        {blocked && (
+                          <div style={{ 
+                            background: 'rgba(239, 68, 68, 0.1)', 
+                            border: '1px solid var(--danger)', 
+                            borderRadius: '8px', 
+                            padding: '0.75rem', 
+                            marginBottom: '0.75rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem'
+                          }}>
+                            <AlertTriangle size={18} style={{ color: 'var(--danger)' }} />
+                            <span style={{ color: 'var(--danger)', fontSize: '0.85rem', fontWeight: '500' }}>
+                              🚫 Certificat médical requis - RDV impossible
+                            </span>
+                          </div>
+                        )}
+                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                          <strong style={{ color: 'var(--accent)' }}>{FORFAITS[client.forfait]?.icon} {client.forfait}</strong> - {FORFAITS[client.forfait]?.prix}€<br />
+                          Séances : {getSeancesEffectuees(client.id)} / {client.seancesTotal}
+                        </p>
+                      </>
                     );
                   })()}
                 </div>
@@ -12391,9 +12419,21 @@ export default function SlimTouchApp() {
             </div>
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => { setShowPlanningRdvModal(false); setEditingRdv(null); }}>Annuler</button>
-              <button className="btn btn-primary" onClick={editingRdv ? handleUpdateRdv : handleCreatePlanningRdv}>
-                <Save size={18} /> {editingRdv ? 'Enregistrer' : 'Créer le RDV'}
-              </button>
+              {(() => {
+                const selectedClientForRdv = clients.find(c => c.id === planningRdvForm.clientId || c.id === parseInt(planningRdvForm.clientId));
+                const isBlocked = selectedClientForRdv && !canHaveSession(selectedClientForRdv);
+                return (
+                  <button 
+                    className="btn btn-primary" 
+                    onClick={editingRdv ? handleUpdateRdv : handleCreatePlanningRdv}
+                    disabled={isBlocked}
+                    style={{ opacity: isBlocked ? 0.5 : 1 }}
+                    title={isBlocked ? 'Certificat médical requis' : ''}
+                  >
+                    <Save size={18} /> {editingRdv ? 'Enregistrer' : 'Créer le RDV'}
+                  </button>
+                );
+              })()}
             </div>
           </div>
         </div>
