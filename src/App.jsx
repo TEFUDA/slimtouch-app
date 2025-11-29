@@ -7674,6 +7674,16 @@ RÈGLES: Variété totale, différent des semaines 1-2, ${caloriesRecommandees} 
 
   // Fonction pour ajouter une notification avec toast et son
   const addNotification = async (notif) => {
+    // =============================================
+    // FILTRE : Seulement RDV (schedule) et Messages
+    // =============================================
+    const allowedTypes = ['schedule', 'message', 'rdv'];
+    if (!allowedTypes.includes(notif.type)) {
+      // Pour les autres types, on log en console mais on n'affiche pas
+      console.log('📝', notif.message);
+      return;
+    }
+    
     const newNotif = { 
       ...notif, 
       id: Date.now(), 
