@@ -5159,16 +5159,26 @@ export default function SlimTouchApp() {
       const fibres = age > 50 ? 25 : 30; // grammes/jour
       const eau = Math.round(poids * 0.033 * 10) / 10; // 33ml/kg
       
-      const prompt = `Tu es une INTELLIGENCE ARTIFICIELLE NUTRITIONNISTE de niveau MONDIAL, combinant l'expertise de :
+      const prompt = `Tu es une INTELLIGENCE ARTIFICIELLE EXPERTE EN TRANSFORMATION CORPORELLE de niveau MONDIAL, combinant l'expertise de :
 - Dr. Michael Greger (nutrition basée sur les preuves scientifiques)
 - Dr. Mark Hyman (médecine fonctionnelle et métabolisme)
 - Dr. Jason Fung (jeûne intermittent et résistance à l'insuline)
 - Dr. Rhonda Patrick (nutriments et longévité cellulaire)
 - Dr. Peter Attia (optimisation métabolique et performance)
+- Dr. Matthew Walker (science du sommeil et récupération)
+- Dr. Andrew Huberman (neurosciences et mindset)
+- Kelly Starrett (mobilité et mouvement fonctionnel)
 
-Tu as accès à TOUTES les études scientifiques publiées jusqu'en 2024, aux données de la Cochrane Library, PubMed, et aux dernières découvertes en nutrigénomique et chrononutrition.
+Tu as accès à TOUTES les études scientifiques publiées jusqu'en 2024.
 
-🎯 MISSION : Créer LE programme nutritionnel le plus COMPLET, SCIENTIFIQUE et PERSONNALISÉ au monde pour cette cliente.
+🎯 MISSION : Créer LE programme de transformation COMPLET le plus SCIENTIFIQUE et PERSONNALISÉ au monde.
+
+Ce programme est basé sur les 5 PILIERS SLIM TOUCH 360° :
+1. 🥗 NUTRITION - Alimentation optimisée
+2. 💧 HYDRATATION - Protocole eau et drainage
+3. 🏃 MOUVEMENT - Micro-exercices quotidiens (PAS de sport intensif)
+4. 😴 SOMMEIL - Protocole récupération optimale
+5. 🧠 MINDSET - Mental et motivation
 
 ══════════════════════════════════════════════════════════════
 📊 DONNÉES BIOMÉTRIQUES COMPLÈTES
@@ -5190,14 +5200,13 @@ Tu as accès à TOUTES les études scientifiques publiées jusqu'en 2024, aux do
 • Métabolisme basal (Mifflin-St Jeor) : ${Math.round(mb)} kcal/jour
 • Niveau d'activité : ${nutritionForm.activitePhysique} (coefficient ${coeffActivite[nutritionForm.activitePhysique] || 1.4})
 • TDEE (dépense totale) : ${depenseJournaliere} kcal/jour
-• Apport calorique cible : ${caloriesRecommandees} kcal/jour (déficit de 400 kcal = perte ~0.4kg/semaine)
-• Effet thermique des aliments estimé : ${Math.round(caloriesRecommandees * 0.10)} kcal
+• Apport calorique cible : ${caloriesRecommandees} kcal/jour (déficit de 400 kcal)
 
-RÉPARTITION MACRONUTRIMENTS OPTIMALE :
-• Protéines : ${proteinesMin}-${proteinesMax}g/jour (${Math.round(proteinesMin*4/caloriesRecommandees*100)}% - essentiel pour préserver la masse musculaire en déficit)
-• Lipides : ${lipides}g/jour (30% - privilégier oméga-3, acides gras mono-insaturés)
-• Glucides : ${glucides}g/jour (priorité IG bas <55, charge glycémique contrôlée)
-• Fibres : minimum ${fibres}g/jour (satiété, microbiote, transit)
+RÉPARTITION MACRONUTRIMENTS :
+• Protéines : ${proteinesMin}-${proteinesMax}g/jour
+• Lipides : ${lipides}g/jour (30%)
+• Glucides : ${glucides}g/jour (IG bas)
+• Fibres : minimum ${fibres}g/jour
 • Hydratation : ${eau}L d'eau/jour minimum
 
 ══════════════════════════════════════════════════════════════
@@ -5207,26 +5216,34 @@ RÉPARTITION MACRONUTRIMENTS OPTIMALE :
 • Intolérances : ${nutritionForm.intolerance.length > 0 ? nutritionForm.intolerance.join(', ') : 'Aucune déclarée'}
 • Régime alimentaire : ${nutritionForm.regimeSpecial || 'Omnivore sans restriction'}
 • Aliments à EXCLURE : ${nutritionForm.alimentsDetestes || 'Aucun'}
-• Aliments PRÉFÉRÉS à intégrer : ${nutritionForm.alimentsAdores || 'Pas de préférence particulière'}
-• Pathologies/Conditions : ${nutritionForm.pathologies.length > 0 ? nutritionForm.pathologies.join(', ') : 'Aucune déclarée'}
-
-CONTRAINTES PRATIQUES :
-• Budget : ${nutritionForm.budgetCourses === 'economique' ? '40-60€/semaine - privilégier légumineuses, œufs, légumes de saison, protéines économiques' : nutritionForm.budgetCourses === 'moyen' ? '60-90€/semaine - bon équilibre qualité/prix' : '90€+/semaine - produits premium, bio, poissons nobles'}
-• Temps cuisine : ${nutritionForm.tempsCuisine === 'express' ? 'Maximum 15 min - batch cooking, recettes ultra-simples' : nutritionForm.tempsCuisine === 'moyen' ? '15-30 min - recettes accessibles' : '30+ min - recettes élaborées possibles'}
-• Repas par jour : ${nutritionForm.nombreRepas} (${nutritionForm.nombreRepas === '3' ? 'structure classique' : nutritionForm.nombreRepas === '4' ? 'avec 1 collation stratégique' : 'avec 2 collations pour stabiliser la glycémie'})
+• Aliments PRÉFÉRÉS : ${nutritionForm.alimentsAdores || 'Pas de préférence particulière'}
+• Pathologies : ${nutritionForm.pathologies.length > 0 ? nutritionForm.pathologies.join(', ') : 'Aucune déclarée'}
+• Budget : ${nutritionForm.budgetCourses === 'economique' ? '40-60€/semaine' : nutritionForm.budgetCourses === 'moyen' ? '60-90€/semaine' : '90€+/semaine'}
+• Temps cuisine : ${nutritionForm.tempsCuisine === 'express' ? 'Maximum 15 min' : nutritionForm.tempsCuisine === 'moyen' ? '15-30 min' : '30+ min'}
+• Repas par jour : ${nutritionForm.nombreRepas}
 • Durée du programme : ${nutritionForm.duree} semaines
 
+CONTEXTE SLIM TOUCH :
+• La cliente suit un programme de massages G5 anti-cellulite (${nutritionForm.duree === '4' ? '10' : nutritionForm.duree === '6' ? '15' : '20'} séances)
+• Objectif synergique : Nutrition + Hydratation + Mouvement amplifient l'effet des massages G5
+• Le mouvement léger AVANT le massage G5 optimise la circulation
+• L'hydratation APRÈS le massage G5 élimine les toxines délogées
+
 ══════════════════════════════════════════════════════════════
-📋 FORMAT JSON OBLIGATOIRE - STRUCTURE ULTRA-DÉTAILLÉE
+📋 FORMAT JSON OBLIGATOIRE - PROGRAMME SLIM TOUCH 360°
 ══════════════════════════════════════════════════════════════
 
 {
+  "titrePersonnalise": "Programme SLIM TOUCH 360° de [Prénom] - Transformation ${nutritionForm.duree} semaines",
+  
   "analysePersonnalisee": {
-    "profilMetabolique": "Analyse détaillée du profil métabolique de la cliente et stratégie adaptée",
-    "defisIdentifies": ["Défi 1 spécifique à son profil", "Défi 2", "Défi 3"],
-    "atoutsNutritionnels": ["Atout 1 à exploiter", "Atout 2"],
-    "strategieGlobale": "Explication de la stratégie nutritionnelle choisie et pourquoi elle est optimale pour ce profil"
+    "profilMetabolique": "Analyse détaillée du profil",
+    "defisIdentifies": ["Défi 1", "Défi 2", "Défi 3"],
+    "atoutsNutritionnels": ["Atout 1", "Atout 2"],
+    "strategieGlobale": "Stratégie des 5 piliers adaptée à ce profil",
+    "synergieG5": "Comment les 5 piliers vont amplifier l'effet des massages G5"
   },
+  
   "resume": {
     "caloriesJour": ${caloriesRecommandees},
     "proteines": "${proteinesMin}-${proteinesMax}g",
@@ -5234,225 +5251,614 @@ CONTRAINTES PRATIQUES :
     "lipides": "${lipides}g",
     "fibres": "${fibres}g",
     "hydratation": "${eau}L",
-    "perteEstimee": "${Math.round(perteVisee * 10) / 10}kg en ${nutritionForm.duree} semaines",
-    "rythmePerteRecommande": "0.4-0.5 kg/semaine (optimal pour préserver la masse musculaire)"
+    "perteEstimee": "${Math.round(perteVisee * 10) / 10}kg en ${nutritionForm.duree} semaines"
   },
-  "principesScientifiques": [
-    {
-      "principe": "Nom du principe scientifique",
-      "explication": "Explication vulgarisée mais précise",
-      "applicationPratique": "Comment c'est appliqué dans ce programme",
-      "sourcesScientifiques": "Référence aux études (ex: 'Méta-analyse 2023, Journal of Nutrition')"
-    }
-  ],
-  "conseilsPersonnalises": [
-    {
-      "conseil": "Conseil ultra-personnalisé basé sur le profil",
-      "pourquoi": "Explication scientifique de pourquoi ce conseil est crucial pour CETTE cliente",
-      "comment": "Instructions pratiques détaillées pour appliquer ce conseil",
-      "beneficesAttendus": "Ce que la cliente peut espérer en suivant ce conseil"
-    }
-  ],
-  "chronoNutrition": {
-    "explication": "Pourquoi le timing des repas est crucial pour cette cliente",
-    "petitDejeunerIdeal": "Horaire optimal et pourquoi",
-    "dejeunerIdeal": "Horaire optimal et pourquoi",
-    "dinerIdeal": "Horaire optimal et pourquoi (au moins 3h avant le coucher)",
-    "fenetreAlimentaire": "Durée recommandée entre premier et dernier repas"
+  
+  "pilierNutrition": {
+    "principes": ["Principe clé 1 adapté au profil", "Principe 2", "Principe 3"],
+    "conseilsPersonnalises": [
+      {
+        "conseil": "Conseil nutrition personnalisé",
+        "pourquoi": "Explication scientifique",
+        "comment": "Application pratique",
+        "benefices": "Résultats attendus"
+      }
+    ],
+    "chronoNutrition": {
+      "petitDejeunerIdeal": "7h-8h - Pourquoi",
+      "dejeunerIdeal": "12h-13h - Pourquoi",
+      "dinerIdeal": "19h-20h (3h avant coucher) - Pourquoi",
+      "fenetreAlimentaire": "12h (ex: 8h-20h)"
+    },
+    "alimentsSuperStars": [
+      {
+        "aliment": "Nom",
+        "pourquoi": "Bénéfice spécifique pour CE profil",
+        "frequence": "X fois/semaine"
+      }
+    ],
+    "alimentsAEviter": [
+      {
+        "aliment": "Nom",
+        "pourquoi": "Raison",
+        "alternative": "Alternative saine"
+      }
+    ]
   },
-  "supplementsRecommandes": [
-    {
-      "supplement": "Nom du supplément si vraiment nécessaire",
-      "dosage": "Dosage précis",
-      "timing": "Quand le prendre",
-      "pourquoi": "Justification scientifique",
-      "duree": "Durée de supplémentation recommandée",
-      "precautions": "Précautions éventuelles"
+  
+  "pilierHydratation": {
+    "objectifJournalier": "${eau}L minimum",
+    "protocoleDetaille": {
+      "auReveil": {
+        "quantite": "500ml",
+        "type": "Eau tiède avec citron",
+        "pourquoi": "Réhydratation après la nuit, stimule le système digestif, alcalinise le corps",
+        "timing": "Dès le réveil, 30 min avant petit-déjeuner"
+      },
+      "avantRepas": {
+        "quantite": "250ml",
+        "timing": "20-30 min avant chaque repas",
+        "pourquoi": "Coupe-faim naturel (-75 kcal/repas selon études), prépare la digestion"
+      },
+      "pendantRepas": {
+        "quantite": "150ml maximum",
+        "pourquoi": "Ne pas diluer les enzymes digestives"
+      },
+      "entreRepas": {
+        "quantite": "Petites gorgées régulières",
+        "astuce": "1 gorgée toutes les 15-20 min"
+      },
+      "avantMassageG5": {
+        "quantite": "500ml",
+        "timing": "1h avant la séance",
+        "pourquoi": "Tissus hydratés = massage plus efficace, meilleure circulation"
+      },
+      "apresMassageG5": {
+        "quantite": "750ml",
+        "timing": "Dans les 2h suivant la séance",
+        "pourquoi": "CRUCIAL : Éliminer les toxines et graisses délogées par le massage"
+      }
+    },
+    "infusionsDrainantes": [
+      {
+        "nom": "Queue de cerise",
+        "bienfaits": "Drainage lymphatique puissant, anti-rétention",
+        "posologie": "1L/jour pendant 3 semaines max",
+        "meilleurMoment": "Matin et début d'après-midi"
+      },
+      {
+        "nom": "Thé vert Sencha",
+        "bienfaits": "Thermogénèse, antioxydants, brûle-graisses naturel",
+        "posologie": "2-3 tasses/jour avant 16h",
+        "meilleurMoment": "Matin et après déjeuner"
+      },
+      {
+        "nom": "Pissenlit + Orthosiphon",
+        "bienfaits": "Détox hépatique, drainant rénal",
+        "posologie": "1 infusion/jour",
+        "meilleurMoment": "Fin d'après-midi"
+      }
+    ],
+    "signesDeshydratation": ["Urine foncée", "Fatigue", "Maux de tête", "Peau sèche", "Fringales (souvent soif déguisée)"],
+    "astuces": [
+      "Garder une gourde de 1L visible en permanence",
+      "App de rappel ou alarme toutes les heures",
+      "Marquer les heures sur la gourde",
+      "Tisane froide l'été, chaude l'hiver pour varier"
+    ],
+    "erreursEviter": [
+      "Boire trop d'un coup (max 500ml en 30 min)",
+      "Eau glacée pendant les repas",
+      "Boissons sucrées qui ne comptent PAS",
+      "Oublier l'eau les jours sans massage"
+    ]
+  },
+  
+  "pilierMouvement": {
+    "philosophie": "Pas de sport intensif ! Des micro-mouvements quotidiens accessibles à tous, qui amplifient le drainage lymphatique et potentialisent les massages G5.",
+    "objectifs": {
+      "pasQuotidiens": 8000,
+      "minutesActivite": 30,
+      "frequenceGainageMin": 5
+    },
+    "protocoleQuotidien": {
+      "auReveil": {
+        "exercice": "Routine réveil doux",
+        "duree": "5 min",
+        "mouvements": [
+          "10 respirations profondes ventre (activer le diaphragme)",
+          "Étirements chat-vache (mobilité colonne) x10",
+          "Rotations chevilles et poignets (circulation) x10 chaque",
+          "Auto-massage ventre sens horaire 1 min (transit)"
+        ],
+        "benefices": "Active le métabolisme, stimule le transit, réveille le corps en douceur"
+      },
+      "matinee": {
+        "exercice": "Marche active",
+        "duree": "15-20 min",
+        "conseil": "Marcher à un rythme où on peut parler mais pas chanter",
+        "alternatives": ["Monter/descendre escaliers 10 min", "Vélo doux", "Ménage actif"],
+        "benefices": "Brûle les graisses en zone lipidique, stimule la lymphe"
+      },
+      "avantMassageG5": {
+        "exercice": "Activation drainage",
+        "duree": "10 min",
+        "mouvements": [
+          "Brossage à sec de la peau (vers le cœur) 3 min",
+          "Squats légers x15 (active circulation jambes)",
+          "Talons-fesses x20 (zone cuisses)",
+          "Cercles de hanches x10 chaque sens (zone abdomen)"
+        ],
+        "pourquoi": "Prépare les tissus, active la circulation = massage G5 2x plus efficace"
+      },
+      "apresMassageG5": {
+        "exercice": "Drainage doux",
+        "duree": "10 min post-séance",
+        "mouvements": [
+          "Marche lente 5 min",
+          "Jambes en l'air contre un mur 5 min",
+          "Respirations profondes"
+        ],
+        "pourquoi": "Aide à éliminer les toxines délogées par le massage"
+      },
+      "soir": {
+        "exercice": "Gainage & Stretching",
+        "duree": "10 min",
+        "mouvements": [
+          "Planche sur genoux ou classique 3x30sec",
+          "Planche latérale chaque côté 2x20sec",
+          "Vacuum (rentrer le ventre à fond) 5x10sec",
+          "Étirements détente 5 min"
+        ],
+        "benefices": "Renforce la sangle abdominale (zone souvent ciblée), améliore la posture"
+      }
+    },
+    "exercicesCiblesParZone": {
+      "ventre": [
+        {"exercice": "Vacuum abdominal", "description": "Inspirer, expirer à fond, rentrer le nombril vers la colonne, tenir 10sec", "repetitions": "5x10sec, 2x/jour", "efficacite": "Réduit le tour de taille de 2-3cm en 4 semaines"},
+        {"exercice": "Respiration hypopressive", "description": "Allongée, inspirer, expirer, bloquer, rentrer le ventre, tenir", "repetitions": "10x matin", "efficacite": "Tonifie le transverse profond"},
+        {"exercice": "Crunchs inversés doux", "description": "Allongée, genoux pliés, ramener genoux vers poitrine", "repetitions": "3x15", "efficacite": "Bas du ventre"}
+      ],
+      "cuisses": [
+        {"exercice": "Squats légers", "description": "Pieds largeur épaules, descendre comme pour s'asseoir", "repetitions": "3x15", "efficacite": "Tonifie cuisses et fessiers"},
+        {"exercice": "Fentes avant", "description": "Grand pas en avant, descendre genou arrière vers sol", "repetitions": "2x10 chaque jambe", "efficacite": "Galbe les cuisses"},
+        {"exercice": "Battements latéraux", "description": "Debout, lever jambe sur le côté", "repetitions": "3x20 chaque jambe", "efficacite": "Culotte de cheval"}
+      ],
+      "fessiers": [
+        {"exercice": "Pont fessier", "description": "Allongée, pieds au sol, monter le bassin", "repetitions": "3x20", "efficacite": "Galbe et raffermit"},
+        {"exercice": "Donkey kicks", "description": "À 4 pattes, pousser le pied vers le plafond", "repetitions": "3x15 chaque jambe", "efficacite": "Cible le grand fessier"},
+        {"exercice": "Clam", "description": "Sur le côté, genoux pliés, ouvrir le genou supérieur", "repetitions": "3x20 chaque côté", "efficacite": "Moyen fessier, galbe la hanche"}
+      ],
+      "bras": [
+        {"exercice": "Pompes au mur", "description": "Mains au mur, faire des pompes debout", "repetitions": "3x15", "efficacite": "Triceps sans difficulté"},
+        {"exercice": "Dips sur chaise", "description": "Dos à une chaise, descendre en pliant les coudes", "repetitions": "3x10", "efficacite": "Effet chauve-souris"},
+        {"exercice": "Rotations bras tendus", "description": "Bras en croix, petits cercles", "repetitions": "3x30sec", "efficacite": "Tonification globale"}
+      ]
+    },
+    "integrationQuotidien": [
+      "Toujours prendre les escaliers (brûle 3x plus que l'ascenseur)",
+      "Se garer plus loin / descendre un arrêt avant",
+      "Téléphoner debout en marchant",
+      "Squats pendant que le café coule",
+      "Contracter les abdos 10sec au feu rouge",
+      "Marche digestive de 10 min après déjeuner"
+    ]
+  },
+  
+  "pilierSommeil": {
+    "importance": "Le manque de sommeil augmente la ghréline (+50% de faim), diminue la leptine (satiété), favorise le stockage abdominal, et annule les bénéfices de l'alimentation saine. 1h de sommeil en moins = +200-300 kcal consommées le lendemain.",
+    "objectifHeures": "7-8h de sommeil de qualité",
+    "horairesOptimaux": {
+      "coucher": "22h30-23h",
+      "lever": "6h30-7h30",
+      "pourquoi": "Respecter les cycles de 90min, maximiser le sommeil profond (pic entre 22h-2h)"
+    },
+    "routineSoir": {
+      "h_moins_3": {
+        "action": "Dernier repas",
+        "conseil": "Dîner léger terminé 3h avant le coucher",
+        "pourquoi": "Digestion perturbe le sommeil profond"
+      },
+      "h_moins_2": {
+        "action": "Tamiser les lumières",
+        "conseil": "Lumières chaudes, bougies, éviter néons",
+        "pourquoi": "Prépare la production de mélatonine"
+      },
+      "h_moins_1": {
+        "action": "Digital detox",
+        "conseil": "Arrêter tous les écrans (ou filtre bleu au minimum)",
+        "pourquoi": "La lumière bleue retarde l'endormissement de 30-60min"
+      },
+      "h_moins_30": {
+        "action": "Routine relaxante",
+        "conseil": "Tisane, lecture papier, stretching doux, bain tiède",
+        "pourquoi": "Active le système parasympathique"
+      },
+      "h_moins_15": {
+        "action": "Préparation mentale",
+        "conseil": "Gratitude (3 choses positives), respiration 4-7-8",
+        "pourquoi": "Calme le mental, facilite l'endormissement"
+      }
+    },
+    "environnementChambre": {
+      "temperature": "18-19°C (idéal pour le sommeil profond)",
+      "obscurite": "Totale (masque si besoin, rideaux occultants)",
+      "bruit": "Silence ou bruit blanc/ventilateur",
+      "literie": "Matelas ferme, oreiller adapté à votre position"
+    },
+    "alimentsSommeil": {
+      "favoriser": [
+        {"aliment": "Banane", "pourquoi": "Tryptophane + magnésium = précurseurs mélatonine"},
+        {"aliment": "Amandes/noix", "pourquoi": "Magnésium naturel"},
+        {"aliment": "Tisane camomille", "pourquoi": "Apigénine = effet sédatif léger"},
+        {"aliment": "Kiwi", "pourquoi": "Études montrent +13% temps de sommeil"},
+        {"aliment": "Cerises", "pourquoi": "Seule source naturelle de mélatonine"}
+      ],
+      "eviterLeSoir": [
+        {"aliment": "Caféine", "pourquoi": "Reste 6h dans le système - stop à 14h max"},
+        {"aliment": "Alcool", "pourquoi": "Endort mais supprime sommeil profond"},
+        {"aliment": "Sucres rapides", "pourquoi": "Pic glycémique puis hypoglycémie = réveil"},
+        {"aliment": "Repas trop riche", "pourquoi": "Digestion perturbe les cycles"}
+      ]
+    },
+    "troublesEtSolutions": [
+      {
+        "probleme": "Difficultés d'endormissement",
+        "solutions": ["Technique 4-7-8 (inspirer 4s, bloquer 7s, expirer 8s)", "Relaxation musculaire progressive", "Cohérence cardiaque 5min"]
+      },
+      {
+        "probleme": "Réveils nocturnes",
+        "solutions": ["Ne pas regarder l'heure", "Rester au lit, respiration calme", "Si >20min : se lever, activité calme, revenir quand fatiguée"]
+      },
+      {
+        "probleme": "Réveil trop tôt",
+        "solutions": ["Coucher plus tard (pas plus tôt !)", "Lumière vive le soir, obscurité le matin", "Vérifier stress/anxiété"]
+      }
+    ]
+  },
+  
+  "pilierMindset": {
+    "importance": "80% de la réussite est mentale. Les études montrent que les personnes avec un état d'esprit positif perdent 2x plus de poids et le maintiennent.",
+    "affirmationsQuotidiennes": [
+      "Mon corps se transforme un peu plus chaque jour",
+      "Je choisis des aliments qui me nourrissent et me font du bien",
+      "Je suis capable de tenir mes engagements envers moi-même",
+      "Chaque séance de massage G5 me rapproche de mon objectif",
+      "Je mérite de me sentir bien dans mon corps",
+      "Mes efforts quotidiens construisent la version de moi que je veux être"
+    ],
+    "visualisation": {
+      "exercice": "Visualisation matinale 5 min",
+      "methode": "Fermez les yeux. Imaginez-vous dans ${nutritionForm.duree} semaines, ${perteVisee}kg en moins. Comment vous sentez-vous ? Quels vêtements portez-vous ? Comment les autres vous regardent ? Ressentez la fierté, l'énergie, la confiance.",
+      "frequence": "Tous les matins au réveil",
+      "benefices": "Programme le subconscient vers le succès, augmente la motivation"
+    },
+    "gestionEmotionsAlimentaires": {
+      "comprendre": "Manger ses émotions est un mécanisme de récompense du cerveau. Ce n'est pas une faiblesse.",
+      "declencheurs": ["Stress", "Ennui", "Fatigue", "Tristesse", "Colère", "Solitude"],
+      "alternatives": [
+        {"emotion": "Stress", "alternative": "5 respirations profondes, marche de 10 min, appeler une amie"},
+        {"emotion": "Ennui", "alternative": "Liste d'activités plaisir (lecture, bain, série), sortir de la cuisine"},
+        {"emotion": "Fatigue", "alternative": "Micro-sieste 20min, tisane, aller se coucher plus tôt"},
+        {"emotion": "Tristesse", "alternative": "Se permettre de pleurer, musique positive, mouvement doux"}
+      ],
+      "technique3min": "Avant de manger hors repas : STOP. Respirer. Identifier l'émotion. Attendre 3 min. Choisir consciemment."
+    },
+    "celebrerLesVictoires": {
+      "concept": "Le cerveau a besoin de récompenses régulières pour maintenir la motivation",
+      "victoires": [
+        "Chaque jour où le programme est suivi = victoire 🏆",
+        "Chaque kilo perdu = victoire majeure 🎉",
+        "Chaque refus de tentation = victoire mentale 💪",
+        "Chaque séance G5 terminée = victoire bien-être 💆",
+        "Chaque nouveau vêtement qui va = victoire visible 👗"
+      ],
+      "recompenses": [
+        "Pas de récompense alimentaire !",
+        "Soin beauté / manucure",
+        "Nouveau vêtement",
+        "Activité plaisir (cinéma, massage spa)",
+        "Temps pour soi"
+      ]
+    },
+    "gestionEcarts": {
+      "philosophie": "Un écart n'est pas un échec. Un écart N'ANNULE PAS les progrès. Seul l'abandon est un échec.",
+      "apresUnEcart": [
+        "1. Ne pas culpabiliser (le stress fait stocker !)",
+        "2. Ne pas se peser le lendemain",
+        "3. Ne pas compenser par du jeûne ou sport excessif",
+        "4. Reprendre le programme au repas suivant, simplement",
+        "5. Boire beaucoup d'eau pour éliminer"
+      ],
+      "repasPlaisirAutorises": "1-2 repas plaisir par semaine FONT PARTIE du programme. Ils relancent le métabolisme."
+    },
+    "mantras": {
+      "fringale": "Cette envie va passer dans 10 minutes. Je suis plus forte que cette envie.",
+      "decouragement": "Je n'ai pas fait tout ce chemin pour faire que ce chemin.",
+      "tentation": "Ce plaisir dure 10 secondes, ma fierté dure toute la journée.",
+      "fatigue": "Mon corps se repose, mais mon objectif ne dort jamais."
     }
-  ],
-  "alimentsSuperStars": [
-    {
-      "aliment": "Nom de l'aliment à privilégier",
-      "pourquoi": "Pourquoi cet aliment est particulièrement bénéfique pour CE profil",
-      "nutrimentsCles": ["Nutriment 1", "Nutriment 2"],
-      "frequenceRecommandee": "Combien de fois par semaine",
-      "meilleurePreparation": "Comment le préparer pour maximiser les bénéfices"
+  },
+  
+  "produitsRecommandes": {
+    "intro": "Ces produits de qualité amplifient les résultats du programme. Ils ne sont pas obligatoires mais fortement recommandés pour maximiser votre transformation.",
+    "categories": {
+      "soinCorps": [
+        {
+          "nom": "Huile de massage anti-cellulite (type Weleda Bouleau)",
+          "utilisation": "Auto-massage quotidien 5min sur zones ciblées",
+          "benefices": "Active la microcirculation, prépare la peau aux massages G5",
+          "moment": "Le soir avant la douche ou matin",
+          "qrCodePlaceholder": "QR_HUILE_MASSAGE",
+          "prixIndicatif": "15-25€"
+        },
+        {
+          "nom": "Gommage corps au sel marin ou café",
+          "utilisation": "2x/semaine sous la douche",
+          "benefices": "Exfolie, active la circulation, prépare les tissus",
+          "moment": "Avant les jours de massage G5",
+          "qrCodePlaceholder": "QR_GOMMAGE",
+          "prixIndicatif": "10-20€"
+        },
+        {
+          "nom": "Crème raffermissante caféine (type Somatoline)",
+          "utilisation": "1x/jour sur zones ciblées",
+          "benefices": "Effet tenseur, caféine = lipolytique",
+          "moment": "Après la douche du matin",
+          "qrCodePlaceholder": "QR_CREME_FERMETE",
+          "prixIndicatif": "20-40€"
+        },
+        {
+          "nom": "Ventouse cellulite silicone",
+          "utilisation": "Auto-palper-rouler 5min/jour",
+          "benefices": "Complète les massages G5 entre les séances",
+          "moment": "Le soir avec l'huile de massage",
+          "qrCodePlaceholder": "QR_VENTOUSE",
+          "prixIndicatif": "10-15€"
+        },
+        {
+          "nom": "Brosse de massage à sec",
+          "utilisation": "3-5min chaque matin AVANT douche",
+          "benefices": "Stimule le drainage lymphatique, exfolie, tonifie",
+          "moment": "Matin, brossage vers le cœur",
+          "qrCodePlaceholder": "QR_BROSSE_SEC",
+          "prixIndicatif": "8-15€"
+        }
+      ],
+      "hydratation": [
+        {
+          "nom": "Gourde graduée 1L avec marquage heures",
+          "utilisation": "À garder visible toute la journée",
+          "benefices": "Rappel visuel, suivi facile de l'hydratation",
+          "qrCodePlaceholder": "QR_GOURDE",
+          "prixIndicatif": "15-25€"
+        },
+        {
+          "nom": "Tisane Queue de Cerise bio",
+          "utilisation": "1L/jour pendant 3 semaines",
+          "benefices": "Drainage puissant, anti-rétention d'eau",
+          "qrCodePlaceholder": "QR_TISANE_CERISE",
+          "prixIndicatif": "8-12€"
+        },
+        {
+          "nom": "Thé vert Matcha (qualité culinaire)",
+          "utilisation": "1 c. à café/jour le matin",
+          "benefices": "Thermogénèse, antioxydants, brûle-graisses",
+          "qrCodePlaceholder": "QR_MATCHA",
+          "prixIndicatif": "15-25€"
+        }
+      ],
+      "complement": [
+        {
+          "nom": "Magnésium bisglycinate",
+          "utilisation": "300mg le soir",
+          "benefices": "Améliore le sommeil, réduit le stress, anti-crampes",
+          "qrCodePlaceholder": "QR_MAGNESIUM",
+          "prixIndicatif": "15-20€"
+        },
+        {
+          "nom": "Oméga 3 (huile de poisson ou algues)",
+          "utilisation": "1-2g/jour au repas",
+          "benefices": "Anti-inflammatoire, aide à la perte de graisse viscérale",
+          "qrCodePlaceholder": "QR_OMEGA3",
+          "prixIndicatif": "15-25€"
+        }
+      ],
+      "equipement": [
+        {
+          "nom": "Tapis de yoga/fitness",
+          "utilisation": "Pour les exercices quotidiens",
+          "benefices": "Confort, motivation, espace dédié",
+          "qrCodePlaceholder": "QR_TAPIS",
+          "prixIndicatif": "20-40€"
+        },
+        {
+          "nom": "Élastique de résistance",
+          "utilisation": "Renforcement musculaire doux",
+          "benefices": "Tonification sans prise de masse",
+          "qrCodePlaceholder": "QR_ELASTIQUE",
+          "prixIndicatif": "10-15€"
+        },
+        {
+          "nom": "Balance connectée",
+          "utilisation": "1 pesée/semaine même jour même heure",
+          "benefices": "Suivi masse grasse/musculaire, pas juste le poids",
+          "qrCodePlaceholder": "QR_BALANCE",
+          "prixIndicatif": "30-60€"
+        }
+      ]
+    },
+    "budgetComplet": "Budget total recommandé : 100-150€ (investissement unique qui dure plusieurs mois)",
+    "priorites": ["1. Gourde graduée (essentiel)", "2. Huile massage + Ventouse (synergie G5)", "3. Tisane drainage (résultats rapides)", "4. Brosse à sec (rituel matin)"]
+  },
+  
+  "checklistQuotidienne": {
+    "matin": [
+      {"action": "Boire 500ml eau tiède citron au réveil", "icon": "💧", "points": 10},
+      {"action": "Routine réveil 5min (étirements, respirations)", "icon": "🌅", "points": 10},
+      {"action": "Brossage à sec 3min", "icon": "✨", "points": 5},
+      {"action": "Petit-déjeuner du programme", "icon": "🥗", "points": 15},
+      {"action": "Affirmation positive du jour", "icon": "🧠", "points": 5}
+    ],
+    "journee": [
+      {"action": "Atteindre 8000 pas", "icon": "🚶", "points": 20},
+      {"action": "Boire ${eau}L d'eau total", "icon": "💧", "points": 15},
+      {"action": "Déjeuner du programme", "icon": "🥗", "points": 15},
+      {"action": "Collation saine si faim", "icon": "🍎", "points": 5},
+      {"action": "10min mouvement/exercices ciblés", "icon": "💪", "points": 10}
+    ],
+    "soir": [
+      {"action": "Dîner du programme (3h avant coucher)", "icon": "🥗", "points": 15},
+      {"action": "Gainage 5min", "icon": "🏋️", "points": 10},
+      {"action": "Auto-massage huile zones ciblées", "icon": "💆", "points": 10},
+      {"action": "Digital detox 1h avant coucher", "icon": "📵", "points": 10},
+      {"action": "Coucher avant 23h", "icon": "😴", "points": 15}
+    ],
+    "bonusJourMassageG5": [
+      {"action": "500ml eau 1h avant massage", "icon": "💧", "points": 10},
+      {"action": "Exercices activation avant massage", "icon": "🔥", "points": 10},
+      {"action": "750ml eau dans les 2h après massage", "icon": "💧", "points": 15},
+      {"action": "Marche douce après massage", "icon": "🚶", "points": 5}
+    ],
+    "systemPoints": {
+      "objectifJour": 100,
+      "niveaux": [
+        {"points": 0, "badge": "Débutante", "emoji": "🌱"},
+        {"points": 500, "badge": "Motivée", "emoji": "💫"},
+        {"points": 1500, "badge": "Déterminée", "emoji": "🔥"},
+        {"points": 3000, "badge": "Warrior", "emoji": "💪"},
+        {"points": 5000, "badge": "Championne", "emoji": "🏆"},
+        {"points": 10000, "badge": "Légende SLIM TOUCH", "emoji": "👑"}
+      ]
     }
-  ],
-  "alimentsAEviter": [
-    {
-      "aliment": "Aliment à limiter ou éviter",
-      "pourquoi": "Raison scientifique spécifique à ce profil",
-      "alternative": "Alternative saine et satisfaisante"
-    }
-  ],
+  },
+  
   "semaines": [
     {
       "numero": 1,
-      "theme": "Thème scientifique de la semaine (ex: 'Rééquilibrage de la glycémie et détoxification hépatique')",
-      "objectifScientifique": "Objectif physiologique précis de cette semaine",
-      "focusNutritionnel": "Sur quoi on met l'accent cette semaine et pourquoi",
-      "conseilSemaine": "Conseil comportemental spécifique pour cette semaine",
+      "theme": "Détox et mise en place des rituels",
+      "objectifScientifique": "Rééquilibrer la glycémie, initier le drainage, créer les habitudes",
+      "focusNutritionnel": "Élimination sucres raffinés, augmentation fibres et eau",
+      "focusMouvement": "Marche quotidienne + routine réveil",
+      "focusSommeil": "Installer la routine coucher",
+      "focusMindset": "Visualisation et affirmations quotidiennes",
       "jours": [
         {
           "jour": "Lundi",
-          "themeJour": "Mini-thème ou focus du jour",
+          "themeJour": "Jour de lancement",
           "petitDejeuner": {
-            "plat": "Nom appétissant du plat",
-            "description": "Description qui donne envie",
-            "ingredients": [
-              {"item": "ingrédient 1", "quantite": "quantité précise", "benefice": "pourquoi cet ingrédient"}
-            ],
-            "macros": {"calories": 350, "proteines": 20, "glucides": 35, "lipides": 15, "fibres": 6},
-            "indiceClygemique": "Bas/Moyen/Haut",
-            "tempsPreparation": "X min",
-            "preparation": "Instructions détaillées étape par étape",
-            "astucesChef": "Astuce pour rendre le plat encore meilleur",
-            "variante": "Variante possible si besoin de changement",
-            "beneficesSante": "Pourquoi ce petit-déjeuner est optimal pour commencer la journée"
+            "plat": "Bowl protéiné myrtilles",
+            "description": "Yaourt grec, myrtilles, amandes, graines de chia",
+            "macros": {"calories": 350, "proteines": 22, "glucides": 30, "lipides": 15, "fibres": 8},
+            "tempsPreparation": "5 min"
           },
           "dejeuner": {
-            "plat": "Nom appétissant",
-            "description": "Description appétissante",
-            "ingredients": [
-              {"item": "ingrédient", "quantite": "quantité", "benefice": "bénéfice"}
-            ],
-            "macros": {"calories": 450, "proteines": 35, "glucides": 40, "lipides": 18, "fibres": 8},
-            "indiceClygemique": "Bas",
-            "tempsPreparation": "X min",
-            "preparation": "Instructions détaillées",
-            "astucesChef": "Astuce",
-            "variante": "Variante",
-            "beneficesSante": "Bénéfices santé de ce repas"
+            "plat": "Salade composée poulet grillé",
+            "description": "Poulet, quinoa, légumes croquants, avocat, vinaigrette citron",
+            "macros": {"calories": 480, "proteines": 38, "glucides": 35, "lipides": 22, "fibres": 10},
+            "tempsPreparation": "15 min"
           },
           "collation": {
-            "plat": "Nom de la collation",
-            "ingredients": ["ingrédient avec quantité"],
-            "macros": {"calories": 150, "proteines": 8, "glucides": 15, "lipides": 6},
-            "timing": "Moment optimal pour cette collation",
-            "pourquoi": "Pourquoi cette collation à ce moment"
+            "plat": "Pomme + 10 amandes",
+            "macros": {"calories": 150, "proteines": 4, "glucides": 18, "lipides": 8}
           },
           "diner": {
-            "plat": "Nom appétissant",
-            "description": "Description",
-            "ingredients": [
-              {"item": "ingrédient", "quantite": "quantité", "benefice": "bénéfice"}
-            ],
-            "macros": {"calories": 400, "proteines": 30, "glucides": 30, "lipides": 18, "fibres": 10},
-            "indiceClygemique": "Bas",
-            "tempsPreparation": "X min",
-            "preparation": "Instructions détaillées",
-            "astucesChef": "Astuce",
-            "pourquoiLeSoir": "Pourquoi ce type de repas est idéal le soir"
+            "plat": "Saumon vapeur légumes verts",
+            "description": "Pavé de saumon, brocolis, haricots verts, huile d'olive",
+            "macros": {"calories": 420, "proteines": 35, "glucides": 15, "lipides": 25, "fibres": 8},
+            "tempsPreparation": "20 min"
           },
-          "hydratation": "Objectif hydratation du jour et astuces",
-          "activitePhysiqueConseillee": "Suggestion d'activité adaptée pour ce jour",
-          "totalJour": {"calories": 1350, "proteines": 93, "glucides": 120, "lipides": 57, "fibres": 28}
+          "totalJour": {"calories": 1400, "proteines": 99, "glucides": 98, "lipides": 70, "fibres": 34},
+          "hydratation": "${eau}L + tisane drainage",
+          "mouvement": "30min marche + routine réveil",
+          "sommeil": "Coucher 22h30, routine tisane + lecture"
         }
       ],
       "bilanSemaine": {
-        "calories": "Total calories semaine",
-        "deficitTotal": "Déficit cumulé",
-        "pertePotentielle": "Perte de poids estimée cette semaine",
-        "objectifAtteint": "Ce que le corps aura accompli"
+        "pertePotentielle": "0.8-1.2 kg (dont eau/rétention)",
+        "signeSuc": "Moins de ballonnements, meilleure énergie"
       }
     }
   ],
+  
   "listesCourses": [
     {
       "semaine": 1,
-      "fruits": [{"item": "Pommes Bio Gala", "quantite": "6", "prix_estime": "3€", "conservation": "1 semaine au frigo"}],
-      "legumes": [{"item": "Brocoli", "quantite": "2 têtes", "prix_estime": "2.50€", "conservation": "4-5 jours"}],
-      "proteinesAnimales": [{"item": "Filet de poulet fermier", "quantite": "600g", "prix_estime": "8€", "conservation": "3 jours ou congeler"}],
-      "proteinesVegetales": [{"item": "Lentilles vertes", "quantite": "500g", "prix_estime": "2€", "conservation": "Plusieurs mois"}],
-      "produitsFrais": [{"item": "Yaourt grec 0%", "quantite": "4 pots", "prix_estime": "3€", "pourquoi": "Riche en protéines, probiotiques"}],
-      "feculentsComplexes": [{"item": "Quinoa", "quantite": "400g", "prix_estime": "4€", "pourquoi": "Protéines complètes, IG bas"}],
-      "bonnesGraisses": [{"item": "Huile d'olive extra vierge", "quantite": "50cl", "prix_estime": "6€", "utilisation": "Assaisonnement à froid"}],
-      "epicerie": [{"item": "Curcuma + poivre noir", "quantite": "1 pot", "prix_estime": "3€", "benefice": "Anti-inflammatoire puissant"}],
-      "budgetTotal": "XX€",
-      "astucesEconomies": ["Astuce 1 pour économiser", "Astuce 2"]
+      "fruits": [{"item": "Myrtilles", "quantite": "2 barquettes", "prix_estime": "6€"}, {"item": "Pommes", "quantite": "6", "prix_estime": "3€"}, {"item": "Citrons", "quantite": "4", "prix_estime": "2€"}, {"item": "Bananes", "quantite": "6", "prix_estime": "2€"}],
+      "legumes": [{"item": "Brocolis", "quantite": "2", "prix_estime": "3€"}, {"item": "Courgettes", "quantite": "4", "prix_estime": "3€"}, {"item": "Épinards frais", "quantite": "200g", "prix_estime": "2.50€"}, {"item": "Avocat", "quantite": "3", "prix_estime": "4€"}, {"item": "Concombre", "quantite": "2", "prix_estime": "2€"}],
+      "proteines": [{"item": "Filets de poulet", "quantite": "500g", "prix_estime": "7€"}, {"item": "Pavés de saumon", "quantite": "4", "prix_estime": "12€"}, {"item": "Oeufs bio", "quantite": "12", "prix_estime": "4€"}],
+      "feculents": [{"item": "Quinoa", "quantite": "500g", "prix_estime": "4€"}, {"item": "Flocons d'avoine", "quantite": "500g", "prix_estime": "2€"}],
+      "produitsFrais": [{"item": "Yaourt grec 0%", "quantite": "4", "prix_estime": "3€"}, {"item": "Lait d'amande", "quantite": "1L", "prix_estime": "2.50€"}],
+      "oleagineux": [{"item": "Amandes", "quantite": "200g", "prix_estime": "4€"}, {"item": "Graines de chia", "quantite": "200g", "prix_estime": "4€"}],
+      "epicerie": [{"item": "Huile d'olive vierge", "quantite": "50cl", "prix_estime": "6€"}, {"item": "Tisane queue de cerise", "quantite": "1 boîte", "prix_estime": "4€"}],
+      "budgetTotal": "67€",
+      "astucesEconomies": ["Acheter les légumes de saison", "Comparer les prix au kilo", "Surgeler le poisson si promo"]
     }
   ],
+  
   "recettesSignatures": [
     {
-      "nom": "Nom de la recette signature",
-      "categorie": "Petit-déjeuner/Déjeuner/Dîner",
-      "difficulte": "Facile/Moyen/Élaboré",
-      "tempsTotal": "XX min",
-      "tempsPreparation": "XX min",
-      "tempsCuisson": "XX min",
-      "portions": 2,
-      "conservation": "Comment et combien de temps conserver",
+      "nom": "Bowl Énergisant du Matin SLIM TOUCH",
+      "categorie": "Petit-déjeuner",
+      "tempsTotal": "10 min",
       "scoreNutritionnel": "9/10",
-      "pourquoiCetteRecette": "Pourquoi cette recette est parfaite pour ce profil",
+      "pourquoiCetteRecette": "Protéines pour la satiété, IG bas pour éviter les fringales, antioxydants des baies",
       "ingredients": [
-        {"item": "Ingrédient", "quantite": "Quantité précise", "substitut": "Alternative si besoin", "role": "Rôle dans la recette"}
+        {"item": "Yaourt grec 0%", "quantite": "150g"},
+        {"item": "Myrtilles fraîches", "quantite": "80g"},
+        {"item": "Amandes effilées", "quantite": "15g"},
+        {"item": "Graines de chia", "quantite": "10g"},
+        {"item": "Cannelle", "quantite": "1 pincée"}
       ],
-      "materielNecessaire": ["Poêle anti-adhésive", "Mixeur"],
       "etapesDetaillees": [
-        {"etape": 1, "instruction": "Instruction détaillée", "astuce": "Astuce pro pour cette étape", "duree": "2 min"},
-        {"etape": 2, "instruction": "Instruction", "astuce": "Astuce", "duree": "5 min"}
+        {"etape": 1, "instruction": "Verser le yaourt grec dans un bol", "astuce": "Sortir le yaourt 5min avant pour qu'il soit moins froid"},
+        {"etape": 2, "instruction": "Ajouter les myrtilles fraîches ou décongelées", "astuce": "Les myrtilles surgelées sont aussi nutritives et moins chères"},
+        {"etape": 3, "instruction": "Parsemer d'amandes effilées et graines de chia", "astuce": "Les graines de chia gonflent = satiété prolongée"},
+        {"etape": 4, "instruction": "Saupoudrer de cannelle", "astuce": "La cannelle régule la glycémie, goût sucré sans sucre"}
       ],
-      "macrosParPortion": {"calories": 400, "proteines": 30, "glucides": 35, "lipides": 15, "fibres": 8},
-      "beneficesSante": ["Bénéfice 1", "Bénéfice 2", "Bénéfice 3"],
-      "variantes": [
-        {"nom": "Variante végétarienne", "modification": "Remplacer X par Y"},
-        {"nom": "Version express", "modification": "Simplification pour gagner du temps"}
-      ],
-      "accordsParfaits": "Avec quoi accompagner ce plat",
-      "noteDuChef": "Conseil du chef pour sublimer cette recette"
+      "macrosParPortion": {"calories": 320, "proteines": 22, "glucides": 28, "lipides": 14, "fibres": 8},
+      "noteDuChef": "Préparez les graines de chia la veille dans un peu d'eau pour un effet pudding encore plus onctueux"
     }
   ],
-  "planBatchCooking": {
-    "explication": "Comment préparer plusieurs repas en une seule session pour gagner du temps",
-    "jourPreparation": "Dimanche (2h de préparation)",
-    "recettesABatcher": ["Recette 1 qui se conserve bien", "Recette 2"],
-    "contenantsNecessaires": ["X boîtes hermétiques", "Bocaux en verre"],
-    "ordrePreparation": ["1. Commencer par...", "2. Pendant que X cuit, préparer Y...", "3. Finaliser..."],
-    "conservationOptimale": "Comment stocker pour la semaine"
-  },
-  "gestionEcarts": {
-    "philosophie": "Les écarts font partie de la vie et ne ruinent pas les progrès",
-    "strategieRepasLibre": "Comment intégrer 1-2 repas plaisir par semaine sans culpabilité",
-    "recuperationApresExces": "Quoi faire le lendemain d'un écart pour revenir sur les rails",
-    "alimentsPlaisirAutorises": ["Aliment plaisir 1 (version saine)", "Aliment 2"],
-    "gestionFringales": ["Astuce 1 contre les fringales", "Astuce 2", "Astuce 3"]
-  },
-  "suiviProgression": {
-    "indicateursASuivre": ["Poids (1x/semaine, même jour, même heure)", "Mensurations (toutes les 2 semaines)", "Énergie (échelle 1-10)", "Qualité du sommeil"],
-    "signesPositifs": ["Signe 1 que le programme fonctionne", "Signe 2", "Signe 3"],
-    "signesAjustementNecessaire": ["Si X, alors ajuster Y", "Si fatigue persistante, augmenter glucides de 20g"],
-    "plateauPrevention": "Comment éviter et gérer les plateaux de perte de poids"
-  },
+  
   "faq": [
     {
-      "question": "Question fréquente 1 adaptée au profil",
-      "reponse": "Réponse détaillée et scientifique"
+      "question": "Puis-je boire du café ?",
+      "reponse": "Oui ! Maximum 2-3 cafés avant 14h. Le café noir (sans sucre) peut même booster le métabolisme de 3-11%. Évitez après 14h pour ne pas perturber le sommeil."
     },
     {
-      "question": "Puis-je boire de l'alcool ?",
-      "reponse": "Réponse nuancée et pratique"
+      "question": "Et si j'ai une invitation au restaurant ?",
+      "reponse": "C'est votre repas plaisir de la semaine ! Choisissez : entrée légère + plat protéine/légumes OU plat + dessert partagé. Pas d'entrée + plat + dessert + alcool. Et reprenez le programme au repas suivant."
+    },
+    {
+      "question": "Je n'ai pas le temps de cuisiner tous les jours",
+      "reponse": "Utilisez le batch cooking ! 2h le dimanche = repas de la semaine prêts. Les recettes sont pensées pour être préparées en grande quantité et se conserver."
+    },
+    {
+      "question": "Comment maximiser les effets du massage G5 ?",
+      "reponse": "Triptyque magique : 1) Eau +++ (500ml avant, 750ml après), 2) Mouvement léger avant et après, 3) Pas d'alcool 24h avant/après. Vos résultats seront amplifiés de 30-50%."
     }
   ],
-  "messageMotivation": "Message personnalisé et motivant pour cette cliente, avec son prénom, qui lui donne envie de commencer et de tenir sur la durée"
+  
+  "messageMotivation": "Message personnalisé avec prénom de la cliente"
 }
 
 ══════════════════════════════════════════════════════════════
-🎯 INSTRUCTIONS CRITIQUES POUR UN PROGRAMME PARFAIT
+🎯 INSTRUCTIONS CRITIQUES
 ══════════════════════════════════════════════════════════════
 
-1. PERSONNALISATION MAXIMALE : Chaque élément doit être adapté à CE profil spécifique, pas de généralités
-2. SCIENCE VULGARISÉE : Explique le "pourquoi" de chaque recommandation de façon accessible mais précise
-3. VARIÉTÉ ABSOLUE : JAMAIS le même plat 2 jours de suite, JAMAIS les mêmes ingrédients trop souvent
-4. PLAISIR GUSTATIF : Les recettes doivent donner ENVIE, pas l'impression de régime triste
-5. PRATICITÉ : Respecter strictement le temps de cuisine (${nutritionForm.tempsCuisine}) et budget (${nutritionForm.budgetCourses})
-6. PROGRESSION : Chaque semaine doit avoir un thème et objectif qui fait progresser vers l'objectif final
-7. COMPLÉTUDE : Génère TOUTES les ${nutritionForm.duree} semaines avec 7 jours COMPLETS chacune
-8. INGRÉDIENTS FRANÇAIS : Tous les ingrédients doivent être trouvables en supermarché français standard
-9. RECETTES SIGNATURES : 5-6 recettes détaillées qui deviendront les favorites de la cliente
-10. BIENVEILLANCE : Ton encourageant, pas culpabilisant, qui donne confiance
+1. Génère TOUTES les ${nutritionForm.duree} semaines COMPLÈTES avec 7 jours chacune
+2. VARIÉTÉ ABSOLUE : Jamais le même plat 2 jours de suite
+3. PERSONNALISATION : Adapte tout au profil (allergies, budget, temps, pathologies)
+4. 5 PILIERS PRÉSENTS : Chaque jour inclut nutrition + hydratation + mouvement + sommeil + mindset
+5. SYNERGIE G5 : Explique comment chaque pilier amplifie les massages G5
+6. PRODUITS : Garde les placeholders QR_XXXX pour les QR codes affiliés
+7. CHECKLIST : Points et gamification pour l'engagement quotidien
+8. TON BIENVEILLANT : Encourageant, jamais culpabilisant
+9. SCIENCE VULGARISÉE : Explique le "pourquoi" de façon accessible
+10. INGRÉDIENTS FRANÇAIS : Trouvables en supermarché standard
 
-CE PROGRAMME DOIT ÊTRE LE MEILLEUR QUE CETTE CLIENTE PUISSE RECEVOIR DE SA VIE.`;
+CE PROGRAMME DOIT ÊTRE LE PLUS COMPLET ET TRANSFORMATEUR QUE CETTE CLIENTE AIT JAMAIS VU.`;
 
       // Appel via webhook n8n (proxy OpenAI GPT-4o)
       const response = await fetch('https://n8n.srv819641.hstgr.cloud/webhook/generate-nutrition', {
@@ -5524,7 +5930,7 @@ CE PROGRAMME DOIT ÊTRE LE MEILLEUR QUE CETTE CLIENTE PUISSE RECEVOIR DE SA VIE.
       
       addNotification({
         type: 'success',
-        message: `Programme nutrition généré pour ${client.nom} ! 🥗`
+        message: `Programme SLIM TOUCH 360° généré pour ${client.nom} ! 🎯`
       });
       
     } catch (error) {
@@ -8150,6 +8556,72 @@ CE PROGRAMME DOIT ÊTRE LE MEILLEUR QUE CETTE CLIENTE PUISSE RECEVOIR DE SA VIE.
           {/* ============================================ */}
           {currentView === 'dashboard' && !selectedClient && (
             <div className="animate-in">
+              
+              {/* Disclaimer légal - affiché une fois par session */}
+              {!sessionStorage.getItem('disclaimerAccepted') && (
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(251, 191, 36, 0.05))',
+                  border: '1px solid #f59e0b',
+                  borderRadius: '16px',
+                  padding: '1.5rem',
+                  marginBottom: '1.5rem',
+                  position: 'relative'
+                }}>
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                    <div style={{ 
+                      width: '48px', 
+                      height: '48px', 
+                      background: 'rgba(251, 191, 36, 0.2)',
+                      borderRadius: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      <AlertTriangle size={24} style={{ color: '#f59e0b' }} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <h4 style={{ color: '#b45309', marginBottom: '0.75rem', fontSize: '1rem' }}>
+                        ⚖️ Informations importantes - Mentions légales
+                      </h4>
+                      <div style={{ color: '#92400e', fontSize: '0.85rem', lineHeight: '1.6' }}>
+                        <p style={{ marginBottom: '0.5rem' }}>
+                          <strong>SLIM TOUCH</strong> propose des prestations de massage G5 à visée esthétique et de bien-être. 
+                          Nos services ne constituent en aucun cas un acte médical, paramédical ou de kinésithérapie.
+                        </p>
+                        <p style={{ marginBottom: '0.5rem' }}>
+                          • Les programmes nutritionnels générés par IA sont fournis <strong>à titre informatif uniquement</strong> et ne remplacent pas l'avis d'un médecin, diététicien ou nutritionniste diplômé.
+                        </p>
+                        <p style={{ marginBottom: '0.5rem' }}>
+                          • Les résultats peuvent varier selon les individus. Les témoignages et résultats présentés ne garantissent pas des résultats similaires.
+                        </p>
+                        <p style={{ marginBottom: '0.5rem' }}>
+                          • Un certificat médical de non contre-indication est obligatoire avant tout programme de soins.
+                        </p>
+                        <p>
+                          • En cas de doute sur votre état de santé, consultez un professionnel de santé avant de commencer tout programme.
+                        </p>
+                      </div>
+                      <button 
+                        className="btn btn-sm"
+                        style={{ 
+                          marginTop: '1rem',
+                          background: '#f59e0b',
+                          color: 'white',
+                          border: 'none'
+                        }}
+                        onClick={() => {
+                          sessionStorage.setItem('disclaimerAccepted', 'true');
+                          window.location.reload();
+                        }}
+                      >
+                        ✓ J'ai lu et compris
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               {/* Stats pour Directrice */}
               {currentUser.isDirector ? (
                 <div className="stats-grid">
@@ -9153,13 +9625,13 @@ CE PROGRAMME DOIT ÊTRE LE MEILLEUR QUE CETTE CLIENTE PUISSE RECEVOIR DE SA VIE.
                   )}
                 </div>
                 
-                {/* 🥗 Programme Nutrition IA */}
-                <div className="card" style={{ background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.05), rgba(34, 197, 94, 0.02))' }}>
+                {/* 🎯 Programme SLIM TOUCH 360° */}
+                <div className="card" style={{ background: 'linear-gradient(135deg, rgba(201, 169, 98, 0.1), rgba(34, 197, 94, 0.05))', border: '2px solid rgba(201, 169, 98, 0.5)' }}>
                   <div className="card-header">
-                    <div className="card-title" style={{ color: '#22c55e' }}>🥗 Programme Nutrition IA</div>
+                    <div className="card-title" style={{ color: '#c9a962' }}>🎯 Programme SLIM TOUCH 360°</div>
                     <button 
                       className="btn btn-primary btn-sm" 
-                      style={{ background: 'linear-gradient(135deg, #22c55e, #16a34a)' }}
+                      style={{ background: 'linear-gradient(135deg, #c9a962, #22c55e)' }}
                       onClick={() => {
                         setGeneratedProgramme(null);
                         setNutritionForm(prev => ({
@@ -9169,21 +9641,35 @@ CE PROGRAMME DOIT ÊTRE LE MEILLEUR QUE CETTE CLIENTE PUISSE RECEVOIR DE SA VIE.
                         setShowNutritionModal(true);
                       }}
                     >
-                      <Zap size={16} /> Générer un programme
+                      <Zap size={16} /> Générer le programme complet
                     </button>
                   </div>
                   
                   <div style={{ padding: '0.5rem 0' }}>
                     <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1rem' }}>
-                      Créez un programme nutritionnel personnalisé pour {selectedClient.nom?.split(' ')[0]} basé sur son profil, 
-                      ses objectifs et ses préférences alimentaires. Notre IA nutritionniste génère des menus complets avec recettes et liste de courses.
+                      Programme de transformation COMPLET pour {selectedClient.nom?.split(' ')[0]} combinant les 5 piliers : 
+                      <strong style={{ color: '#22c55e' }}> Nutrition</strong>, 
+                      <strong style={{ color: '#3b82f6' }}> Hydratation</strong>, 
+                      <strong style={{ color: '#f59e0b' }}> Mouvement</strong>, 
+                      <strong style={{ color: '#8b5cf6' }}> Sommeil</strong> et 
+                      <strong style={{ color: '#ec4899' }}> Mindset</strong>.
+                      Synchronisé avec les massages G5 pour des résultats amplifiés.
                     </p>
+                    
+                    {/* Les 5 piliers */}
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+                      <span style={{ background: 'rgba(34, 197, 94, 0.2)', color: '#22c55e', padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.8rem' }}>🥗 Nutrition</span>
+                      <span style={{ background: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6', padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.8rem' }}>💧 Hydratation</span>
+                      <span style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#f59e0b', padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.8rem' }}>🏃 Mouvement</span>
+                      <span style={{ background: 'rgba(139, 92, 246, 0.2)', color: '#8b5cf6', padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.8rem' }}>😴 Sommeil</span>
+                      <span style={{ background: 'rgba(236, 72, 153, 0.2)', color: '#ec4899', padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.8rem' }}>🧠 Mindset</span>
+                    </div>
                     
                     {/* Si un programme existe déjà */}
                     {selectedClient.programme_nutrition && (
                       <div style={{ 
-                        background: 'rgba(34, 197, 94, 0.1)', 
-                        border: '1px solid #22c55e',
+                        background: 'rgba(201, 169, 98, 0.1)', 
+                        border: '1px solid #c9a962',
                         borderRadius: '12px',
                         padding: '1rem',
                         display: 'flex',
@@ -9193,7 +9679,7 @@ CE PROGRAMME DOIT ÊTRE LE MEILLEUR QUE CETTE CLIENTE PUISSE RECEVOIR DE SA VIE.
                         flexWrap: 'wrap'
                       }}>
                         <div>
-                          <div style={{ fontWeight: '600', color: '#22c55e' }}>✓ Programme actif</div>
+                          <div style={{ fontWeight: '600', color: '#c9a962' }}>✓ Programme 360° actif</div>
                           <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                             Généré le {selectedClient.date_programme_nutrition ? new Date(selectedClient.date_programme_nutrition).toLocaleDateString('fr-FR') : 'récemment'}
                           </div>
@@ -15300,12 +15786,12 @@ CE PROGRAMME DOIT ÊTRE LE MEILLEUR QUE CETTE CLIENTE PUISSE RECEVOIR DE SA VIE.
         </div>
       )}
       
-      {/* Modal Programme Nutrition IA */}
+      {/* Modal Programme SLIM TOUCH 360° */}
       {showNutritionModal && selectedClient && (
         <div className="modal-overlay" onClick={() => setShowNutritionModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '900px', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            <div className="modal-header" style={{ background: 'linear-gradient(135deg, #22c55e, #16a34a)', color: 'white', borderRadius: '16px 16px 0 0' }}>
-              <h3 className="modal-title" style={{ color: 'white' }}>🥗 Programme Nutrition IA - {selectedClient.nom}</h3>
+            <div className="modal-header" style={{ background: 'linear-gradient(135deg, #c9a962, #22c55e)', color: 'white', borderRadius: '16px 16px 0 0' }}>
+              <h3 className="modal-title" style={{ color: 'white' }}>🎯 Programme SLIM TOUCH 360° - {selectedClient.nom}</h3>
               <button className="btn btn-ghost" style={{ color: 'white' }} onClick={() => setShowNutritionModal(false)}><X size={20} /></button>
             </div>
             <div className="modal-body" style={{ overflow: 'auto', flex: 1 }}>
@@ -15313,9 +15799,28 @@ CE PROGRAMME DOIT ÊTRE LE MEILLEUR QUE CETTE CLIENTE PUISSE RECEVOIR DE SA VIE.
               {/* Si pas encore de programme généré → Formulaire */}
               {!generatedProgramme && !nutritionLoading && (
                 <div>
-                  <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-                    Remplissez le profil nutritionnel de {selectedClient.nom?.split(' ')[0]} pour générer un programme sur-mesure.
-                  </p>
+                  <div style={{ 
+                    background: 'linear-gradient(135deg, rgba(201, 169, 98, 0.1), rgba(34, 197, 94, 0.05))',
+                    border: '1px solid rgba(201, 169, 98, 0.3)',
+                    borderRadius: '12px',
+                    padding: '1rem',
+                    marginBottom: '1.5rem'
+                  }}>
+                    <div style={{ fontWeight: '600', color: '#c9a962', marginBottom: '0.5rem' }}>✨ Programme de transformation complet</div>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>
+                      Remplissez le profil de {selectedClient.nom?.split(' ')[0]} pour générer un programme incluant les 5 piliers : 
+                      Nutrition, Hydratation, Mouvement, Sommeil et Mindset - synchronisé avec ses massages G5.
+                    </p>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.75rem' }}>
+                      <span style={{ background: 'rgba(34, 197, 94, 0.2)', color: '#22c55e', padding: '0.15rem 0.5rem', borderRadius: '12px', fontSize: '0.75rem' }}>🥗 Menus détaillés</span>
+                      <span style={{ background: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6', padding: '0.15rem 0.5rem', borderRadius: '12px', fontSize: '0.75rem' }}>💧 Protocole hydratation</span>
+                      <span style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#f59e0b', padding: '0.15rem 0.5rem', borderRadius: '12px', fontSize: '0.75rem' }}>🏃 Exercices ciblés</span>
+                      <span style={{ background: 'rgba(139, 92, 246, 0.2)', color: '#8b5cf6', padding: '0.15rem 0.5rem', borderRadius: '12px', fontSize: '0.75rem' }}>😴 Routine sommeil</span>
+                      <span style={{ background: 'rgba(236, 72, 153, 0.2)', color: '#ec4899', padding: '0.15rem 0.5rem', borderRadius: '12px', fontSize: '0.75rem' }}>🧠 Affirmations</span>
+                      <span style={{ background: 'rgba(201, 169, 98, 0.2)', color: '#c9a962', padding: '0.15rem 0.5rem', borderRadius: '12px', fontSize: '0.75rem' }}>🛒 Liste courses</span>
+                      <span style={{ background: 'rgba(201, 169, 98, 0.2)', color: '#c9a962', padding: '0.15rem 0.5rem', borderRadius: '12px', fontSize: '0.75rem' }}>🧴 Produits recommandés</span>
+                    </div>
+                  </div>
                   
                   {/* Infos de base */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
