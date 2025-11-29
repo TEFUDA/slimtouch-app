@@ -5263,18 +5263,15 @@ IMPORTANT :
 - Respecte TOUTES les contraintes alimentaires
 - Les recettes doivent être réalistes et les ingrédients trouvables en supermarché français`;
 
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      // Appel via webhook n8n (proxy pour éviter les erreurs CORS en production)
+      const response = await fetch('https://n8n.srv819641.hstgr.cloud/webhook/generate-nutrition', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': 'YOUR_ANTHROPIC_API_KEY', // À remplacer par ta clé
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true'
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 16000,
-          messages: [{ role: 'user', content: prompt }]
+          prompt: prompt,
+          clientNom: client.nom
         })
       });
 
@@ -5283,25 +5280,31 @@ IMPORTANT :
       }
 
       const data = await response.json();
-      const content = data.content[0].text;
       
-      // Parser le JSON de la réponse
+      // Le workflow n8n retourne directement le programme parsé
       let programme;
-      try {
-        // Nettoyer la réponse si elle contient du texte autour du JSON
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          programme = JSON.parse(jsonMatch[0]);
-        } else {
-          throw new Error('Pas de JSON trouvé dans la réponse');
+      if (data.programme) {
+        programme = data.programme;
+      } else if (data.content) {
+        // Fallback: parser le contenu si retourné brut
+        try {
+          const jsonMatch = data.content.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            programme = JSON.parse(jsonMatch[0]);
+          } else {
+            throw new Error('Pas de JSON trouvé');
+          }
+        } catch (parseError) {
+          programme = {
+            error: true,
+            message: 'Le programme a été généré mais le format est incorrect. Veuillez réessayer.',
+            rawContent: data.content
+          };
         }
-      } catch (parseError) {
-        console.error('Erreur parsing JSON:', parseError);
-        // Créer un programme par défaut si le parsing échoue
+      } else {
         programme = {
           error: true,
-          message: 'Le programme a été généré mais le format est incorrect. Veuillez réessayer.',
-          rawContent: content
+          message: 'Réponse inattendue du serveur. Veuillez réessayer.'
         };
       }
       
@@ -7039,7 +7042,7 @@ IMPORTANT :
         // { id: 'objectifs', label: 'Objectifs Équipe', icon: Trophy, section: 'Administration' }, // Masqué temporairement
         { id: 'employees', label: 'Gestion Équipe', icon: User },
         { id: 'stocks', label: 'Stocks Équipe', icon: Package },
-        { id: 'paiements', label: 'Paiements', icon: CreditCard },
+        // { id: 'paiements', label: 'Paiements', icon: CreditCard }, // Supprimé - géré via Stripe
         { id: 'settings', label: 'Paramètres', icon: Settings },
       ];
     } else {
