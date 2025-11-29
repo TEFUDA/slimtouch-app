@@ -3257,6 +3257,28 @@ export default function SlimTouchApp() {
   const [showExportModal, setShowExportModal] = useState(null); // client object or null
   const [paiement3xForm, setPaiement3xForm] = useState({ clientId: '', montantTotal: '', methode: 'CB', employeeId: '' });
   
+  // State pour le module nutrition IA
+  const [showNutritionModal, setShowNutritionModal] = useState(false);
+  const [nutritionLoading, setNutritionLoading] = useState(false);
+  const [generatedProgramme, setGeneratedProgramme] = useState(null);
+  const [nutritionForm, setNutritionForm] = useState({
+    age: '',
+    taille: '',
+    activitePhysique: 'sedentaire', // sedentaire, leger, modere, actif, tres_actif
+    objectifPerte: '', // kg à perdre
+    duree: '4', // semaines
+    allergies: [],
+    intolerance: [],
+    regimeSpecial: '', // vegetarien, vegan, halal, casher, sans_porc
+    alimentsDetestes: '',
+    alimentsAdores: '',
+    budgetCourses: 'moyen', // economique, moyen, confortable
+    tempsCuisine: 'moyen', // express, moyen, elabore
+    nombreRepas: '3', // 3, 4, 5
+    pathologies: [],
+    objectifSpecifique: '' // ventre, cuisses, etc.
+  });
+  
   // State pour objectifs et gamification
   const [objectives, setObjectives] = useState([]);
   const [showBadgeModal, setShowBadgeModal] = useState(null);
@@ -5096,6 +5118,764 @@ export default function SlimTouchApp() {
       message: `Relance envoyée à ${client?.nom}`,
       forEmployee: currentUser?.id
     });
+  };
+  
+  // ============================================
+  // MODULE NUTRITION IA - Générateur de programme
+  // ============================================
+  
+  const generateNutritionProgramme = async (client) => {
+    setNutritionLoading(true);
+    
+    try {
+      // Calcul du métabolisme basal (formule Mifflin-St Jeor)
+      const poids = client.poidsActuel || 70;
+      const taille = parseInt(nutritionForm.taille) || 165;
+      const age = parseInt(nutritionForm.age) || 35;
+      const objectifPoids = client.objectif || poids - 5;
+      const perteVisee = poids - objectifPoids;
+      
+      // Coefficients d'activité
+      const coeffActivite = {
+        sedentaire: 1.2,
+        leger: 1.375,
+        modere: 1.55,
+        actif: 1.725,
+        tres_actif: 1.9
+      };
+      
+      // MB pour femme (on assume femme pour SLIM TOUCH)
+      const mb = (10 * poids) + (6.25 * taille) - (5 * age) - 161;
+      const depenseJournaliere = Math.round(mb * (coeffActivite[nutritionForm.activitePhysique] || 1.4));
+      const caloriesRecommandees = Math.round(depenseJournaliere - 400); // Déficit de 400 kcal
+      
+      const prompt = `Tu es le Dr. Michel Montignac, nutritionniste de renommée mondiale, expert en perte de poids durable et en indice glycémique. Tu vas créer un programme nutritionnel PERSONNALISÉ et DÉTAILLÉ.
+
+=== PROFIL DE LA CLIENTE ===
+- Prénom : ${client.nom?.split(' ')[0] || 'Cliente'}
+- Poids actuel : ${poids} kg
+- Objectif : ${objectifPoids} kg (perte de ${perteVisee} kg)
+- Taille : ${taille} cm
+- Âge : ${age} ans
+- Activité physique : ${nutritionForm.activitePhysique}
+- Zone à cibler : ${nutritionForm.objectifSpecifique || client.notes || 'Corps entier'}
+
+=== CONTRAINTES ALIMENTAIRES ===
+- Allergies : ${nutritionForm.allergies.length > 0 ? nutritionForm.allergies.join(', ') : 'Aucune'}
+- Intolérances : ${nutritionForm.intolerance.length > 0 ? nutritionForm.intolerance.join(', ') : 'Aucune'}
+- Régime spécial : ${nutritionForm.regimeSpecial || 'Aucun'}
+- Aliments détestés : ${nutritionForm.alimentsDetestes || 'Aucun'}
+- Aliments adorés : ${nutritionForm.alimentsAdores || 'Pas de préférence'}
+
+=== PARAMÈTRES ===
+- Budget courses : ${nutritionForm.budgetCourses} (economique/moyen/confortable)
+- Temps cuisine : ${nutritionForm.tempsCuisine} (express <15min / moyen 15-30min / elabore >30min)
+- Nombre de repas/jour : ${nutritionForm.nombreRepas}
+- Pathologies : ${nutritionForm.pathologies.length > 0 ? nutritionForm.pathologies.join(', ') : 'Aucune'}
+- Durée du programme : ${nutritionForm.duree} semaines
+
+=== CALCULS MÉTABOLIQUES ===
+- Métabolisme basal : ${Math.round(mb)} kcal
+- Dépense journalière estimée : ${depenseJournaliere} kcal
+- Apport calorique recommandé : ${caloriesRecommandees} kcal/jour (déficit de 400 kcal)
+- Répartition macros recommandée : 30% protéines, 35% glucides (IG bas), 35% lipides
+
+=== FORMAT DE RÉPONSE OBLIGATOIRE (JSON) ===
+Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ni après, structuré exactement comme suit :
+
+{
+  "resume": {
+    "caloriesJour": ${caloriesRecommandees},
+    "proteines": "XX g/jour",
+    "glucides": "XX g/jour",
+    "lipides": "XX g/jour",
+    "perteEstimee": "${perteVisee} kg en ${nutritionForm.duree} semaines",
+    "hydratation": "X litres/jour"
+  },
+  "conseils": [
+    "Conseil personnalisé 1 basé sur le profil",
+    "Conseil personnalisé 2",
+    "Conseil personnalisé 3",
+    "Conseil personnalisé 4",
+    "Conseil personnalisé 5"
+  ],
+  "semaines": [
+    {
+      "numero": 1,
+      "theme": "Titre de la semaine (ex: Détox et mise en route)",
+      "objectif": "Objectif spécifique de cette semaine",
+      "jours": [
+        {
+          "jour": "Lundi",
+          "petitDejeuner": {
+            "plat": "Nom du plat",
+            "ingredients": ["ingrédient 1", "ingrédient 2"],
+            "calories": 350,
+            "preparation": "Instructions courtes"
+          },
+          "dejeuner": {
+            "plat": "Nom du plat",
+            "ingredients": ["ingrédient 1", "ingrédient 2"],
+            "calories": 450,
+            "preparation": "Instructions courtes"
+          },
+          "collation": {
+            "plat": "Nom de la collation",
+            "calories": 150
+          },
+          "diner": {
+            "plat": "Nom du plat",
+            "ingredients": ["ingrédient 1", "ingrédient 2"],
+            "calories": 400,
+            "preparation": "Instructions courtes"
+          }
+        }
+      ]
+    }
+  ],
+  "listeCoursesSemaine1": {
+    "fruits": ["pommes x4", "bananes x3", "citrons x2"],
+    "legumes": ["courgettes x3", "tomates x6", "salade x2"],
+    "proteines": ["poulet 500g", "oeufs x12", "saumon 300g"],
+    "feculents": ["riz complet 500g", "quinoa 300g"],
+    "produitsFrais": ["yaourt grec x4", "fromage blanc 500g"],
+    "epicerie": ["huile olive", "épices"],
+    "budgetEstime": "XX€"
+  },
+  "recettesPhares": [
+    {
+      "nom": "Nom de la recette signature",
+      "tempsPreparation": "XX min",
+      "ingredients": ["ingrédient 1 - quantité", "ingrédient 2 - quantité"],
+      "etapes": ["Étape 1", "Étape 2", "Étape 3"],
+      "calories": 400,
+      "astuce": "Astuce du chef"
+    }
+  ]
+}
+
+IMPORTANT : 
+- Génère un programme COMPLET pour ${nutritionForm.duree} semaines (${nutritionForm.duree} objets dans le tableau "semaines")
+- Chaque semaine doit avoir 7 jours complets (Lundi à Dimanche)
+- Varie les repas, ne répète JAMAIS le même plat 2 jours de suite
+- Adapte les recettes au temps de cuisine (${nutritionForm.tempsCuisine})
+- Adapte au budget (${nutritionForm.budgetCourses})
+- Respecte TOUTES les contraintes alimentaires
+- Les recettes doivent être réalistes et les ingrédients trouvables en supermarché français`;
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': 'YOUR_ANTHROPIC_API_KEY', // À remplacer par ta clé
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 16000,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erreur API: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const content = data.content[0].text;
+      
+      // Parser le JSON de la réponse
+      let programme;
+      try {
+        // Nettoyer la réponse si elle contient du texte autour du JSON
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          programme = JSON.parse(jsonMatch[0]);
+        } else {
+          throw new Error('Pas de JSON trouvé dans la réponse');
+        }
+      } catch (parseError) {
+        console.error('Erreur parsing JSON:', parseError);
+        // Créer un programme par défaut si le parsing échoue
+        programme = {
+          error: true,
+          message: 'Le programme a été généré mais le format est incorrect. Veuillez réessayer.',
+          rawContent: content
+        };
+      }
+      
+      // Ajouter les métadonnées
+      programme.metadata = {
+        clientNom: client.nom,
+        dateGeneration: new Date().toISOString(),
+        poidsDepart: poids,
+        poidsObjectif: objectifPoids,
+        duree: nutritionForm.duree
+      };
+      
+      setGeneratedProgramme(programme);
+      
+      // Sauvegarder dans la fiche cliente (optionnel)
+      try {
+        if (client.airtable_id) {
+          await apiUpdateCliente(client.airtable_id, {
+            programme_nutrition: JSON.stringify(programme),
+            date_programme_nutrition: new Date().toISOString().split('T')[0]
+          });
+        }
+      } catch (e) {
+        console.warn('Programme généré mais non sauvegardé dans Airtable');
+      }
+      
+      addNotification({
+        type: 'success',
+        message: `Programme nutrition généré pour ${client.nom} ! 🥗`
+      });
+      
+    } catch (error) {
+      console.error('Erreur génération programme:', error);
+      addNotification({
+        type: 'error',
+        message: 'Erreur lors de la génération du programme. Réessayez.'
+      });
+    } finally {
+      setNutritionLoading(false);
+    }
+  };
+  
+  // Export PDF du programme nutrition
+  const exportNutritionPDF = (programme, client) => {
+    if (!programme || programme.error) return;
+    
+    const content = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Programme Nutrition - ${client.nom}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap');
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: 'Inter', sans-serif; 
+      background: #fff; 
+      color: #333;
+      line-height: 1.6;
+    }
+    
+    .cover {
+      height: 100vh;
+      background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 40px;
+      page-break-after: always;
+    }
+    
+    .cover-logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 48px;
+      color: #c9a962;
+      margin-bottom: 20px;
+    }
+    
+    .cover-title {
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+    
+    .cover-subtitle {
+      font-size: 18px;
+      color: #888;
+      margin-bottom: 40px;
+    }
+    
+    .cover-client {
+      font-size: 24px;
+      color: #c9a962;
+      margin-bottom: 10px;
+    }
+    
+    .cover-stats {
+      display: flex;
+      gap: 40px;
+      margin-top: 40px;
+    }
+    
+    .cover-stat {
+      text-align: center;
+    }
+    
+    .cover-stat-value {
+      font-size: 36px;
+      font-weight: 700;
+      color: #c9a962;
+    }
+    
+    .cover-stat-label {
+      font-size: 14px;
+      color: #888;
+    }
+    
+    .page {
+      padding: 40px;
+      page-break-after: always;
+    }
+    
+    .page-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 28px;
+      color: #1a1a2e;
+      margin-bottom: 30px;
+      padding-bottom: 15px;
+      border-bottom: 3px solid #c9a962;
+    }
+    
+    .section {
+      margin-bottom: 30px;
+    }
+    
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1a1a2e;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .resume-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .resume-card {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+      border-left: 4px solid #c9a962;
+    }
+    
+    .resume-card-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #c9a962;
+    }
+    
+    .resume-card-label {
+      font-size: 12px;
+      color: #666;
+      text-transform: uppercase;
+    }
+    
+    .conseil {
+      background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+      padding: 15px 20px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      border-left: 4px solid #22c55e;
+    }
+    
+    .jour-card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    
+    .jour-header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #2d2d44 100%);
+      color: white;
+      padding: 15px 20px;
+      font-weight: 600;
+    }
+    
+    .jour-content {
+      padding: 20px;
+    }
+    
+    .repas {
+      display: flex;
+      gap: 15px;
+      padding: 15px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .repas:last-child {
+      border-bottom: none;
+    }
+    
+    .repas-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    
+    .repas-icon.breakfast { background: #fef3c7; }
+    .repas-icon.lunch { background: #dbeafe; }
+    .repas-icon.snack { background: #f3e8ff; }
+    .repas-icon.dinner { background: #fce7f3; }
+    
+    .repas-content {
+      flex: 1;
+    }
+    
+    .repas-title {
+      font-weight: 600;
+      color: #1a1a2e;
+      margin-bottom: 5px;
+    }
+    
+    .repas-plat {
+      color: #c9a962;
+      font-weight: 500;
+    }
+    
+    .repas-calories {
+      font-size: 12px;
+      color: #888;
+    }
+    
+    .liste-courses {
+      columns: 2;
+      column-gap: 30px;
+    }
+    
+    .liste-categorie {
+      break-inside: avoid;
+      margin-bottom: 20px;
+    }
+    
+    .liste-categorie-title {
+      font-weight: 600;
+      color: #1a1a2e;
+      margin-bottom: 10px;
+      padding-bottom: 5px;
+      border-bottom: 2px solid #c9a962;
+    }
+    
+    .liste-item {
+      padding: 5px 0;
+      padding-left: 20px;
+      position: relative;
+    }
+    
+    .liste-item:before {
+      content: "□";
+      position: absolute;
+      left: 0;
+      color: #c9a962;
+    }
+    
+    .recette {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 25px;
+      margin-bottom: 20px;
+    }
+    
+    .recette-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      color: #1a1a2e;
+      margin-bottom: 15px;
+    }
+    
+    .recette-meta {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 20px;
+      color: #888;
+      font-size: 14px;
+    }
+    
+    .recette-etapes {
+      counter-reset: step;
+    }
+    
+    .recette-etape {
+      padding: 10px 0 10px 40px;
+      position: relative;
+    }
+    
+    .recette-etape:before {
+      counter-increment: step;
+      content: counter(step);
+      position: absolute;
+      left: 0;
+      width: 28px;
+      height: 28px;
+      background: #c9a962;
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    
+    .footer {
+      text-align: center;
+      padding: 20px;
+      color: #888;
+      font-size: 12px;
+      border-top: 1px solid #e5e7eb;
+    }
+    
+    .disclaimer {
+      background: #fef3c7;
+      padding: 20px;
+      border-radius: 12px;
+      margin-top: 30px;
+      font-size: 12px;
+      color: #92400e;
+    }
+    
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Page de couverture -->
+  <div class="cover">
+    <div class="cover-logo">SLIM TOUCH</div>
+    <div class="cover-title">Programme Nutritionnel Personnalisé</div>
+    <div class="cover-subtitle">Créé par notre IA Nutritionniste Expert</div>
+    <div class="cover-client">${client.nom}</div>
+    <div class="cover-stats">
+      <div class="cover-stat">
+        <div class="cover-stat-value">${programme.metadata?.poidsDepart || client.poidsActuel}kg</div>
+        <div class="cover-stat-label">Poids de départ</div>
+      </div>
+      <div class="cover-stat">
+        <div class="cover-stat-value">→</div>
+        <div class="cover-stat-label"></div>
+      </div>
+      <div class="cover-stat">
+        <div class="cover-stat-value">${programme.metadata?.poidsObjectif || client.objectif}kg</div>
+        <div class="cover-stat-label">Objectif</div>
+      </div>
+    </div>
+    <div style="margin-top: 60px; color: #666;">
+      Programme de ${programme.metadata?.duree || 4} semaines<br>
+      Généré le ${new Date().toLocaleDateString('fr-FR')}
+    </div>
+  </div>
+  
+  <!-- Page Résumé -->
+  <div class="page">
+    <h1 class="page-title">📊 Votre Programme en Résumé</h1>
+    
+    <div class="resume-grid">
+      <div class="resume-card">
+        <div class="resume-card-value">${programme.resume?.caloriesJour || 1400}</div>
+        <div class="resume-card-label">Calories / jour</div>
+      </div>
+      <div class="resume-card">
+        <div class="resume-card-value">${programme.resume?.proteines || '90g'}</div>
+        <div class="resume-card-label">Protéines</div>
+      </div>
+      <div class="resume-card">
+        <div class="resume-card-value">${programme.resume?.glucides || '130g'}</div>
+        <div class="resume-card-label">Glucides</div>
+      </div>
+      <div class="resume-card">
+        <div class="resume-card-value">${programme.resume?.lipides || '55g'}</div>
+        <div class="resume-card-label">Lipides</div>
+      </div>
+      <div class="resume-card">
+        <div class="resume-card-value">${programme.resume?.hydratation || '2L'}</div>
+        <div class="resume-card-label">Hydratation</div>
+      </div>
+      <div class="resume-card">
+        <div class="resume-card-value">${programme.resume?.perteEstimee || '-4kg'}</div>
+        <div class="resume-card-label">Perte estimée</div>
+      </div>
+    </div>
+    
+    <div class="section">
+      <h2 class="section-title">💡 Conseils Personnalisés</h2>
+      ${(programme.conseils || []).map(c => `<div class="conseil">✓ ${c}</div>`).join('')}
+    </div>
+    
+    <div class="disclaimer">
+      <strong>⚠️ Avertissement :</strong> Ce programme nutritionnel est généré à titre informatif et ne remplace pas l'avis d'un médecin ou diététicien diplômé. Consultez un professionnel de santé avant tout changement alimentaire important, notamment si vous avez des pathologies particulières.
+    </div>
+  </div>
+  
+  <!-- Pages des semaines -->
+  ${(programme.semaines || []).map((semaine, idx) => `
+    <div class="page">
+      <h1 class="page-title">📅 Semaine ${semaine.numero || idx + 1} - ${semaine.theme || 'Programme'}</h1>
+      <p style="color: #666; margin-bottom: 30px;">${semaine.objectif || ''}</p>
+      
+      ${(semaine.jours || []).slice(0, 4).map(jour => `
+        <div class="jour-card">
+          <div class="jour-header">${jour.jour}</div>
+          <div class="jour-content">
+            <div class="repas">
+              <div class="repas-icon breakfast">🌅</div>
+              <div class="repas-content">
+                <div class="repas-title">Petit-déjeuner</div>
+                <div class="repas-plat">${jour.petitDejeuner?.plat || 'Non défini'}</div>
+                <div class="repas-calories">${jour.petitDejeuner?.calories || 0} kcal</div>
+              </div>
+            </div>
+            <div class="repas">
+              <div class="repas-icon lunch">☀️</div>
+              <div class="repas-content">
+                <div class="repas-title">Déjeuner</div>
+                <div class="repas-plat">${jour.dejeuner?.plat || 'Non défini'}</div>
+                <div class="repas-calories">${jour.dejeuner?.calories || 0} kcal</div>
+              </div>
+            </div>
+            ${jour.collation ? `
+            <div class="repas">
+              <div class="repas-icon snack">🍎</div>
+              <div class="repas-content">
+                <div class="repas-title">Collation</div>
+                <div class="repas-plat">${jour.collation?.plat || ''}</div>
+                <div class="repas-calories">${jour.collation?.calories || 0} kcal</div>
+              </div>
+            </div>
+            ` : ''}
+            <div class="repas">
+              <div class="repas-icon dinner">🌙</div>
+              <div class="repas-content">
+                <div class="repas-title">Dîner</div>
+                <div class="repas-plat">${jour.diner?.plat || 'Non défini'}</div>
+                <div class="repas-calories">${jour.diner?.calories || 0} kcal</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+    
+    ${(semaine.jours || []).length > 4 ? `
+    <div class="page">
+      <h1 class="page-title">📅 Semaine ${semaine.numero || idx + 1} (suite)</h1>
+      ${(semaine.jours || []).slice(4).map(jour => `
+        <div class="jour-card">
+          <div class="jour-header">${jour.jour}</div>
+          <div class="jour-content">
+            <div class="repas">
+              <div class="repas-icon breakfast">🌅</div>
+              <div class="repas-content">
+                <div class="repas-title">Petit-déjeuner</div>
+                <div class="repas-plat">${jour.petitDejeuner?.plat || 'Non défini'}</div>
+                <div class="repas-calories">${jour.petitDejeuner?.calories || 0} kcal</div>
+              </div>
+            </div>
+            <div class="repas">
+              <div class="repas-icon lunch">☀️</div>
+              <div class="repas-content">
+                <div class="repas-title">Déjeuner</div>
+                <div class="repas-plat">${jour.dejeuner?.plat || 'Non défini'}</div>
+                <div class="repas-calories">${jour.dejeuner?.calories || 0} kcal</div>
+              </div>
+            </div>
+            ${jour.collation ? `
+            <div class="repas">
+              <div class="repas-icon snack">🍎</div>
+              <div class="repas-content">
+                <div class="repas-title">Collation</div>
+                <div class="repas-plat">${jour.collation?.plat || ''}</div>
+                <div class="repas-calories">${jour.collation?.calories || 0} kcal</div>
+              </div>
+            </div>
+            ` : ''}
+            <div class="repas">
+              <div class="repas-icon dinner">🌙</div>
+              <div class="repas-content">
+                <div class="repas-title">Dîner</div>
+                <div class="repas-plat">${jour.diner?.plat || 'Non défini'}</div>
+                <div class="repas-calories">${jour.diner?.calories || 0} kcal</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+    ` : ''}
+  `).join('')}
+  
+  <!-- Page Liste de courses -->
+  <div class="page">
+    <h1 class="page-title">🛒 Liste de Courses - Semaine 1</h1>
+    <p style="color: #666; margin-bottom: 30px;">Budget estimé : ${programme.listeCoursesSemaine1?.budgetEstime || '60-80€'}</p>
+    
+    <div class="liste-courses">
+      ${Object.entries(programme.listeCoursesSemaine1 || {})
+        .filter(([key]) => key !== 'budgetEstime')
+        .map(([categorie, items]) => `
+          <div class="liste-categorie">
+            <div class="liste-categorie-title">${categorie.charAt(0).toUpperCase() + categorie.slice(1)}</div>
+            ${(Array.isArray(items) ? items : []).map(item => `<div class="liste-item">${item}</div>`).join('')}
+          </div>
+        `).join('')}
+    </div>
+  </div>
+  
+  <!-- Page Recettes -->
+  ${(programme.recettesPhares || []).length > 0 ? `
+  <div class="page">
+    <h1 class="page-title">👩‍🍳 Recettes Signatures</h1>
+    
+    ${(programme.recettesPhares || []).map(recette => `
+      <div class="recette">
+        <h3 class="recette-title">${recette.nom}</h3>
+        <div class="recette-meta">
+          <span>⏱️ ${recette.tempsPreparation}</span>
+          <span>🔥 ${recette.calories} kcal</span>
+        </div>
+        <div style="margin-bottom: 15px;">
+          <strong>Ingrédients :</strong>
+          <ul style="margin-top: 5px; padding-left: 20px;">
+            ${(recette.ingredients || []).map(ing => `<li>${ing}</li>`).join('')}
+          </ul>
+        </div>
+        <div class="recette-etapes">
+          ${(recette.etapes || []).map(etape => `<div class="recette-etape">${etape}</div>`).join('')}
+        </div>
+        ${recette.astuce ? `<div style="margin-top: 15px; padding: 10px; background: #fef3c7; border-radius: 8px; font-size: 14px;"><strong>💡 Astuce :</strong> ${recette.astuce}</div>` : ''}
+      </div>
+    `).join('')}
+  </div>
+  ` : ''}
+  
+  <div class="footer">
+    <p>Programme généré par SLIM TOUCH - IA Nutritionniste</p>
+    <p>${new Date().toLocaleDateString('fr-FR')} • ${client.nom}</p>
+  </div>
+</body>
+</html>`;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(content);
+    printWindow.document.close();
+    printWindow.onload = () => {
+      printWindow.print();
+    };
   };
   
   // Générer une facture PDF
@@ -7683,6 +8463,115 @@ export default function SlimTouchApp() {
                   ) : (
                     <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem' }}>Aucune mensuration</p>
                   )}
+                </div>
+                
+                {/* 🥗 Programme Nutrition IA */}
+                <div className="card" style={{ background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.05), rgba(34, 197, 94, 0.02))' }}>
+                  <div className="card-header">
+                    <div className="card-title" style={{ color: '#22c55e' }}>🥗 Programme Nutrition IA</div>
+                    <button 
+                      className="btn btn-primary btn-sm" 
+                      style={{ background: 'linear-gradient(135deg, #22c55e, #16a34a)' }}
+                      onClick={() => {
+                        setGeneratedProgramme(null);
+                        setNutritionForm(prev => ({
+                          ...prev,
+                          objectifPerte: (selectedClient.poidsActuel - selectedClient.objectif).toString()
+                        }));
+                        setShowNutritionModal(true);
+                      }}
+                    >
+                      <Zap size={16} /> Générer un programme
+                    </button>
+                  </div>
+                  
+                  <div style={{ padding: '0.5rem 0' }}>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1rem' }}>
+                      Créez un programme nutritionnel personnalisé pour {selectedClient.nom?.split(' ')[0]} basé sur son profil, 
+                      ses objectifs et ses préférences alimentaires. Notre IA nutritionniste génère des menus complets avec recettes et liste de courses.
+                    </p>
+                    
+                    {/* Si un programme existe déjà */}
+                    {selectedClient.programme_nutrition && (
+                      <div style={{ 
+                        background: 'rgba(34, 197, 94, 0.1)', 
+                        border: '1px solid #22c55e',
+                        borderRadius: '12px',
+                        padding: '1rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '1rem',
+                        flexWrap: 'wrap'
+                      }}>
+                        <div>
+                          <div style={{ fontWeight: '600', color: '#22c55e' }}>✓ Programme actif</div>
+                          <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                            Généré le {selectedClient.date_programme_nutrition ? new Date(selectedClient.date_programme_nutrition).toLocaleDateString('fr-FR') : 'récemment'}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button 
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => {
+                              try {
+                                const prog = typeof selectedClient.programme_nutrition === 'string' 
+                                  ? JSON.parse(selectedClient.programme_nutrition) 
+                                  : selectedClient.programme_nutrition;
+                                setGeneratedProgramme(prog);
+                                setShowNutritionModal(true);
+                              } catch (e) {
+                                console.error('Erreur parsing programme:', e);
+                              }
+                            }}
+                          >
+                            <Eye size={16} /> Voir
+                          </button>
+                          <button 
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => {
+                              try {
+                                const prog = typeof selectedClient.programme_nutrition === 'string' 
+                                  ? JSON.parse(selectedClient.programme_nutrition) 
+                                  : selectedClient.programme_nutrition;
+                                exportNutritionPDF(prog, selectedClient);
+                              } catch (e) {
+                                console.error('Erreur export PDF:', e);
+                              }
+                            }}
+                          >
+                            <Download size={16} /> PDF
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Avantages */}
+                    <div style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', 
+                      gap: '0.75rem',
+                      marginTop: '1rem'
+                    }}>
+                      {[
+                        { icon: '🎯', label: '100% personnalisé' },
+                        { icon: '📅', label: 'Menus 4 semaines' },
+                        { icon: '🛒', label: 'Liste de courses' },
+                        { icon: '👩‍🍳', label: 'Recettes détaillées' }
+                      ].map((item, i) => (
+                        <div key={i} style={{ 
+                          background: 'var(--bg)',
+                          padding: '0.75rem',
+                          borderRadius: '8px',
+                          textAlign: 'center',
+                          fontSize: '0.85rem'
+                        }}>
+                          <div style={{ fontSize: '1.5rem', marginBottom: '4px' }}>{item.icon}</div>
+                          <div style={{ color: 'var(--text-muted)' }}>{item.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
                 
                 {/* Parrainage */}
@@ -13718,6 +14607,408 @@ export default function SlimTouchApp() {
               }}>
                 <Save size={18} /> Enregistrer le paiement
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Modal Programme Nutrition IA */}
+      {showNutritionModal && selectedClient && (
+        <div className="modal-overlay" onClick={() => setShowNutritionModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '900px', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div className="modal-header" style={{ background: 'linear-gradient(135deg, #22c55e, #16a34a)', color: 'white', borderRadius: '16px 16px 0 0' }}>
+              <h3 className="modal-title" style={{ color: 'white' }}>🥗 Programme Nutrition IA - {selectedClient.nom}</h3>
+              <button className="btn btn-ghost" style={{ color: 'white' }} onClick={() => setShowNutritionModal(false)}><X size={20} /></button>
+            </div>
+            <div className="modal-body" style={{ overflow: 'auto', flex: 1 }}>
+              
+              {/* Si pas encore de programme généré → Formulaire */}
+              {!generatedProgramme && !nutritionLoading && (
+                <div>
+                  <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+                    Remplissez le profil nutritionnel de {selectedClient.nom?.split(' ')[0]} pour générer un programme sur-mesure.
+                  </p>
+                  
+                  {/* Infos de base */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+                    <div className="form-group">
+                      <label className="form-label">Âge *</label>
+                      <input 
+                        type="number" 
+                        className="form-input" 
+                        placeholder="35"
+                        value={nutritionForm.age}
+                        onChange={(e) => setNutritionForm(prev => ({ ...prev, age: e.target.value }))}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Taille (cm) *</label>
+                      <input 
+                        type="number" 
+                        className="form-input" 
+                        placeholder="165"
+                        value={nutritionForm.taille}
+                        onChange={(e) => setNutritionForm(prev => ({ ...prev, taille: e.target.value }))}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Durée programme</label>
+                      <select 
+                        className="form-input"
+                        value={nutritionForm.duree}
+                        onChange={(e) => setNutritionForm(prev => ({ ...prev, duree: e.target.value }))}
+                      >
+                        <option value="2">2 semaines</option>
+                        <option value="4">4 semaines</option>
+                        <option value="6">6 semaines</option>
+                        <option value="8">8 semaines</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  {/* Activité physique */}
+                  <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                    <label className="form-label">Niveau d'activité physique</label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      {[
+                        { value: 'sedentaire', label: '🪑 Sédentaire', desc: 'Bureau, peu de mouvement' },
+                        { value: 'leger', label: '🚶 Léger', desc: '1-2 séances/semaine' },
+                        { value: 'modere', label: '🏃 Modéré', desc: '3-4 séances/semaine' },
+                        { value: 'actif', label: '💪 Actif', desc: '5+ séances/semaine' },
+                        { value: 'tres_actif', label: '🔥 Très actif', desc: 'Sport quotidien intense' }
+                      ].map(opt => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          className={`btn ${nutritionForm.activitePhysique === opt.value ? 'btn-primary' : 'btn-secondary'}`}
+                          style={{ flex: '1 1 150px' }}
+                          onClick={() => setNutritionForm(prev => ({ ...prev, activitePhysique: opt.value }))}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Allergies et intolérances */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+                    <div className="form-group">
+                      <label className="form-label">Allergies</label>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        {['Arachides', 'Fruits à coque', 'Œufs', 'Poisson', 'Crustacés', 'Soja', 'Sésame'].map(allergie => (
+                          <button
+                            key={allergie}
+                            type="button"
+                            className={`btn btn-sm ${nutritionForm.allergies.includes(allergie) ? 'btn-danger' : 'btn-ghost'}`}
+                            onClick={() => setNutritionForm(prev => ({
+                              ...prev,
+                              allergies: prev.allergies.includes(allergie) 
+                                ? prev.allergies.filter(a => a !== allergie)
+                                : [...prev.allergies, allergie]
+                            }))}
+                          >
+                            {allergie}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Intolérances</label>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        {['Gluten', 'Lactose', 'Fructose'].map(intol => (
+                          <button
+                            key={intol}
+                            type="button"
+                            className={`btn btn-sm ${nutritionForm.intolerance.includes(intol) ? 'btn-warning' : 'btn-ghost'}`}
+                            style={nutritionForm.intolerance.includes(intol) ? { background: 'rgba(251, 191, 36, 0.2)', color: 'var(--warning)', border: '1px solid var(--warning)' } : {}}
+                            onClick={() => setNutritionForm(prev => ({
+                              ...prev,
+                              intolerance: prev.intolerance.includes(intol) 
+                                ? prev.intolerance.filter(i => i !== intol)
+                                : [...prev.intolerance, intol]
+                            }))}
+                          >
+                            {intol}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Régime spécial */}
+                  <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                    <label className="form-label">Régime alimentaire particulier</label>
+                    <select 
+                      className="form-input"
+                      value={nutritionForm.regimeSpecial}
+                      onChange={(e) => setNutritionForm(prev => ({ ...prev, regimeSpecial: e.target.value }))}
+                    >
+                      <option value="">Aucun régime particulier</option>
+                      <option value="vegetarien">🥬 Végétarien</option>
+                      <option value="vegan">🌱 Végan</option>
+                      <option value="pescetarien">🐟 Pescétarien</option>
+                      <option value="halal">🌙 Halal</option>
+                      <option value="casher">✡️ Casher</option>
+                      <option value="sans_porc">🚫🐷 Sans porc</option>
+                    </select>
+                  </div>
+                  
+                  {/* Préférences */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+                    <div className="form-group">
+                      <label className="form-label">Aliments détestés</label>
+                      <input 
+                        type="text" 
+                        className="form-input" 
+                        placeholder="ex: choux, épinards, foie..."
+                        value={nutritionForm.alimentsDetestes}
+                        onChange={(e) => setNutritionForm(prev => ({ ...prev, alimentsDetestes: e.target.value }))}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Aliments adorés</label>
+                      <input 
+                        type="text" 
+                        className="form-input" 
+                        placeholder="ex: avocat, saumon, quinoa..."
+                        value={nutritionForm.alimentsAdores}
+                        onChange={(e) => setNutritionForm(prev => ({ ...prev, alimentsAdores: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Budget et temps */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+                    <div className="form-group">
+                      <label className="form-label">Budget courses</label>
+                      <select 
+                        className="form-input"
+                        value={nutritionForm.budgetCourses}
+                        onChange={(e) => setNutritionForm(prev => ({ ...prev, budgetCourses: e.target.value }))}
+                      >
+                        <option value="economique">💰 Économique (40-60€/sem)</option>
+                        <option value="moyen">💰💰 Moyen (60-90€/sem)</option>
+                        <option value="confortable">💰💰💰 Confortable (90€+/sem)</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Temps pour cuisiner</label>
+                      <select 
+                        className="form-input"
+                        value={nutritionForm.tempsCuisine}
+                        onChange={(e) => setNutritionForm(prev => ({ ...prev, tempsCuisine: e.target.value }))}
+                      >
+                        <option value="express">⚡ Express (&lt;15 min)</option>
+                        <option value="moyen">🍳 Moyen (15-30 min)</option>
+                        <option value="elabore">👨‍🍳 Élaboré (30+ min)</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Repas par jour</label>
+                      <select 
+                        className="form-input"
+                        value={nutritionForm.nombreRepas}
+                        onChange={(e) => setNutritionForm(prev => ({ ...prev, nombreRepas: e.target.value }))}
+                      >
+                        <option value="3">3 repas</option>
+                        <option value="4">3 repas + 1 collation</option>
+                        <option value="5">3 repas + 2 collations</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  {/* Pathologies */}
+                  <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                    <label className="form-label">Pathologies à prendre en compte</label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      {['Diabète type 2', 'Cholestérol', 'Hypertension', 'Thyroïde', 'SOPK', 'Ménopause'].map(patho => (
+                        <button
+                          key={patho}
+                          type="button"
+                          className={`btn btn-sm ${nutritionForm.pathologies.includes(patho) ? 'btn-primary' : 'btn-ghost'}`}
+                          onClick={() => setNutritionForm(prev => ({
+                            ...prev,
+                            pathologies: prev.pathologies.includes(patho) 
+                              ? prev.pathologies.filter(p => p !== patho)
+                              : [...prev.pathologies, patho]
+                          }))}
+                        >
+                          {patho}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Zone à cibler */}
+                  <div className="form-group">
+                    <label className="form-label">Zone(s) à cibler particulièrement</label>
+                    <input 
+                      type="text" 
+                      className="form-input" 
+                      placeholder="ex: ventre, cuisses, bras..."
+                      value={nutritionForm.objectifSpecifique}
+                      onChange={(e) => setNutritionForm(prev => ({ ...prev, objectifSpecifique: e.target.value }))}
+                    />
+                  </div>
+                </div>
+              )}
+              
+              {/* Loading */}
+              {nutritionLoading && (
+                <div style={{ textAlign: 'center', padding: '3rem' }}>
+                  <div style={{ fontSize: '4rem', marginBottom: '1rem', animation: 'pulse 2s infinite' }}>🥗</div>
+                  <h3 style={{ marginBottom: '0.5rem' }}>Notre IA nutritionniste travaille...</h3>
+                  <p style={{ color: 'var(--text-muted)' }}>
+                    Génération du programme personnalisé pour {selectedClient.nom?.split(' ')[0]}.<br/>
+                    Calcul des calories, création des menus, sélection des recettes...
+                  </p>
+                  <div style={{ marginTop: '2rem' }}>
+                    <div className="progress-bar" style={{ height: '6px', width: '200px', margin: '0 auto' }}>
+                      <div className="progress-fill" style={{ width: '60%', animation: 'progressAnim 3s ease-in-out infinite' }} />
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Programme généré */}
+              {generatedProgramme && !generatedProgramme.error && (
+                <div>
+                  {/* Résumé */}
+                  <div style={{ 
+                    background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.05))',
+                    borderRadius: '16px',
+                    padding: '1.5rem',
+                    marginBottom: '1.5rem'
+                  }}>
+                    <h4 style={{ color: '#22c55e', marginBottom: '1rem' }}>📊 Votre programme en résumé</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '1rem' }}>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--accent)' }}>{generatedProgramme.resume?.caloriesJour || 1400}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>kcal/jour</div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#ef4444' }}>{generatedProgramme.resume?.proteines || '90g'}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Protéines</div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#f59e0b' }}>{generatedProgramme.resume?.glucides || '130g'}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Glucides</div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#3b82f6' }}>{generatedProgramme.resume?.lipides || '55g'}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Lipides</div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#22c55e' }}>{generatedProgramme.resume?.perteEstimee || '-4kg'}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Perte estimée</div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Conseils */}
+                  {generatedProgramme.conseils && generatedProgramme.conseils.length > 0 && (
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <h4 style={{ marginBottom: '0.75rem' }}>💡 Conseils personnalisés</h4>
+                      {generatedProgramme.conseils.slice(0, 3).map((conseil, i) => (
+                        <div key={i} style={{ 
+                          background: 'var(--bg)',
+                          padding: '0.75rem 1rem',
+                          borderRadius: '8px',
+                          marginBottom: '0.5rem',
+                          borderLeft: '3px solid #22c55e'
+                        }}>
+                          ✓ {conseil}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* Aperçu semaine 1 */}
+                  {generatedProgramme.semaines && generatedProgramme.semaines[0] && (
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <h4 style={{ marginBottom: '0.75rem' }}>📅 Aperçu Semaine 1 : {generatedProgramme.semaines[0].theme}</h4>
+                      <div style={{ display: 'grid', gap: '0.5rem' }}>
+                        {(generatedProgramme.semaines[0].jours || []).slice(0, 3).map((jour, i) => (
+                          <div key={i} style={{ 
+                            background: 'var(--bg-card)',
+                            border: '1px solid var(--border)',
+                            borderRadius: '12px',
+                            padding: '1rem'
+                          }}>
+                            <div style={{ fontWeight: '600', marginBottom: '0.5rem', color: 'var(--accent)' }}>{jour.jour}</div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.75rem', fontSize: '0.85rem' }}>
+                              <div><span style={{ color: 'var(--text-muted)' }}>🌅</span> {jour.petitDejeuner?.plat || 'N/A'}</div>
+                              <div><span style={{ color: 'var(--text-muted)' }}>☀️</span> {jour.dejeuner?.plat || 'N/A'}</div>
+                              <div><span style={{ color: 'var(--text-muted)' }}>🌙</span> {jour.diner?.plat || 'N/A'}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.75rem', textAlign: 'center' }}>
+                        ... et {(generatedProgramme.semaines[0].jours?.length || 7) - 3} autres jours + {generatedProgramme.semaines.length - 1} semaines dans le PDF complet
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* Disclaimer */}
+                  <div style={{ 
+                    background: 'rgba(251, 191, 36, 0.1)',
+                    border: '1px solid var(--warning)',
+                    borderRadius: '12px',
+                    padding: '1rem',
+                    fontSize: '0.85rem',
+                    color: 'var(--warning)'
+                  }}>
+                    <strong>⚠️ Avertissement :</strong> Ce programme nutritionnel est généré à titre informatif et ne remplace pas l'avis d'un médecin ou diététicien diplômé.
+                  </div>
+                </div>
+              )}
+              
+              {/* Erreur */}
+              {generatedProgramme?.error && (
+                <div style={{ textAlign: 'center', padding: '2rem' }}>
+                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>😕</div>
+                  <h3 style={{ color: 'var(--danger)', marginBottom: '0.5rem' }}>Oups, une erreur s'est produite</h3>
+                  <p style={{ color: 'var(--text-muted)' }}>{generatedProgramme.message}</p>
+                  <button 
+                    className="btn btn-primary" 
+                    style={{ marginTop: '1rem' }}
+                    onClick={() => setGeneratedProgramme(null)}
+                  >
+                    Réessayer
+                  </button>
+                </div>
+              )}
+              
+            </div>
+            <div className="modal-footer">
+              {!generatedProgramme && !nutritionLoading && (
+                <>
+                  <button className="btn btn-secondary" onClick={() => setShowNutritionModal(false)}>Annuler</button>
+                  <button 
+                    className="btn btn-primary" 
+                    style={{ background: 'linear-gradient(135deg, #22c55e, #16a34a)' }}
+                    onClick={() => generateNutritionProgramme(selectedClient)}
+                    disabled={!nutritionForm.age || !nutritionForm.taille}
+                  >
+                    <Zap size={18} /> Générer le programme
+                  </button>
+                </>
+              )}
+              {generatedProgramme && !generatedProgramme.error && (
+                <>
+                  <button className="btn btn-secondary" onClick={() => setGeneratedProgramme(null)}>
+                    <RefreshCw size={16} /> Régénérer
+                  </button>
+                  <button 
+                    className="btn btn-primary" 
+                    style={{ background: 'linear-gradient(135deg, #22c55e, #16a34a)' }}
+                    onClick={() => exportNutritionPDF(generatedProgramme, selectedClient)}
+                  >
+                    <Download size={18} /> Télécharger le PDF complet
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
