@@ -5529,11 +5529,23 @@ GÉNÈRE CE JSON (SANS les semaines, elles viendront après):
 IMPORTANT: Génère le JSON COMPLET, avec TOUS les détails demandés. Ne raccourcis RIEN.`;
 
       // Fonction pour faire un appel API
-      const callAPI = async (promptText) => {
+      const callAPI = async (promptText, isLastCall = false) => {
         const response = await fetch('https://n8n.srv819641.hstgr.cloud/webhook/generate-nutrition', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: promptText, clientNom: client.nom, maxTokens: 16000 })
+          body: JSON.stringify({ 
+            prompt: promptText, 
+            maxTokens: 16000,
+            // Infos client pour l'envoi email automatique
+            clientNom: client.nom,
+            clientPrenom: prenom,
+            clientEmail: client.email || '',
+            poids: poids,
+            objectifPoids: objectifPoids,
+            duree: duree,
+            // Envoyer l'email seulement au dernier appel
+            sendEmail: isLastCall && client.email ? true : false
+          })
         });
         if (!response.ok) throw new Error(`Erreur API: ${response.status}`);
         const data = await response.json();
@@ -5735,6 +5747,40 @@ RÈGLES: Variété totale, différent des semaines 1-2, ${caloriesRecommandees} 
       }
       
       addNotification({ type: 'success', message: `✅ Programme SLIM TOUCH 360° COMPLET généré pour ${client.nom} !` });
+      
+      // ============================================
+      // ENVOI EMAIL AUTOMATIQUE
+      // ============================================
+      if (client.email) {
+        try {
+          addNotification({ type: 'info', message: `📧 Envoi du programme par email à ${client.email}...` });
+          
+          const emailResponse = await fetch('https://n8n.srv819641.hstgr.cloud/webhook/send-programme-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              client: {
+                nom: client.nom,
+                prenom: prenom,
+                email: client.email,
+                poids: poids,
+                objectif: objectifPoids
+              },
+              programme: programme
+            })
+          });
+          
+          if (emailResponse.ok) {
+            const emailResult = await emailResponse.json();
+            if (emailResult.success) {
+              addNotification({ type: 'success', message: `📧 Programme envoyé par email à ${client.email} !` });
+            }
+          }
+        } catch (emailError) {
+          console.warn('Email non envoyé:', emailError);
+          addNotification({ type: 'warning', message: `Programme généré mais email non envoyé` });
+        }
+      }
       
     } catch (error) {
       console.error('Erreur génération:', error);
@@ -6579,7 +6625,6 @@ RÈGLES: Variété totale, différent des semaines 1-2, ${caloriesRecommandees} 
       printWindow.print();
     };
   };
-  
   
   // Générer une facture PDF
   const generateFacturePDF = (paiement, client) => {
@@ -9259,6 +9304,51 @@ RÈGLES: Variété totale, différent des semaines 1-2, ${caloriesRecommandees} 
                             }}
                           >
                             <Download size={16} /> PDF
+                          </button>
+                          <button 
+                            className="btn btn-sm"
+                            style={{ background: 'linear-gradient(135deg, #c9a962, #e0c285)', color: 'white' }}
+                            onClick={() => {
+                              try {
+                                const prog = typeof selectedClient.programme_nutrition === 'string' 
+                                  ? JSON.parse(selectedClient.programme_nutrition) 
+                                  : selectedClient.programme_nutrition;
+                                const prenom = selectedClient.nom?.split(' ')[0] || 'Cliente';
+                                const duree = prog.metadata?.duree || 4;
+                                
+                                const subject = encodeURIComponent(`🌟 Votre Programme SLIM TOUCH 360° - ${prenom}`);
+                                const body = encodeURIComponent(`Bonjour ${prenom},
+
+Votre Programme SLIM TOUCH 360° personnalisé est prêt ! 🎯
+
+Ce programme de ${duree} semaines inclut :
+• Menus complets jour par jour (${duree * 7} jours)
+• Protocole hydratation optimisé
+• Exercices ciblés pour vos zones
+• Routine sommeil & récupération
+• Conseils mindset & motivation
+• Listes de courses détaillées
+• Recettes signatures
+
+📎 Vous trouverez votre programme complet en pièce jointe de cet email.
+
+💆 Votre prochaine séance de massage G5 sera encore plus efficace grâce à ce programme !
+
+À très bientôt,
+L'équipe SLIM TOUCH ✨
+
+---
+SLIM TOUCH - Programme de Transformation 360°`);
+                                
+                                const email = selectedClient.email || '';
+                                window.open(`mailto:${email}?subject=${subject}&body=${body}`, '_blank');
+                                addNotification({ type: 'success', message: `📧 Email prêt ! N'oubliez pas de joindre le PDF.` });
+                              } catch (e) {
+                                console.error('Erreur email:', e);
+                              }
+                            }}
+                          >
+                            <Mail size={16} /> Envoyer
                           </button>
                         </div>
                       </div>
