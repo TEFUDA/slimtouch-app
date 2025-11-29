@@ -5134,6 +5134,8 @@ export default function SlimTouchApp() {
       const age = parseInt(nutritionForm.age) || 35;
       const objectifPoids = client.objectif || poids - 5;
       const perteVisee = poids - objectifPoids;
+      const prenom = client.nom?.split(' ')[0] || 'Cliente';
+      const duree = parseInt(nutritionForm.duree) || 4;
       
       // Coefficients d'activité
       const coeffActivite = {
@@ -5144,104 +5146,51 @@ export default function SlimTouchApp() {
         tres_actif: 1.9
       };
       
-      // MB pour femme (on assume femme pour SLIM TOUCH)
+      // MB pour femme
       const mb = (10 * poids) + (6.25 * taille) - (5 * age) - 161;
       const depenseJournaliere = Math.round(mb * (coeffActivite[nutritionForm.activitePhysique] || 1.4));
-      const caloriesRecommandees = Math.round(depenseJournaliere - 400); // Déficit de 400 kcal
+      const caloriesRecommandees = Math.round(depenseJournaliere - 400);
       
       // Calculs avancés
       const imc = (poids / ((taille/100) ** 2)).toFixed(1);
-      const poidsIdeal = Math.round(22 * ((taille/100) ** 2)); // IMC 22 = idéal
-      const proteinesMin = Math.round(poids * 1.6); // 1.6g/kg pour préserver la masse musculaire
+      const poidsIdeal = Math.round(22 * ((taille/100) ** 2));
+      const proteinesMin = Math.round(poids * 1.6);
       const proteinesMax = Math.round(poids * 2.0);
-      const lipides = Math.round(caloriesRecommandees * 0.30 / 9); // 30% des calories
+      const lipides = Math.round(caloriesRecommandees * 0.30 / 9);
       const glucides = Math.round((caloriesRecommandees - (proteinesMin * 4) - (lipides * 9)) / 4);
-      const fibres = age > 50 ? 25 : 30; // grammes/jour
-      const eau = Math.round(poids * 0.033 * 10) / 10; // 33ml/kg
+      const fibres = age > 50 ? 25 : 30;
+      const eau = Math.round(poids * 0.033 * 10) / 10;
       
-      const prompt = `Tu es une INTELLIGENCE ARTIFICIELLE EXPERTE EN TRANSFORMATION CORPORELLE de niveau MONDIAL, combinant l'expertise de :
-- Dr. Michael Greger (nutrition basée sur les preuves scientifiques)
-- Dr. Mark Hyman (médecine fonctionnelle et métabolisme)
-- Dr. Jason Fung (jeûne intermittent et résistance à l'insuline)
-- Dr. Rhonda Patrick (nutriments et longévité cellulaire)
-- Dr. Peter Attia (optimisation métabolique et performance)
-- Dr. Matthew Walker (science du sommeil et récupération)
-- Dr. Andrew Huberman (neurosciences et mindset)
-- Kelly Starrett (mobilité et mouvement fonctionnel)
+      // Contexte partagé pour tous les appels
+      const contexteBio = `
+CLIENTE: ${prenom}, ${age} ans, ${taille}cm, ${poids}kg → objectif ${objectifPoids}kg
+IMC: ${imc} | Calories/jour: ${caloriesRecommandees} kcal | Protéines: ${proteinesMin}-${proteinesMax}g | Glucides: ${glucides}g | Lipides: ${lipides}g | Fibres: ${fibres}g | Eau: ${eau}L
+Allergies: ${nutritionForm.allergies.length > 0 ? nutritionForm.allergies.join(', ') : 'Aucune'}
+Intolérances: ${nutritionForm.intolerance.length > 0 ? nutritionForm.intolerance.join(', ') : 'Aucune'}
+Régime: ${nutritionForm.regimeSpecial || 'Omnivore'}
+Aliments détestés: ${nutritionForm.alimentsDetestes || 'Aucun'}
+Aliments adorés: ${nutritionForm.alimentsAdores || 'Aucun'}
+Pathologies: ${nutritionForm.pathologies.length > 0 ? nutritionForm.pathologies.join(', ') : 'Aucune'}
+Budget: ${nutritionForm.budgetCourses} | Temps cuisine: ${nutritionForm.tempsCuisine} | Repas/jour: ${nutritionForm.nombreRepas}
+Zone cible: ${nutritionForm.objectifSpecifique || 'Perte globale'}
+Programme: ${duree} semaines avec massages G5`;
 
-Tu as accès à TOUTES les études scientifiques publiées jusqu'en 2024.
+      // ============================================
+      // APPEL 1: Analyse + Piliers (sauf semaines)
+      // ============================================
+      const prompt1 = `Tu es un expert mondial en transformation corporelle. Génère un JSON COMPLET et DÉTAILLÉ.
 
-🎯 MISSION : Créer LE programme de transformation COMPLET le plus SCIENTIFIQUE et PERSONNALISÉ au monde.
+${contexteBio}
 
-Ce programme est basé sur les 5 PILIERS SLIM TOUCH 360° :
-1. 🥗 NUTRITION - Alimentation optimisée
-2. 💧 HYDRATATION - Protocole eau et drainage
-3. 🏃 MOUVEMENT - Micro-exercices quotidiens (PAS de sport intensif)
-4. 😴 SOMMEIL - Protocole récupération optimale
-5. 🧠 MINDSET - Mental et motivation
-
-══════════════════════════════════════════════════════════════
-📊 DONNÉES BIOMÉTRIQUES COMPLÈTES
-══════════════════════════════════════════════════════════════
-• Prénom : ${client.nom?.split(' ')[0] || 'Cliente'}
-• Âge : ${age} ans
-• Sexe : Femme
-• Poids actuel : ${poids} kg
-• Taille : ${taille} cm
-• IMC actuel : ${imc} (${parseFloat(imc) < 18.5 ? 'insuffisance pondérale' : parseFloat(imc) < 25 ? 'normal' : parseFloat(imc) < 30 ? 'surpoids' : 'obésité'})
-• Poids objectif : ${objectifPoids} kg
-• Poids idéal santé (IMC 22) : ${poidsIdeal} kg
-• Perte visée : ${perteVisee} kg
-• Zone(s) cible(s) : ${nutritionForm.objectifSpecifique || 'Perte globale harmonieuse'}
-
-══════════════════════════════════════════════════════════════
-🔬 CALCULS MÉTABOLIQUES SCIENTIFIQUES
-══════════════════════════════════════════════════════════════
-• Métabolisme basal (Mifflin-St Jeor) : ${Math.round(mb)} kcal/jour
-• Niveau d'activité : ${nutritionForm.activitePhysique} (coefficient ${coeffActivite[nutritionForm.activitePhysique] || 1.4})
-• TDEE (dépense totale) : ${depenseJournaliere} kcal/jour
-• Apport calorique cible : ${caloriesRecommandees} kcal/jour (déficit de 400 kcal)
-
-RÉPARTITION MACRONUTRIMENTS :
-• Protéines : ${proteinesMin}-${proteinesMax}g/jour
-• Lipides : ${lipides}g/jour (30%)
-• Glucides : ${glucides}g/jour (IG bas)
-• Fibres : minimum ${fibres}g/jour
-• Hydratation : ${eau}L d'eau/jour minimum
-
-══════════════════════════════════════════════════════════════
-⚠️ CONTRAINTES & PERSONNALISATION
-══════════════════════════════════════════════════════════════
-• Allergies : ${nutritionForm.allergies.length > 0 ? nutritionForm.allergies.join(', ') : 'Aucune déclarée'}
-• Intolérances : ${nutritionForm.intolerance.length > 0 ? nutritionForm.intolerance.join(', ') : 'Aucune déclarée'}
-• Régime alimentaire : ${nutritionForm.regimeSpecial || 'Omnivore sans restriction'}
-• Aliments à EXCLURE : ${nutritionForm.alimentsDetestes || 'Aucun'}
-• Aliments PRÉFÉRÉS : ${nutritionForm.alimentsAdores || 'Pas de préférence particulière'}
-• Pathologies : ${nutritionForm.pathologies.length > 0 ? nutritionForm.pathologies.join(', ') : 'Aucune déclarée'}
-• Budget : ${nutritionForm.budgetCourses === 'economique' ? '40-60€/semaine' : nutritionForm.budgetCourses === 'moyen' ? '60-90€/semaine' : '90€+/semaine'}
-• Temps cuisine : ${nutritionForm.tempsCuisine === 'express' ? 'Maximum 15 min' : nutritionForm.tempsCuisine === 'moyen' ? '15-30 min' : '30+ min'}
-• Repas par jour : ${nutritionForm.nombreRepas}
-• Durée du programme : ${nutritionForm.duree} semaines
-
-CONTEXTE SLIM TOUCH :
-• La cliente suit un programme de massages G5 anti-cellulite (${nutritionForm.duree === '4' ? '10' : nutritionForm.duree === '6' ? '15' : '20'} séances)
-• Objectif synergique : Nutrition + Hydratation + Mouvement amplifient l'effet des massages G5
-• Le mouvement léger AVANT le massage G5 optimise la circulation
-• L'hydratation APRÈS le massage G5 élimine les toxines délogées
-
-══════════════════════════════════════════════════════════════
-📋 FORMAT JSON OBLIGATOIRE - PROGRAMME SLIM TOUCH 360°
-══════════════════════════════════════════════════════════════
+GÉNÈRE CE JSON (SANS les semaines, elles viendront après):
 
 {
-  "titrePersonnalise": "Programme SLIM TOUCH 360° de [Prénom] - Transformation ${nutritionForm.duree} semaines",
-  
   "analysePersonnalisee": {
-    "profilMetabolique": "Analyse détaillée du profil",
-    "defisIdentifies": ["Défi 1", "Défi 2", "Défi 3"],
-    "atoutsNutritionnels": ["Atout 1", "Atout 2"],
-    "strategieGlobale": "Stratégie des 5 piliers adaptée à ce profil",
-    "synergieG5": "Comment les 5 piliers vont amplifier l'effet des massages G5"
+    "profilMetabolique": "Analyse DÉTAILLÉE de 100+ mots du profil métabolique de ${prenom}, ses forces, faiblesses, et comment son corps va réagir au programme",
+    "defisIdentifies": ["Défi 1 SPÉCIFIQUE à son profil avec explication", "Défi 2", "Défi 3", "Défi 4"],
+    "atoutsNutritionnels": ["Atout 1 à exploiter", "Atout 2", "Atout 3"],
+    "strategieGlobale": "Stratégie DÉTAILLÉE de 150+ mots expliquant comment les 5 piliers vont fonctionner ensemble pour ${prenom}",
+    "synergieG5": "Explication de 100+ mots sur comment le programme amplifie les massages G5"
   },
   
   "resume": {
@@ -5251,672 +5200,529 @@ CONTEXTE SLIM TOUCH :
     "lipides": "${lipides}g",
     "fibres": "${fibres}g",
     "hydratation": "${eau}L",
-    "perteEstimee": "${Math.round(perteVisee * 10) / 10}kg en ${nutritionForm.duree} semaines"
-  },
-  
-  "pilierNutrition": {
-    "principes": ["Principe clé 1 adapté au profil", "Principe 2", "Principe 3"],
-    "conseilsPersonnalises": [
-      {
-        "conseil": "Conseil nutrition personnalisé",
-        "pourquoi": "Explication scientifique",
-        "comment": "Application pratique",
-        "benefices": "Résultats attendus"
-      }
-    ],
-    "chronoNutrition": {
-      "petitDejeunerIdeal": "7h-8h - Pourquoi",
-      "dejeunerIdeal": "12h-13h - Pourquoi",
-      "dinerIdeal": "19h-20h (3h avant coucher) - Pourquoi",
-      "fenetreAlimentaire": "12h (ex: 8h-20h)"
-    },
-    "alimentsSuperStars": [
-      {
-        "aliment": "Nom",
-        "pourquoi": "Bénéfice spécifique pour CE profil",
-        "frequence": "X fois/semaine"
-      }
-    ],
-    "alimentsAEviter": [
-      {
-        "aliment": "Nom",
-        "pourquoi": "Raison",
-        "alternative": "Alternative saine"
-      }
-    ]
+    "perteEstimee": "-${perteVisee}kg en ${duree} semaines"
   },
   
   "pilierHydratation": {
-    "objectifJournalier": "${eau}L minimum",
-    "protocoleDetaille": {
-      "auReveil": {
-        "quantite": "500ml",
-        "type": "Eau tiède avec citron",
-        "pourquoi": "Réhydratation après la nuit, stimule le système digestif, alcalinise le corps",
-        "timing": "Dès le réveil, 30 min avant petit-déjeuner"
-      },
-      "avantRepas": {
-        "quantite": "250ml",
-        "timing": "20-30 min avant chaque repas",
-        "pourquoi": "Coupe-faim naturel (-75 kcal/repas selon études), prépare la digestion"
-      },
-      "pendantRepas": {
-        "quantite": "150ml maximum",
-        "pourquoi": "Ne pas diluer les enzymes digestives"
-      },
-      "entreRepas": {
-        "quantite": "Petites gorgées régulières",
-        "astuce": "1 gorgée toutes les 15-20 min"
-      },
-      "avantMassageG5": {
-        "quantite": "500ml",
-        "timing": "1h avant la séance",
-        "pourquoi": "Tissus hydratés = massage plus efficace, meilleure circulation"
-      },
-      "apresMassageG5": {
-        "quantite": "750ml",
-        "timing": "Dans les 2h suivant la séance",
-        "pourquoi": "CRUCIAL : Éliminer les toxines et graisses délogées par le massage"
-      }
+    "objectifJournalier": "${eau}L minimum + infusions drainantes",
+    "importance": "Explication de 80+ mots sur pourquoi l'hydratation est CRUCIALE pour ${prenom}",
+    "protocole": {
+      "auReveil": {"heure": "7h00", "quantite": "500ml", "type": "Eau tiède + jus d'1/2 citron", "pourquoi": "Réhydrate après 8h de jeûne, stimule le foie, alcalinise"},
+      "avantPetitDej": {"heure": "7h30", "quantite": "250ml", "type": "Eau plate", "pourquoi": "Prépare l'estomac à recevoir les aliments"},
+      "matinee": {"heure": "10h00", "quantite": "300ml", "type": "Thé vert ou infusion drainante", "pourquoi": "Maintient l'hydratation, effet thermogénique"},
+      "avantDejeuner": {"heure": "12h00", "quantite": "250ml", "type": "Eau plate", "pourquoi": "Effet coupe-faim naturel, améliore la satiété"},
+      "apresMidi": {"heure": "15h00", "quantite": "300ml", "type": "Eau ou tisane queue de cerise", "pourquoi": "Combat la fatigue, drainage lymphatique"},
+      "avantDiner": {"heure": "19h00", "quantite": "250ml", "type": "Eau plate", "pourquoi": "Évite de confondre soif et faim"},
+      "soiree": {"heure": "21h00", "quantite": "200ml", "type": "Tisane camomille ou verveine", "pourquoi": "Relaxation, préparation au sommeil"}
     },
+    "avantMassageG5": "Boire 500ml d'eau 1h avant la séance pour hydrater les tissus et faciliter le travail du massage",
+    "apresMassageG5": "Boire 750ml dans les 2h suivant la séance - CRUCIAL pour éliminer les toxines et graisses délogées",
     "infusionsDrainantes": [
-      {
-        "nom": "Queue de cerise",
-        "bienfaits": "Drainage lymphatique puissant, anti-rétention",
-        "posologie": "1L/jour pendant 3 semaines max",
-        "meilleurMoment": "Matin et début d'après-midi"
-      },
-      {
-        "nom": "Thé vert Sencha",
-        "bienfaits": "Thermogénèse, antioxydants, brûle-graisses naturel",
-        "posologie": "2-3 tasses/jour avant 16h",
-        "meilleurMoment": "Matin et après déjeuner"
-      },
-      {
-        "nom": "Pissenlit + Orthosiphon",
-        "bienfaits": "Détox hépatique, drainant rénal",
-        "posologie": "1 infusion/jour",
-        "meilleurMoment": "Fin d'après-midi"
-      }
+      {"nom": "Queue de cerise", "bienfaits": "Puissant drainant rénal, anti-rétention d'eau, élimine jusqu'à 1kg d'eau en 1 semaine", "posologie": "1L/jour pendant 3 semaines", "moment": "Matin et après-midi"},
+      {"nom": "Thé vert Sencha", "bienfaits": "Thermogénèse (+4% métabolisme), antioxydants EGCG, brûle-graisses prouvé", "posologie": "2-3 tasses/jour", "moment": "Matin et après déjeuner, JAMAIS après 16h"},
+      {"nom": "Pissenlit", "bienfaits": "Détox hépatique, diurétique naturel, améliore la digestion", "posologie": "1-2 tasses/jour", "moment": "Matin ou après repas"},
+      {"nom": "Orthosiphon (thé de Java)", "bienfaits": "Draineur rénal puissant, anti-cellulite reconnu", "posologie": "2 tasses/jour", "moment": "Matin et fin d'après-midi"}
     ],
-    "signesDeshydratation": ["Urine foncée", "Fatigue", "Maux de tête", "Peau sèche", "Fringales (souvent soif déguisée)"],
-    "astuces": [
-      "Garder une gourde de 1L visible en permanence",
-      "App de rappel ou alarme toutes les heures",
-      "Marquer les heures sur la gourde",
-      "Tisane froide l'été, chaude l'hiver pour varier"
-    ],
-    "erreursEviter": [
-      "Boire trop d'un coup (max 500ml en 30 min)",
-      "Eau glacée pendant les repas",
-      "Boissons sucrées qui ne comptent PAS",
-      "Oublier l'eau les jours sans massage"
-    ]
+    "signesDeshydratation": ["Urines foncées (doivent être jaune pâle)", "Fatigue inexpliquée", "Maux de tête", "Peau sèche ou terne", "Constipation", "Fringales (souvent soif déguisée)"],
+    "astuces": ["Gourde graduée de 1L toujours visible sur le bureau", "Alarme téléphone toutes les heures", "Ajouter des rondelles de citron/concombre pour le goût", "1 verre d'eau à chaque pause toilettes", "App de suivi hydratation"]
   },
   
   "pilierMouvement": {
-    "philosophie": "Pas de sport intensif ! Des micro-mouvements quotidiens accessibles à tous, qui amplifient le drainage lymphatique et potentialisent les massages G5.",
-    "objectifs": {
-      "pasQuotidiens": 8000,
-      "minutesActivite": 30,
-      "frequenceGainageMin": 5
+    "philosophie": "Pas de sport intensif qui fatigue et donne faim ! Des micro-mouvements quotidiens de 30-45 min total, répartis dans la journée, qui activent le drainage lymphatique et potentialisent les massages G5.",
+    "objectifs": {"pasQuotidiens": 8000, "minutesActivite": 45, "frequenceGainage": "Quotidien"},
+    "routineReveil": {
+      "nom": "Réveil en Douceur",
+      "duree": "8 minutes",
+      "exercices": [
+        {"nom": "Respirations profondes", "description": "Allongée, mains sur le ventre, inspirer 4s par le nez, gonfler le ventre, expirer 6s par la bouche", "repetitions": "10 respirations", "benefice": "Active le système parasympathique, oxygène le corps"},
+        {"nom": "Étirements chat-vache", "description": "À 4 pattes, alterner dos creux (inspir) et dos rond (expir)", "repetitions": "10 fois", "benefice": "Mobilise la colonne, réveille le dos"},
+        {"nom": "Rotations chevilles", "description": "Allongée, faire des cercles avec les pieds", "repetitions": "10 par pied", "benefice": "Active la circulation, prévient la rétention"},
+        {"nom": "Genoux poitrine", "description": "Ramener les deux genoux vers la poitrine, balancer doucement", "repetitions": "30 secondes", "benefice": "Massage des organes digestifs, transit"},
+        {"nom": "Auto-massage ventre", "description": "En cercles dans le sens des aiguilles d'une montre autour du nombril", "repetitions": "2 minutes", "benefice": "Stimule le transit, draine le ventre"}
+      ]
     },
-    "protocoleQuotidien": {
-      "auReveil": {
-        "exercice": "Routine réveil doux",
-        "duree": "5 min",
-        "mouvements": [
-          "10 respirations profondes ventre (activer le diaphragme)",
-          "Étirements chat-vache (mobilité colonne) x10",
-          "Rotations chevilles et poignets (circulation) x10 chaque",
-          "Auto-massage ventre sens horaire 1 min (transit)"
-        ],
-        "benefices": "Active le métabolisme, stimule le transit, réveille le corps en douceur"
-      },
-      "matinee": {
-        "exercice": "Marche active",
-        "duree": "15-20 min",
-        "conseil": "Marcher à un rythme où on peut parler mais pas chanter",
-        "alternatives": ["Monter/descendre escaliers 10 min", "Vélo doux", "Ménage actif"],
-        "benefices": "Brûle les graisses en zone lipidique, stimule la lymphe"
-      },
-      "avantMassageG5": {
-        "exercice": "Activation drainage",
-        "duree": "10 min",
-        "mouvements": [
-          "Brossage à sec de la peau (vers le cœur) 3 min",
-          "Squats légers x15 (active circulation jambes)",
-          "Talons-fesses x20 (zone cuisses)",
-          "Cercles de hanches x10 chaque sens (zone abdomen)"
-        ],
-        "pourquoi": "Prépare les tissus, active la circulation = massage G5 2x plus efficace"
-      },
-      "apresMassageG5": {
-        "exercice": "Drainage doux",
-        "duree": "10 min post-séance",
-        "mouvements": [
-          "Marche lente 5 min",
-          "Jambes en l'air contre un mur 5 min",
-          "Respirations profondes"
-        ],
-        "pourquoi": "Aide à éliminer les toxines délogées par le massage"
-      },
-      "soir": {
-        "exercice": "Gainage & Stretching",
-        "duree": "10 min",
-        "mouvements": [
-          "Planche sur genoux ou classique 3x30sec",
-          "Planche latérale chaque côté 2x20sec",
-          "Vacuum (rentrer le ventre à fond) 5x10sec",
-          "Étirements détente 5 min"
-        ],
-        "benefices": "Renforce la sangle abdominale (zone souvent ciblée), améliore la posture"
-      }
+    "routineAvantG5": {
+      "nom": "Activation Pré-Massage",
+      "duree": "10 minutes",
+      "quand": "30 min avant la séance de massage G5",
+      "exercices": [
+        {"nom": "Brossage à sec", "description": "Avec une brosse en fibres naturelles, brosser la peau vers le cœur en partant des pieds", "repetitions": "5 minutes tout le corps", "benefice": "Active la lymphe, exfolie, prépare la peau"},
+        {"nom": "Squats légers", "description": "Pieds largeur épaules, descendre comme pour s'asseoir, remonter", "repetitions": "15 squats", "benefice": "Active la circulation des jambes"},
+        {"nom": "Talons-fesses", "description": "Sur place, ramener les talons vers les fesses en alternance", "repetitions": "30 secondes", "benefice": "Chauffe les cuisses, zone souvent ciblée"},
+        {"nom": "Cercles de hanches", "description": "Mains sur les hanches, faire de grands cercles", "repetitions": "10 par sens", "benefice": "Mobilise la zone abdominale"}
+      ],
+      "pourquoi": "Ces exercices augmentent l'afflux sanguin dans les zones ciblées, rendant le massage G5 jusqu'à 2x plus efficace"
     },
-    "exercicesCiblesParZone": {
+    "routineApresG5": {
+      "nom": "Drainage Post-Massage",
+      "duree": "10 minutes",
+      "quand": "Dans l'heure suivant la séance",
+      "exercices": [
+        {"nom": "Marche douce", "description": "Marcher tranquillement, sans effort", "repetitions": "5 minutes", "benefice": "Fait circuler la lymphe mobilisée"},
+        {"nom": "Jambes au mur", "description": "Allongée, fesses contre le mur, jambes à la verticale", "repetitions": "5 minutes", "benefice": "Retour veineux, décongestionne les jambes"},
+        {"nom": "Respirations abdominales", "description": "Allongée, respirer profondément par le ventre", "repetitions": "10 respirations", "benefice": "Relaxation, aide le système lymphatique"}
+      ],
+      "pourquoi": "Le massage G5 a délogé des toxines et cellules graisseuses - ces exercices aident à les évacuer"
+    },
+    "routineSoir": {
+      "nom": "Gainage & Détente",
+      "duree": "12 minutes",
+      "exercices": [
+        {"nom": "Planche sur genoux", "description": "Position de pompe mais genoux au sol, corps aligné, tenir", "repetitions": "3 x 30 secondes", "benefice": "Renforce le transverse (ventre plat)"},
+        {"nom": "Planche latérale modifiée", "description": "Sur le côté, genou inférieur au sol, lever le bassin", "repetitions": "2 x 20 sec par côté", "benefice": "Taille fine, obliques"},
+        {"nom": "Vacuum", "description": "Debout ou à 4 pattes, expirer à fond, rentrer le nombril vers la colonne, tenir", "repetitions": "5 x 10 secondes", "benefice": "Exercice #1 pour ventre plat, réduit le tour de taille"},
+        {"nom": "Pont fessier", "description": "Allongée, pieds au sol, monter le bassin, serrer les fessiers", "repetitions": "20 répétitions", "benefice": "Galbe les fessiers"},
+        {"nom": "Étirements détente", "description": "Étirer doucement jambes, dos, épaules", "repetitions": "5 minutes", "benefice": "Récupération, préparation au sommeil"}
+      ]
+    },
+    "exercicesZoneCible": {
       "ventre": [
-        {"exercice": "Vacuum abdominal", "description": "Inspirer, expirer à fond, rentrer le nombril vers la colonne, tenir 10sec", "repetitions": "5x10sec, 2x/jour", "efficacite": "Réduit le tour de taille de 2-3cm en 4 semaines"},
-        {"exercice": "Respiration hypopressive", "description": "Allongée, inspirer, expirer, bloquer, rentrer le ventre, tenir", "repetitions": "10x matin", "efficacite": "Tonifie le transverse profond"},
-        {"exercice": "Crunchs inversés doux", "description": "Allongée, genoux pliés, ramener genoux vers poitrine", "repetitions": "3x15", "efficacite": "Bas du ventre"}
+        {"nom": "Vacuum abdominal", "description": "Rentrer le nombril à fond vers la colonne sur une expiration, tenir 10s", "frequence": "5x10s, 2 fois/jour", "efficacite": "Réduction 2-3cm tour de taille en 4 semaines"},
+        {"nom": "Respiration hypopressive", "description": "Technique avancée du vacuum avec apnée", "frequence": "1 fois/jour", "efficacite": "Tonifie profondément le transverse"},
+        {"nom": "Crunchs inversés", "description": "Allongée, ramener les genoux vers la poitrine en décollant le bassin", "frequence": "3x15 par jour", "efficacite": "Cible le bas du ventre"}
       ],
       "cuisses": [
-        {"exercice": "Squats légers", "description": "Pieds largeur épaules, descendre comme pour s'asseoir", "repetitions": "3x15", "efficacite": "Tonifie cuisses et fessiers"},
-        {"exercice": "Fentes avant", "description": "Grand pas en avant, descendre genou arrière vers sol", "repetitions": "2x10 chaque jambe", "efficacite": "Galbe les cuisses"},
-        {"exercice": "Battements latéraux", "description": "Debout, lever jambe sur le côté", "repetitions": "3x20 chaque jambe", "efficacite": "Culotte de cheval"}
+        {"nom": "Squats sumo", "description": "Pieds très écartés, pointes vers l'extérieur, descendre", "frequence": "3x20 par jour", "efficacite": "Intérieur des cuisses"},
+        {"nom": "Fentes marchées", "description": "Avancer en faisant des fentes", "frequence": "2x10 chaque jambe", "efficacite": "Galbe global"},
+        {"nom": "Élévations latérales", "description": "Debout, lever la jambe sur le côté", "frequence": "3x20 chaque jambe", "efficacite": "Culotte de cheval"}
       ],
       "fessiers": [
-        {"exercice": "Pont fessier", "description": "Allongée, pieds au sol, monter le bassin", "repetitions": "3x20", "efficacite": "Galbe et raffermit"},
-        {"exercice": "Donkey kicks", "description": "À 4 pattes, pousser le pied vers le plafond", "repetitions": "3x15 chaque jambe", "efficacite": "Cible le grand fessier"},
-        {"exercice": "Clam", "description": "Sur le côté, genoux pliés, ouvrir le genou supérieur", "repetitions": "3x20 chaque côté", "efficacite": "Moyen fessier, galbe la hanche"}
-      ],
-      "bras": [
-        {"exercice": "Pompes au mur", "description": "Mains au mur, faire des pompes debout", "repetitions": "3x15", "efficacite": "Triceps sans difficulté"},
-        {"exercice": "Dips sur chaise", "description": "Dos à une chaise, descendre en pliant les coudes", "repetitions": "3x10", "efficacite": "Effet chauve-souris"},
-        {"exercice": "Rotations bras tendus", "description": "Bras en croix, petits cercles", "repetitions": "3x30sec", "efficacite": "Tonification globale"}
+        {"nom": "Donkey kicks", "description": "À 4 pattes, pousser un pied vers le plafond", "frequence": "3x20 chaque jambe", "efficacite": "Grand fessier, galbe"},
+        {"nom": "Fire hydrants", "description": "À 4 pattes, lever le genou sur le côté", "frequence": "3x15 chaque jambe", "efficacite": "Moyen fessier, arrondi"},
+        {"nom": "Hip thrust", "description": "Dos contre un support, pieds au sol, lever le bassin", "frequence": "3x20", "efficacite": "Volume et tonus"}
       ]
     },
     "integrationQuotidien": [
-      "Toujours prendre les escaliers (brûle 3x plus que l'ascenseur)",
-      "Se garer plus loin / descendre un arrêt avant",
-      "Téléphoner debout en marchant",
-      "Squats pendant que le café coule",
-      "Contracter les abdos 10sec au feu rouge",
-      "Marche digestive de 10 min après déjeuner"
+      "Escaliers TOUJOURS au lieu de l'ascenseur (+300 kcal/semaine)",
+      "Se garer à 10 min de marche de sa destination",
+      "Téléphoner DEBOUT en marchant",
+      "Squats pendant que le café coule (15 squats = 2 min)",
+      "Contracter les abdos 10 sec à chaque feu rouge",
+      "Marche digestive de 15 min après le déjeuner (divise la glycémie par 2)"
     ]
   },
   
   "pilierSommeil": {
-    "importance": "Le manque de sommeil augmente la ghréline (+50% de faim), diminue la leptine (satiété), favorise le stockage abdominal, et annule les bénéfices de l'alimentation saine. 1h de sommeil en moins = +200-300 kcal consommées le lendemain.",
-    "objectifHeures": "7-8h de sommeil de qualité",
-    "horairesOptimaux": {
-      "coucher": "22h30-23h",
-      "lever": "6h30-7h30",
-      "pourquoi": "Respecter les cycles de 90min, maximiser le sommeil profond (pic entre 22h-2h)"
+    "importance": "Le manque de sommeil est l'ENNEMI #1 de la perte de poids : il augmente la ghréline (hormone de la faim) de 28%, diminue la leptine (satiété) de 18%, augmente le cortisol (stockage abdominal), et pousse à manger +300-400 kcal le lendemain. ${prenom}, 7-8h de sommeil de qualité sont NON NÉGOCIABLES.",
+    "objectif": "7-8h de sommeil réparateur par nuit",
+    "horairesRecommandes": {
+      "coucher": "22h30",
+      "lever": "6h30",
+      "pourquoi": "Respecte les cycles de 90min (5 cycles), maximise le sommeil profond (pic entre 22h et 2h où l'hormone de croissance répare les tissus)"
     },
     "routineSoir": {
-      "h_moins_3": {
-        "action": "Dernier repas",
-        "conseil": "Dîner léger terminé 3h avant le coucher",
-        "pourquoi": "Digestion perturbe le sommeil profond"
-      },
-      "h_moins_2": {
-        "action": "Tamiser les lumières",
-        "conseil": "Lumières chaudes, bougies, éviter néons",
-        "pourquoi": "Prépare la production de mélatonine"
-      },
-      "h_moins_1": {
-        "action": "Digital detox",
-        "conseil": "Arrêter tous les écrans (ou filtre bleu au minimum)",
-        "pourquoi": "La lumière bleue retarde l'endormissement de 30-60min"
-      },
-      "h_moins_30": {
-        "action": "Routine relaxante",
-        "conseil": "Tisane, lecture papier, stretching doux, bain tiède",
-        "pourquoi": "Active le système parasympathique"
-      },
-      "h_moins_15": {
-        "action": "Préparation mentale",
-        "conseil": "Gratitude (3 choses positives), respiration 4-7-8",
-        "pourquoi": "Calme le mental, facilite l'endormissement"
-      }
+      "h_moins_4": {"heure": "18h30", "action": "Dernier café/thé", "conseil": "La caféine a une demi-vie de 6h", "pourquoi": "Un café à 18h = encore 50% de caféine à minuit"},
+      "h_moins_3": {"heure": "19h30", "action": "Dîner léger", "conseil": "Terminer de manger", "pourquoi": "3h de digestion nécessaires avant le sommeil profond"},
+      "h_moins_2": {"heure": "20h30", "action": "Lumières tamisées", "conseil": "Éteindre les plafonniers, utiliser des lampes d'ambiance", "pourquoi": "La lumière vive bloque la mélatonine"},
+      "h_moins_1": {"heure": "21h30", "action": "Digital detox", "conseil": "Éteindre téléphone, TV, ordinateur", "pourquoi": "La lumière bleue retarde l'endormissement de 30-60 min"},
+      "h_moins_30": {"heure": "22h00", "action": "Routine détente", "conseil": "Tisane camomille, lecture papier, étirements doux, bain tiède (pas chaud)", "pourquoi": "Active le système nerveux parasympathique"},
+      "h_moins_10": {"heure": "22h20", "action": "Gratitude & respiration", "conseil": "Noter 3 choses positives de la journée, respiration 4-7-8", "pourquoi": "Calme le mental, réduit l'anxiété"}
     },
-    "environnementChambre": {
-      "temperature": "18-19°C (idéal pour le sommeil profond)",
-      "obscurite": "Totale (masque si besoin, rideaux occultants)",
-      "bruit": "Silence ou bruit blanc/ventilateur",
-      "literie": "Matelas ferme, oreiller adapté à votre position"
+    "environnementIdeal": {
+      "temperature": "18-19°C (le corps doit baisser de 1°C pour s'endormir)",
+      "obscurite": "Totale - investir dans des rideaux occultants ou un masque de sommeil",
+      "bruit": "Silence ou bruit blanc constant (ventilateur, app)",
+      "literie": "Matelas de qualité, oreiller adapté à votre position de sommeil",
+      "ecrans": "AUCUN écran dans la chambre - le cerveau doit associer chambre = sommeil"
     },
-    "alimentsSommeil": {
-      "favoriser": [
-        {"aliment": "Banane", "pourquoi": "Tryptophane + magnésium = précurseurs mélatonine"},
-        {"aliment": "Amandes/noix", "pourquoi": "Magnésium naturel"},
-        {"aliment": "Tisane camomille", "pourquoi": "Apigénine = effet sédatif léger"},
-        {"aliment": "Kiwi", "pourquoi": "Études montrent +13% temps de sommeil"},
-        {"aliment": "Cerises", "pourquoi": "Seule source naturelle de mélatonine"}
-      ],
-      "eviterLeSoir": [
-        {"aliment": "Caféine", "pourquoi": "Reste 6h dans le système - stop à 14h max"},
-        {"aliment": "Alcool", "pourquoi": "Endort mais supprime sommeil profond"},
-        {"aliment": "Sucres rapides", "pourquoi": "Pic glycémique puis hypoglycémie = réveil"},
-        {"aliment": "Repas trop riche", "pourquoi": "Digestion perturbe les cycles"}
-      ]
-    },
-    "troublesEtSolutions": [
-      {
-        "probleme": "Difficultés d'endormissement",
-        "solutions": ["Technique 4-7-8 (inspirer 4s, bloquer 7s, expirer 8s)", "Relaxation musculaire progressive", "Cohérence cardiaque 5min"]
-      },
-      {
-        "probleme": "Réveils nocturnes",
-        "solutions": ["Ne pas regarder l'heure", "Rester au lit, respiration calme", "Si >20min : se lever, activité calme, revenir quand fatiguée"]
-      },
-      {
-        "probleme": "Réveil trop tôt",
-        "solutions": ["Coucher plus tard (pas plus tôt !)", "Lumière vive le soir, obscurité le matin", "Vérifier stress/anxiété"]
-      }
+    "alimentsFavorables": [
+      {"aliment": "Banane", "pourquoi": "Tryptophane + magnésium + potassium = combo parfait pour le sommeil"},
+      {"aliment": "Amandes (10-15)", "pourquoi": "Magnésium naturel, régule le sommeil"},
+      {"aliment": "Kiwi (2)", "pourquoi": "Études montrent +13% de temps de sommeil et +5% de qualité"},
+      {"aliment": "Tisane camomille", "pourquoi": "Apigénine = légèrement sédatif, sans accoutumance"},
+      {"aliment": "Cerises ou jus de cerise", "pourquoi": "Seule source alimentaire naturelle de mélatonine"},
+      {"aliment": "Poisson gras au dîner", "pourquoi": "Oméga-3 + vitamine D améliorent la qualité du sommeil"}
+    ],
+    "alimentsAEviter": [
+      {"aliment": "Café/thé après 14h", "pourquoi": "Demi-vie de 6h = reste dans le système"},
+      {"aliment": "Alcool", "pourquoi": "Endort mais DÉTRUIT le sommeil profond et le sommeil REM"},
+      {"aliment": "Sucres rapides le soir", "pourquoi": "Pic glycémique puis hypoglycémie = réveil à 3h du matin"},
+      {"aliment": "Repas trop copieux", "pourquoi": "Digestion difficile = sommeil léger"},
+      {"aliment": "Trop de liquides après 20h", "pourquoi": "Réveils pour uriner"}
+    ],
+    "techniquesEndormissement": [
+      {"technique": "Respiration 4-7-8", "methode": "Inspirer 4s, bloquer 7s, expirer 8s. Répéter 4 fois.", "efficacite": "Endormissement en 60 secondes avec la pratique"},
+      {"technique": "Relaxation musculaire progressive", "methode": "Contracter puis relâcher chaque muscle, des pieds à la tête", "efficacite": "Réduit les tensions, calme le système nerveux"},
+      {"technique": "Visualisation apaisante", "methode": "S'imaginer dans un lieu calme (plage, forêt), avec tous les sens", "efficacite": "Détourne l'attention des pensées anxieuses"},
+      {"technique": "Cohérence cardiaque", "methode": "5 secondes inspiration, 5 secondes expiration, pendant 5 min", "efficacite": "Régule le système nerveux autonome"}
     ]
   },
   
   "pilierMindset": {
-    "importance": "80% de la réussite est mentale. Les études montrent que les personnes avec un état d'esprit positif perdent 2x plus de poids et le maintiennent.",
-    "affirmationsQuotidiennes": [
-      "Mon corps se transforme un peu plus chaque jour",
-      "Je choisis des aliments qui me nourrissent et me font du bien",
-      "Je suis capable de tenir mes engagements envers moi-même",
-      "Chaque séance de massage G5 me rapproche de mon objectif",
-      "Je mérite de me sentir bien dans mon corps",
-      "Mes efforts quotidiens construisent la version de moi que je veux être"
-    ],
+    "importance": "80% de la réussite d'une transformation est MENTALE. Les personnes avec un état d'esprit positif et des objectifs clairs perdent en moyenne 2x plus de poids et surtout le MAINTIENNENT. ${prenom}, ce pilier est votre arme secrète.",
     "visualisation": {
-      "exercice": "Visualisation matinale 5 min",
-      "methode": "Fermez les yeux. Imaginez-vous dans ${nutritionForm.duree} semaines, ${perteVisee}kg en moins. Comment vous sentez-vous ? Quels vêtements portez-vous ? Comment les autres vous regardent ? Ressentez la fierté, l'énergie, la confiance.",
-      "frequence": "Tous les matins au réveil",
-      "benefices": "Programme le subconscient vers le succès, augmente la motivation"
+      "exercice": "Visualisation Matinale",
+      "duree": "5 minutes chaque matin au réveil",
+      "methode": "Fermez les yeux. Imaginez-vous dans ${duree} semaines, ${perteVisee}kg en moins. Visualisez-vous devant le miroir : comment vous sentez-vous ? Quels vêtements portez-vous ? Regardez votre ventre plus plat, vos cuisses affinées. Ressentez la fierté, l'énergie, la confiance. Ancrez cette image.",
+      "pourquoi": "Le cerveau ne fait pas la différence entre imagination et réalité. Visualiser programme le subconscient vers le succès."
     },
-    "gestionEmotionsAlimentaires": {
-      "comprendre": "Manger ses émotions est un mécanisme de récompense du cerveau. Ce n'est pas une faiblesse.",
-      "declencheurs": ["Stress", "Ennui", "Fatigue", "Tristesse", "Colère", "Solitude"],
-      "alternatives": [
-        {"emotion": "Stress", "alternative": "5 respirations profondes, marche de 10 min, appeler une amie"},
-        {"emotion": "Ennui", "alternative": "Liste d'activités plaisir (lecture, bain, série), sortir de la cuisine"},
-        {"emotion": "Fatigue", "alternative": "Micro-sieste 20min, tisane, aller se coucher plus tôt"},
-        {"emotion": "Tristesse", "alternative": "Se permettre de pleurer, musique positive, mouvement doux"}
-      ],
-      "technique3min": "Avant de manger hors repas : STOP. Respirer. Identifier l'émotion. Attendre 3 min. Choisir consciemment."
-    },
-    "celebrerLesVictoires": {
-      "concept": "Le cerveau a besoin de récompenses régulières pour maintenir la motivation",
-      "victoires": [
-        "Chaque jour où le programme est suivi = victoire 🏆",
-        "Chaque kilo perdu = victoire majeure 🎉",
-        "Chaque refus de tentation = victoire mentale 💪",
-        "Chaque séance G5 terminée = victoire bien-être 💆",
-        "Chaque nouveau vêtement qui va = victoire visible 👗"
-      ],
-      "recompenses": [
-        "Pas de récompense alimentaire !",
-        "Soin beauté / manucure",
-        "Nouveau vêtement",
-        "Activité plaisir (cinéma, massage spa)",
-        "Temps pour soi"
+    "affirmationsQuotidiennes": [
+      "Chaque jour, mon corps se transforme et s'affine",
+      "Je nourris mon corps avec des aliments qui le font briller",
+      "Je suis plus forte que n'importe quelle envie passagère",
+      "Chaque massage G5 sculpte mon corps vers mon idéal",
+      "Je mérite d'être bien dans ma peau et j'y travaille",
+      "Mes choix d'aujourd'hui construisent le corps de demain",
+      "Je suis fière de chaque petit progrès, ils s'additionnent",
+      "Mon énergie augmente chaque jour grâce à mes efforts"
+    ],
+    "gestionEmotions": {
+      "comprendre": "Manger ses émotions n'est PAS une faiblesse - c'est un mécanisme de survie du cerveau qui cherche du réconfort. Mais on peut le reprogrammer.",
+      "declencheurs": ["Stress au travail", "Ennui", "Fatigue", "Tristesse", "Anxiété", "Solitude", "Frustration"],
+      "technique3Minutes": "AVANT de manger hors repas : 1) STOP - Posez-vous. 2) RESPIREZ - 3 grandes respirations. 3) IDENTIFIEZ - Quelle émotion je ressens vraiment ? 4) CHOISISSEZ - Est-ce de la vraie faim ou de l'émotion ? 5) ATTENDEZ - 3 minutes, l'envie passe souvent.",
+      "alternativesParEmotion": [
+        {"emotion": "Stress", "alternatives": "5 respirations profondes, marche de 10 min dehors, appeler une amie, écrire ce qui stresse"},
+        {"emotion": "Ennui", "alternatives": "Liste d'activités plaisir (lecture, bain, podcast), sortir de la cuisine, ranger quelque chose"},
+        {"emotion": "Fatigue", "alternatives": "Sieste de 20min max, tisane, s'autoriser à se coucher plus tôt"},
+        {"emotion": "Tristesse", "alternatives": "Se permettre de pleurer, musique qui fait du bien, mouvement doux, parler à quelqu'un"},
+        {"emotion": "Anxiété", "alternatives": "Respiration 4-7-8, cohérence cardiaque, écrire ses inquiétudes, méditation guidée"}
       ]
     },
     "gestionEcarts": {
-      "philosophie": "Un écart n'est pas un échec. Un écart N'ANNULE PAS les progrès. Seul l'abandon est un échec.",
+      "philosophie": "Un écart n'est PAS un échec. La perfection n'existe pas et n'est pas l'objectif. Ce qui compte, c'est la CONSTANCE sur la durée. Un repas ne fait pas plus grossir qu'un repas sain ne fait maigrir.",
       "apresUnEcart": [
-        "1. Ne pas culpabiliser (le stress fait stocker !)",
-        "2. Ne pas se peser le lendemain",
-        "3. Ne pas compenser par du jeûne ou sport excessif",
-        "4. Reprendre le programme au repas suivant, simplement",
-        "5. Boire beaucoup d'eau pour éliminer"
+        "1. NE PAS CULPABILISER - Le stress fait stocker ! L'écart est fait, inutile de ruminer",
+        "2. NE PAS SE PESER le lendemain - Le poids sera faussé par la rétention d'eau",
+        "3. NE PAS COMPENSER - Pas de jeûne ni sport excessif, ça crée un cercle vicieux",
+        "4. REPRENDRE NORMALEMENT - Au repas suivant, comme si de rien n'était",
+        "5. BOIRE +++ - De l'eau et tisanes drainantes pour éliminer",
+        "6. ANALYSER SANS JUGER - Qu'est-ce qui a déclenché cet écart ? Comment l'éviter la prochaine fois ?"
       ],
-      "repasPlaisirAutorises": "1-2 repas plaisir par semaine FONT PARTIE du programme. Ils relancent le métabolisme."
+      "repasPlaisir": "${prenom}, 1 à 2 repas plaisir par semaine FONT PARTIE du programme. Ils relancent le métabolisme, évitent la frustration, et rendent le programme tenable sur la durée. Planifiez-les et savourez-les sans culpabilité !"
     },
+    "celebrerVictoires": [
+      "Chaque jour de programme suivi = victoire 🏆",
+      "Chaque kilo perdu = victoire majeure 🎉",
+      "Chaque tentation refusée = victoire mentale 💪",
+      "Chaque massage G5 = victoire bien-être 💆",
+      "Chaque nuit de bon sommeil = victoire santé 😴",
+      "Chaque nouveau vêtement qui va = victoire visible 👗"
+    ],
+    "recompensesSaines": [
+      "JAMAIS de récompense alimentaire",
+      "Soin beauté / manucure / pédicure",
+      "Nouveau vêtement ou accessoire",
+      "Massage spa (en plus des G5)",
+      "Temps pour soi (livre, bain, film)",
+      "Sortie avec amies",
+      "Achat plaisir (maquillage, bijou, déco)"
+    ],
     "mantras": {
-      "fringale": "Cette envie va passer dans 10 minutes. Je suis plus forte que cette envie.",
-      "decouragement": "Je n'ai pas fait tout ce chemin pour faire que ce chemin.",
+      "fringale": "Cette envie va passer dans 10 minutes. Je suis plus forte qu'une envie.",
+      "decouragement": "Je n'ai pas fait tout ce chemin pour m'arrêter là.",
       "tentation": "Ce plaisir dure 10 secondes, ma fierté dure toute la journée.",
-      "fatigue": "Mon corps se repose, mais mon objectif ne dort jamais."
+      "plateau": "Mon corps se recompose. La balance ne dit pas tout. Je continue.",
+      "fatigue": "Je me repose, mais mon objectif reste éveillé."
     }
   },
   
   "produitsRecommandes": {
-    "intro": "Ces produits de qualité amplifient les résultats du programme. Ils ne sont pas obligatoires mais fortement recommandés pour maximiser votre transformation.",
-    "categories": {
-      "soinCorps": [
-        {
-          "nom": "Huile de massage anti-cellulite (type Weleda Bouleau)",
-          "utilisation": "Auto-massage quotidien 5min sur zones ciblées",
-          "benefices": "Active la microcirculation, prépare la peau aux massages G5",
-          "moment": "Le soir avant la douche ou matin",
-          "qrCodePlaceholder": "QR_HUILE_MASSAGE",
-          "prixIndicatif": "15-25€"
-        },
-        {
-          "nom": "Gommage corps au sel marin ou café",
-          "utilisation": "2x/semaine sous la douche",
-          "benefices": "Exfolie, active la circulation, prépare les tissus",
-          "moment": "Avant les jours de massage G5",
-          "qrCodePlaceholder": "QR_GOMMAGE",
-          "prixIndicatif": "10-20€"
-        },
-        {
-          "nom": "Crème raffermissante caféine (type Somatoline)",
-          "utilisation": "1x/jour sur zones ciblées",
-          "benefices": "Effet tenseur, caféine = lipolytique",
-          "moment": "Après la douche du matin",
-          "qrCodePlaceholder": "QR_CREME_FERMETE",
-          "prixIndicatif": "20-40€"
-        },
-        {
-          "nom": "Ventouse cellulite silicone",
-          "utilisation": "Auto-palper-rouler 5min/jour",
-          "benefices": "Complète les massages G5 entre les séances",
-          "moment": "Le soir avec l'huile de massage",
-          "qrCodePlaceholder": "QR_VENTOUSE",
-          "prixIndicatif": "10-15€"
-        },
-        {
-          "nom": "Brosse de massage à sec",
-          "utilisation": "3-5min chaque matin AVANT douche",
-          "benefices": "Stimule le drainage lymphatique, exfolie, tonifie",
-          "moment": "Matin, brossage vers le cœur",
-          "qrCodePlaceholder": "QR_BROSSE_SEC",
-          "prixIndicatif": "8-15€"
-        }
-      ],
-      "hydratation": [
-        {
-          "nom": "Gourde graduée 1L avec marquage heures",
-          "utilisation": "À garder visible toute la journée",
-          "benefices": "Rappel visuel, suivi facile de l'hydratation",
-          "qrCodePlaceholder": "QR_GOURDE",
-          "prixIndicatif": "15-25€"
-        },
-        {
-          "nom": "Tisane Queue de Cerise bio",
-          "utilisation": "1L/jour pendant 3 semaines",
-          "benefices": "Drainage puissant, anti-rétention d'eau",
-          "qrCodePlaceholder": "QR_TISANE_CERISE",
-          "prixIndicatif": "8-12€"
-        },
-        {
-          "nom": "Thé vert Matcha (qualité culinaire)",
-          "utilisation": "1 c. à café/jour le matin",
-          "benefices": "Thermogénèse, antioxydants, brûle-graisses",
-          "qrCodePlaceholder": "QR_MATCHA",
-          "prixIndicatif": "15-25€"
-        }
-      ],
-      "complement": [
-        {
-          "nom": "Magnésium bisglycinate",
-          "utilisation": "300mg le soir",
-          "benefices": "Améliore le sommeil, réduit le stress, anti-crampes",
-          "qrCodePlaceholder": "QR_MAGNESIUM",
-          "prixIndicatif": "15-20€"
-        },
-        {
-          "nom": "Oméga 3 (huile de poisson ou algues)",
-          "utilisation": "1-2g/jour au repas",
-          "benefices": "Anti-inflammatoire, aide à la perte de graisse viscérale",
-          "qrCodePlaceholder": "QR_OMEGA3",
-          "prixIndicatif": "15-25€"
-        }
-      ],
-      "equipement": [
-        {
-          "nom": "Tapis de yoga/fitness",
-          "utilisation": "Pour les exercices quotidiens",
-          "benefices": "Confort, motivation, espace dédié",
-          "qrCodePlaceholder": "QR_TAPIS",
-          "prixIndicatif": "20-40€"
-        },
-        {
-          "nom": "Élastique de résistance",
-          "utilisation": "Renforcement musculaire doux",
-          "benefices": "Tonification sans prise de masse",
-          "qrCodePlaceholder": "QR_ELASTIQUE",
-          "prixIndicatif": "10-15€"
-        },
-        {
-          "nom": "Balance connectée",
-          "utilisation": "1 pesée/semaine même jour même heure",
-          "benefices": "Suivi masse grasse/musculaire, pas juste le poids",
-          "qrCodePlaceholder": "QR_BALANCE",
-          "prixIndicatif": "30-60€"
-        }
-      ]
-    },
-    "budgetComplet": "Budget total recommandé : 100-150€ (investissement unique qui dure plusieurs mois)",
-    "priorites": ["1. Gourde graduée (essentiel)", "2. Huile massage + Ventouse (synergie G5)", "3. Tisane drainage (résultats rapides)", "4. Brosse à sec (rituel matin)"]
+    "intro": "Ces produits de qualité amplifient vos résultats. Non obligatoires mais recommandés pour maximiser votre transformation.",
+    "soinCorps": [
+      {"nom": "Huile de massage anti-cellulite (type Weleda Bouleau)", "utilisation": "Auto-massage 5min/jour sur zones ciblées", "benefices": "Active la microcirculation, prépare au G5", "prix": "15-25€", "qr": "QR_HUILE"},
+      {"nom": "Ventouse cellulite silicone", "utilisation": "Palper-rouler 5min/jour avec huile", "benefices": "Complète le G5 entre les séances", "prix": "10-15€", "qr": "QR_VENTOUSE"},
+      {"nom": "Brosse de massage à sec", "utilisation": "3-5min chaque matin avant douche", "benefices": "Stimule la lymphe, exfolie, tonifie", "prix": "8-15€", "qr": "QR_BROSSE"},
+      {"nom": "Crème raffermissante caféine", "utilisation": "1x/jour après la douche", "benefices": "Effet tenseur, caféine lipolytique", "prix": "20-40€", "qr": "QR_CREME"},
+      {"nom": "Gommage corps café/sel", "utilisation": "2x/semaine sous la douche", "benefices": "Exfolie, active la circulation", "prix": "10-20€", "qr": "QR_GOMMAGE"}
+    ],
+    "hydratation": [
+      {"nom": "Gourde graduée 1L avec heures", "utilisation": "À garder visible toute la journée", "benefices": "Rappel visuel, suivi facile", "prix": "15-25€", "qr": "QR_GOURDE"},
+      {"nom": "Tisane Queue de Cerise bio", "utilisation": "1L/jour pendant 3 semaines", "benefices": "Drainage puissant anti-rétention", "prix": "8-12€", "qr": "QR_TISANE"},
+      {"nom": "Thé vert Matcha", "utilisation": "1 c. à café/jour le matin", "benefices": "Thermogénèse, brûle-graisses", "prix": "15-25€", "qr": "QR_MATCHA"}
+    ],
+    "complements": [
+      {"nom": "Magnésium bisglycinate", "utilisation": "300mg le soir", "benefices": "Sommeil, stress, anti-crampes", "prix": "15-20€", "qr": "QR_MAGNESIUM"},
+      {"nom": "Oméga 3 EPA/DHA", "utilisation": "1-2g/jour au repas", "benefices": "Anti-inflammatoire, perte graisse viscérale", "prix": "15-25€", "qr": "QR_OMEGA3"}
+    ],
+    "equipement": [
+      {"nom": "Tapis de yoga", "utilisation": "Pour exercices quotidiens", "benefices": "Confort, espace dédié", "prix": "20-40€", "qr": "QR_TAPIS"},
+      {"nom": "Élastique de résistance", "utilisation": "Renforcement musculaire doux", "benefices": "Tonification sans volume", "prix": "10-15€", "qr": "QR_ELASTIQUE"}
+    ],
+    "priorites": ["1. Gourde graduée (indispensable)", "2. Tisane drainage (résultats rapides)", "3. Huile + Ventouse (synergie G5)", "4. Brosse à sec (rituel efficace)"]
   },
-  
-  "checklistQuotidienne": {
-    "matin": [
-      {"action": "Boire 500ml eau tiède citron au réveil", "icon": "💧", "points": 10},
-      {"action": "Routine réveil 5min (étirements, respirations)", "icon": "🌅", "points": 10},
-      {"action": "Brossage à sec 3min", "icon": "✨", "points": 5},
-      {"action": "Petit-déjeuner du programme", "icon": "🥗", "points": 15},
-      {"action": "Affirmation positive du jour", "icon": "🧠", "points": 5}
-    ],
-    "journee": [
-      {"action": "Atteindre 8000 pas", "icon": "🚶", "points": 20},
-      {"action": "Boire ${eau}L d'eau total", "icon": "💧", "points": 15},
-      {"action": "Déjeuner du programme", "icon": "🥗", "points": 15},
-      {"action": "Collation saine si faim", "icon": "🍎", "points": 5},
-      {"action": "10min mouvement/exercices ciblés", "icon": "💪", "points": 10}
-    ],
-    "soir": [
-      {"action": "Dîner du programme (3h avant coucher)", "icon": "🥗", "points": 15},
-      {"action": "Gainage 5min", "icon": "🏋️", "points": 10},
-      {"action": "Auto-massage huile zones ciblées", "icon": "💆", "points": 10},
-      {"action": "Digital detox 1h avant coucher", "icon": "📵", "points": 10},
-      {"action": "Coucher avant 23h", "icon": "😴", "points": 15}
-    ],
-    "bonusJourMassageG5": [
-      {"action": "500ml eau 1h avant massage", "icon": "💧", "points": 10},
-      {"action": "Exercices activation avant massage", "icon": "🔥", "points": 10},
-      {"action": "750ml eau dans les 2h après massage", "icon": "💧", "points": 15},
-      {"action": "Marche douce après massage", "icon": "🚶", "points": 5}
-    ],
-    "systemPoints": {
-      "objectifJour": 100,
-      "niveaux": [
-        {"points": 0, "badge": "Débutante", "emoji": "🌱"},
-        {"points": 500, "badge": "Motivée", "emoji": "💫"},
-        {"points": 1500, "badge": "Déterminée", "emoji": "🔥"},
-        {"points": 3000, "badge": "Warrior", "emoji": "💪"},
-        {"points": 5000, "badge": "Championne", "emoji": "🏆"},
-        {"points": 10000, "badge": "Légende SLIM TOUCH", "emoji": "👑"}
-      ]
-    }
-  },
-  
-  "semaines": [
-    {
-      "numero": 1,
-      "theme": "Détox et mise en place des rituels",
-      "objectifScientifique": "Rééquilibrer la glycémie, initier le drainage, créer les habitudes",
-      "focusNutritionnel": "Élimination sucres raffinés, augmentation fibres et eau",
-      "focusMouvement": "Marche quotidienne + routine réveil",
-      "focusSommeil": "Installer la routine coucher",
-      "focusMindset": "Visualisation et affirmations quotidiennes",
-      "jours": [
-        {
-          "jour": "Lundi",
-          "themeJour": "Jour de lancement",
-          "petitDejeuner": {
-            "plat": "Bowl protéiné myrtilles",
-            "description": "Yaourt grec, myrtilles, amandes, graines de chia",
-            "macros": {"calories": 350, "proteines": 22, "glucides": 30, "lipides": 15, "fibres": 8},
-            "tempsPreparation": "5 min"
-          },
-          "dejeuner": {
-            "plat": "Salade composée poulet grillé",
-            "description": "Poulet, quinoa, légumes croquants, avocat, vinaigrette citron",
-            "macros": {"calories": 480, "proteines": 38, "glucides": 35, "lipides": 22, "fibres": 10},
-            "tempsPreparation": "15 min"
-          },
-          "collation": {
-            "plat": "Pomme + 10 amandes",
-            "macros": {"calories": 150, "proteines": 4, "glucides": 18, "lipides": 8}
-          },
-          "diner": {
-            "plat": "Saumon vapeur légumes verts",
-            "description": "Pavé de saumon, brocolis, haricots verts, huile d'olive",
-            "macros": {"calories": 420, "proteines": 35, "glucides": 15, "lipides": 25, "fibres": 8},
-            "tempsPreparation": "20 min"
-          },
-          "totalJour": {"calories": 1400, "proteines": 99, "glucides": 98, "lipides": 70, "fibres": 34},
-          "hydratation": "${eau}L + tisane drainage",
-          "mouvement": "30min marche + routine réveil",
-          "sommeil": "Coucher 22h30, routine tisane + lecture"
-        }
-      ],
-      "bilanSemaine": {
-        "pertePotentielle": "0.8-1.2 kg (dont eau/rétention)",
-        "signeSuc": "Moins de ballonnements, meilleure énergie"
-      }
-    }
-  ],
-  
-  "listesCourses": [
-    {
-      "semaine": 1,
-      "fruits": [{"item": "Myrtilles", "quantite": "2 barquettes", "prix_estime": "6€"}, {"item": "Pommes", "quantite": "6", "prix_estime": "3€"}, {"item": "Citrons", "quantite": "4", "prix_estime": "2€"}, {"item": "Bananes", "quantite": "6", "prix_estime": "2€"}],
-      "legumes": [{"item": "Brocolis", "quantite": "2", "prix_estime": "3€"}, {"item": "Courgettes", "quantite": "4", "prix_estime": "3€"}, {"item": "Épinards frais", "quantite": "200g", "prix_estime": "2.50€"}, {"item": "Avocat", "quantite": "3", "prix_estime": "4€"}, {"item": "Concombre", "quantite": "2", "prix_estime": "2€"}],
-      "proteines": [{"item": "Filets de poulet", "quantite": "500g", "prix_estime": "7€"}, {"item": "Pavés de saumon", "quantite": "4", "prix_estime": "12€"}, {"item": "Oeufs bio", "quantite": "12", "prix_estime": "4€"}],
-      "feculents": [{"item": "Quinoa", "quantite": "500g", "prix_estime": "4€"}, {"item": "Flocons d'avoine", "quantite": "500g", "prix_estime": "2€"}],
-      "produitsFrais": [{"item": "Yaourt grec 0%", "quantite": "4", "prix_estime": "3€"}, {"item": "Lait d'amande", "quantite": "1L", "prix_estime": "2.50€"}],
-      "oleagineux": [{"item": "Amandes", "quantite": "200g", "prix_estime": "4€"}, {"item": "Graines de chia", "quantite": "200g", "prix_estime": "4€"}],
-      "epicerie": [{"item": "Huile d'olive vierge", "quantite": "50cl", "prix_estime": "6€"}, {"item": "Tisane queue de cerise", "quantite": "1 boîte", "prix_estime": "4€"}],
-      "budgetTotal": "67€",
-      "astucesEconomies": ["Acheter les légumes de saison", "Comparer les prix au kilo", "Surgeler le poisson si promo"]
-    }
-  ],
   
   "recettesSignatures": [
     {
-      "nom": "Bowl Énergisant du Matin SLIM TOUCH",
+      "nom": "Bowl Protéiné du Champion",
       "categorie": "Petit-déjeuner",
-      "tempsTotal": "10 min",
-      "scoreNutritionnel": "9/10",
-      "pourquoiCetteRecette": "Protéines pour la satiété, IG bas pour éviter les fringales, antioxydants des baies",
-      "ingredients": [
-        {"item": "Yaourt grec 0%", "quantite": "150g"},
-        {"item": "Myrtilles fraîches", "quantite": "80g"},
-        {"item": "Amandes effilées", "quantite": "15g"},
-        {"item": "Graines de chia", "quantite": "10g"},
-        {"item": "Cannelle", "quantite": "1 pincée"}
-      ],
-      "etapesDetaillees": [
-        {"etape": 1, "instruction": "Verser le yaourt grec dans un bol", "astuce": "Sortir le yaourt 5min avant pour qu'il soit moins froid"},
-        {"etape": 2, "instruction": "Ajouter les myrtilles fraîches ou décongelées", "astuce": "Les myrtilles surgelées sont aussi nutritives et moins chères"},
-        {"etape": 3, "instruction": "Parsemer d'amandes effilées et graines de chia", "astuce": "Les graines de chia gonflent = satiété prolongée"},
-        {"etape": 4, "instruction": "Saupoudrer de cannelle", "astuce": "La cannelle régule la glycémie, goût sucré sans sucre"}
-      ],
-      "macrosParPortion": {"calories": 320, "proteines": 22, "glucides": 28, "lipides": 14, "fibres": 8},
-      "noteDuChef": "Préparez les graines de chia la veille dans un peu d'eau pour un effet pudding encore plus onctueux"
+      "tempsPrepa": "10 min",
+      "calories": 380,
+      "proteines": 28,
+      "glucides": 35,
+      "lipides": 14,
+      "fibres": 9,
+      "ingredients": ["150g yaourt grec 0%", "80g myrtilles", "15g amandes effilées", "10g graines de chia", "1/2 banane", "1 c.à.s flocons d'avoine", "Cannelle"],
+      "etapes": ["Verser le yaourt dans un bol", "Faire tremper les graines de chia 5min dans 2 c.à.s d'eau", "Ajouter les myrtilles et la banane tranchée", "Parsemer d'amandes et flocons d'avoine", "Ajouter les graines de chia gonflées", "Saupoudrer de cannelle"],
+      "astuce": "Préparer les graines de chia la veille pour un effet pudding. Les myrtilles surgelées sont aussi nutritives et moins chères.",
+      "pourquoi": "Protéines pour tenir jusqu'à midi, IG bas, fibres pour la satiété, antioxydants des baies"
+    },
+    {
+      "nom": "Salade Méditerranéenne Complète",
+      "categorie": "Déjeuner",
+      "tempsPrepa": "15 min",
+      "calories": 480,
+      "proteines": 35,
+      "glucides": 32,
+      "lipides": 24,
+      "fibres": 11,
+      "ingredients": ["150g poulet grillé ou crevettes", "100g quinoa cuit", "1/2 avocat", "Tomates cerises", "Concombre", "Olives noires", "Feta (30g)", "Huile d'olive + citron"],
+      "etapes": ["Cuire le quinoa (ou utiliser du reste)", "Griller le poulet avec herbes de Provence", "Couper tous les légumes en dés", "Disposer le quinoa en base", "Ajouter le poulet tranché, les légumes", "Émietter la feta", "Assaisonner huile d'olive + jus de citron + sel + poivre"],
+      "astuce": "Se prépare à l'avance pour le batch cooking. Garder la sauce à part jusqu'au moment de manger.",
+      "pourquoi": "Équilibre parfait protéines/lipides/glucides, très rassasiant, saveurs méditerranéennes"
+    },
+    {
+      "nom": "Saumon Teriyaki Express",
+      "categorie": "Dîner",
+      "tempsPrepa": "20 min",
+      "calories": 420,
+      "proteines": 38,
+      "glucides": 18,
+      "lipides": 22,
+      "fibres": 8,
+      "ingredients": ["150g pavé de saumon", "200g brocolis", "100g haricots verts", "Sauce soja légère", "Miel (1 c.à.c)", "Gingembre frais", "Sésame"],
+      "etapes": ["Mélanger 2 c.à.s sauce soja + 1 c.à.c miel + gingembre râpé", "Mariner le saumon 10min", "Cuire les légumes à la vapeur 8min", "Poêler le saumon 3min par face", "Napper de sauce et parsemer de sésame", "Servir avec les légumes vapeur"],
+      "astuce": "Le saumon doit rester rosé à cœur. Les oméga-3 favorisent le sommeil.",
+      "pourquoi": "Protéines + oméga-3 le soir, légumes verts pour les fibres, digestion légère"
+    },
+    {
+      "nom": "Wrap Poulet Avocat",
+      "categorie": "Déjeuner rapide",
+      "tempsPrepa": "10 min",
+      "calories": 450,
+      "proteines": 32,
+      "glucides": 38,
+      "lipides": 20,
+      "fibres": 9,
+      "ingredients": ["1 tortilla complète", "120g blanc de poulet", "1/2 avocat", "Tomate", "Salade", "Fromage frais 0%", "Paprika"],
+      "etapes": ["Écraser l'avocat avec citron et sel", "Tartiner la tortilla de fromage frais", "Ajouter l'avocat écrasé", "Disposer le poulet émincé", "Ajouter tomate et salade", "Rouler fermement", "Couper en deux"],
+      "astuce": "Parfait pour le meal prep du dimanche. Entourer de film et conserver 2 jours au frigo.",
+      "pourquoi": "Pratique à emporter, équilibré, version saine du fast-food"
+    },
+    {
+      "nom": "Soupe Détox Verte",
+      "categorie": "Dîner léger",
+      "tempsPrepa": "25 min",
+      "calories": 180,
+      "proteines": 8,
+      "glucides": 22,
+      "lipides": 6,
+      "fibres": 10,
+      "ingredients": ["2 courgettes", "200g brocolis", "100g épinards", "1 poireau", "Bouillon de légumes", "Ail", "Huile d'olive"],
+      "etapes": ["Faire revenir le poireau émincé dans un filet d'huile", "Ajouter les courgettes et brocolis en morceaux", "Couvrir de bouillon", "Cuire 15min à couvert", "Ajouter les épinards en fin de cuisson", "Mixer", "Servir avec un filet d'huile d'olive"],
+      "astuce": "Ajouter un œuf poché pour plus de protéines. Se congèle très bien en portions.",
+      "pourquoi": "Ultra-légère le soir, pleine de fibres et vitamines, effet drainant"
     }
   ],
   
   "faq": [
-    {
-      "question": "Puis-je boire du café ?",
-      "reponse": "Oui ! Maximum 2-3 cafés avant 14h. Le café noir (sans sucre) peut même booster le métabolisme de 3-11%. Évitez après 14h pour ne pas perturber le sommeil."
-    },
-    {
-      "question": "Et si j'ai une invitation au restaurant ?",
-      "reponse": "C'est votre repas plaisir de la semaine ! Choisissez : entrée légère + plat protéine/légumes OU plat + dessert partagé. Pas d'entrée + plat + dessert + alcool. Et reprenez le programme au repas suivant."
-    },
-    {
-      "question": "Je n'ai pas le temps de cuisiner tous les jours",
-      "reponse": "Utilisez le batch cooking ! 2h le dimanche = repas de la semaine prêts. Les recettes sont pensées pour être préparées en grande quantité et se conserver."
-    },
-    {
-      "question": "Comment maximiser les effets du massage G5 ?",
-      "reponse": "Triptyque magique : 1) Eau +++ (500ml avant, 750ml après), 2) Mouvement léger avant et après, 3) Pas d'alcool 24h avant/après. Vos résultats seront amplifiés de 30-50%."
-    }
+    {"question": "Puis-je boire du café ?", "reponse": "Oui ! 2-3 cafés AVANT 14h maximum. Le café noir peut booster le métabolisme de 3-11%. Mais attention : après 14h, la caféine perturbe votre sommeil et donc votre perte de poids."},
+    {"question": "Et si je suis invitée au restaurant ?", "reponse": "C'est votre repas plaisir de la semaine ! Stratégie : entrée légère OU dessert, pas les deux. Privilégiez protéine + légumes. Un verre de vin maximum. Et surtout, SAVOUREZ sans culpabilité. Reprenez le programme au repas suivant."},
+    {"question": "Je n'ai vraiment pas le temps de cuisiner", "reponse": "Le batch cooking est votre ami : 2h le dimanche = repas de la semaine prêts. Nos recettes sont pensées pour être doublées/triplées et conservées."},
+    {"question": "Comment maximiser les effets du massage G5 ?", "reponse": "Le triptyque magique : 1) Eau +++ (500ml avant, 750ml après), 2) Exercices d'activation avant et drainage doux après, 3) Pas d'alcool 24h avant/après. Vos résultats seront amplifiés de 30-50%."},
+    {"question": "Je stagne depuis plusieurs jours, c'est normal ?", "reponse": "Oui ! Les plateaux sont NORMAUX et temporaires. Votre corps se recompose : il perd de la graisse et peut gagner un peu de muscle. Les mensurations bougent même si la balance non. Continuez, le corps lâchera."},
+    {"question": "Puis-je boire de l'alcool ?", "reponse": "L'alcool stoppe la combustion des graisses pendant 24-48h et détruit le sommeil. Si vous souhaitez boire : 1 verre max, pas plus de 1-2 fois par semaine, jamais la veille d'un massage G5."}
   ],
   
-  "messageMotivation": "Message personnalisé avec prénom de la cliente"
+  "messageMotivation": "${prenom}, vous avez pris la meilleure décision pour vous. Ce programme a été créé spécifiquement pour VOUS, votre corps, votre vie. Chaque jour sera une petite victoire. Certains jours seront plus durs que d'autres, et c'est normal. Ce qui compte, c'est de ne jamais abandonner. Dans ${duree} semaines, vous regarderez en arrière et vous serez FIÈRE du chemin parcouru. Vous le méritez. Maintenant, passons à l'action ! 💪"
 }
 
-══════════════════════════════════════════════════════════════
-🎯 INSTRUCTIONS CRITIQUES
-══════════════════════════════════════════════════════════════
+IMPORTANT: Génère le JSON COMPLET, avec TOUS les détails demandés. Ne raccourcis RIEN.`;
 
-1. Génère TOUTES les ${nutritionForm.duree} semaines COMPLÈTES avec 7 jours chacune
-2. VARIÉTÉ ABSOLUE : Jamais le même plat 2 jours de suite
-3. PERSONNALISATION : Adapte tout au profil (allergies, budget, temps, pathologies)
-4. 5 PILIERS PRÉSENTS : Chaque jour inclut nutrition + hydratation + mouvement + sommeil + mindset
-5. SYNERGIE G5 : Explique comment chaque pilier amplifie les massages G5
-6. PRODUITS : Garde les placeholders QR_XXXX pour les QR codes affiliés
-7. CHECKLIST : Points et gamification pour l'engagement quotidien
-8. TON BIENVEILLANT : Encourageant, jamais culpabilisant
-9. SCIENCE VULGARISÉE : Explique le "pourquoi" de façon accessible
-10. INGRÉDIENTS FRANÇAIS : Trouvables en supermarché standard
-
-CE PROGRAMME DOIT ÊTRE LE PLUS COMPLET ET TRANSFORMATEUR QUE CETTE CLIENTE AIT JAMAIS VU.`;
-
-      // Appel via webhook n8n (proxy OpenAI GPT-4o)
-      const response = await fetch('https://n8n.srv819641.hstgr.cloud/webhook/generate-nutrition', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          prompt: prompt,
-          clientNom: client.nom
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Erreur API: ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      // Le workflow n8n retourne directement le programme parsé
-      let programme;
-      if (data.programme) {
-        programme = data.programme;
-      } else if (data.content) {
-        // Fallback: parser le contenu si retourné brut
-        try {
+      // Fonction pour faire un appel API
+      const callAPI = async (promptText) => {
+        const response = await fetch('https://n8n.srv819641.hstgr.cloud/webhook/generate-nutrition', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: promptText, clientNom: client.nom, maxTokens: 16000 })
+        });
+        if (!response.ok) throw new Error(`Erreur API: ${response.status}`);
+        const data = await response.json();
+        if (data.programme) return data.programme;
+        if (data.content) {
           const jsonMatch = data.content.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            programme = JSON.parse(jsonMatch[0]);
-          } else {
-            throw new Error('Pas de JSON trouvé');
-          }
-        } catch (parseError) {
-          programme = {
-            error: true,
-            message: 'Le programme a été généré mais le format est incorrect. Veuillez réessayer.',
-            rawContent: data.content
-          };
+          if (jsonMatch) return JSON.parse(jsonMatch[0]);
         }
-      } else {
-        programme = {
-          error: true,
-          message: 'Réponse inattendue du serveur. Veuillez réessayer.'
-        };
+        throw new Error('Réponse invalide');
+      };
+
+      // ============================================
+      // APPEL 1: Piliers + infos générales
+      // ============================================
+      addNotification({ type: 'info', message: '🔄 Génération en cours... Étape 1/3 : Analyse et piliers' });
+      const partie1 = await callAPI(prompt1);
+      
+      // ============================================
+      // APPEL 2: Semaines 1 et 2 COMPLÈTES
+      // ============================================
+      const prompt2 = `Tu génères les SEMAINES 1 et 2 COMPLÈTES d'un programme nutrition.
+${contexteBio}
+
+GÉNÈRE EXACTEMENT CE JSON avec les 2 semaines, 7 jours chacune, 4 repas par jour:
+
+{
+  "semaine1": {
+    "numero": 1,
+    "theme": "Détoxification et Mise en Place des Habitudes",
+    "objectif": "Rééquilibrer la glycémie, éliminer la rétention d'eau, créer les routines",
+    "jours": [
+      {
+        "jour": "Lundi",
+        "theme": "Lancement du Programme",
+        "petitDejeuner": {"plat": "Nom appétissant", "description": "Description détaillée", "calories": 350, "proteines": 22, "glucides": 35, "lipides": 14},
+        "dejeuner": {"plat": "Nom", "description": "Description", "calories": 450, "proteines": 35, "glucides": 40, "lipides": 18},
+        "collation": {"plat": "Nom", "description": "Description", "calories": 150, "proteines": 8, "glucides": 15, "lipides": 5},
+        "diner": {"plat": "Nom", "description": "Description", "calories": 400, "proteines": 30, "glucides": 25, "lipides": 18},
+        "totalCalories": 1350
+      },
+      {
+        "jour": "Mardi",
+        "theme": "Thème du jour",
+        "petitDejeuner": {"plat": "", "description": "", "calories": 0, "proteines": 0, "glucides": 0, "lipides": 0},
+        "dejeuner": {"plat": "", "description": "", "calories": 0, "proteines": 0, "glucides": 0, "lipides": 0},
+        "collation": {"plat": "", "description": "", "calories": 0, "proteines": 0, "glucides": 0, "lipides": 0},
+        "diner": {"plat": "", "description": "", "calories": 0, "proteines": 0, "glucides": 0, "lipides": 0},
+        "totalCalories": 0
+      },
+      {"jour": "Mercredi", "theme": "", "petitDejeuner": {}, "dejeuner": {}, "collation": {}, "diner": {}, "totalCalories": 0},
+      {"jour": "Jeudi", "theme": "", "petitDejeuner": {}, "dejeuner": {}, "collation": {}, "diner": {}, "totalCalories": 0},
+      {"jour": "Vendredi", "theme": "", "petitDejeuner": {}, "dejeuner": {}, "collation": {}, "diner": {}, "totalCalories": 0},
+      {"jour": "Samedi", "theme": "", "petitDejeuner": {}, "dejeuner": {}, "collation": {}, "diner": {}, "totalCalories": 0},
+      {"jour": "Dimanche", "theme": "Batch Cooking + Repas Plaisir", "petitDejeuner": {}, "dejeuner": {}, "collation": {}, "diner": {}, "totalCalories": 0}
+    ],
+    "listeCourses": {
+      "fruits": [{"item": "Nom", "quantite": "X", "prix": "X€"}],
+      "legumes": [],
+      "proteines": [],
+      "feculents": [],
+      "produitsFrais": [],
+      "epicerie": [],
+      "budgetTotal": "XX€"
+    }
+  },
+  "semaine2": {
+    "numero": 2,
+    "theme": "Accélération et Renforcement",
+    "objectif": "Intensifier le drainage, affiner les zones ciblées",
+    "jours": [
+      {"jour": "Lundi", "theme": "", "petitDejeuner": {}, "dejeuner": {}, "collation": {}, "diner": {}, "totalCalories": 0},
+      {"jour": "Mardi", "theme": "", "petitDejeuner": {}, "dejeuner": {}, "collation": {}, "diner": {}, "totalCalories": 0},
+      {"jour": "Mercredi", "theme": "", "petitDejeuner": {}, "dejeuner": {}, "collation": {}, "diner": {}, "totalCalories": 0},
+      {"jour": "Jeudi", "theme": "", "petitDejeuner": {}, "dejeuner": {}, "collation": {}, "diner": {}, "totalCalories": 0},
+      {"jour": "Vendredi", "theme": "", "petitDejeuner": {}, "dejeuner": {}, "collation": {}, "diner": {}, "totalCalories": 0},
+      {"jour": "Samedi", "theme": "", "petitDejeuner": {}, "dejeuner": {}, "collation": {}, "diner": {}, "totalCalories": 0},
+      {"jour": "Dimanche", "theme": "", "petitDejeuner": {}, "dejeuner": {}, "collation": {}, "diner": {}, "totalCalories": 0}
+    ],
+    "listeCourses": {
+      "fruits": [],
+      "legumes": [],
+      "proteines": [],
+      "feculents": [],
+      "produitsFrais": [],
+      "epicerie": [],
+      "budgetTotal": "XX€"
+    }
+  }
+}
+
+RÈGLES CRITIQUES:
+- Chaque repas DOIT avoir: plat, description (15+ mots), calories, proteines, glucides, lipides
+- VARIÉTÉ: JAMAIS le même plat 2 jours de suite, JAMAIS les mêmes ingrédients trop souvent
+- Calories totales par jour: environ ${caloriesRecommandees} kcal
+- Tous les plats doivent être appétissants, pas "régime triste"
+- Ingrédients trouvables en supermarché français
+- Liste de courses COMPLÈTE avec prix estimés
+- Le dimanche = repas plaisir raisonnable
+
+GÉNÈRE LES 14 JOURS COMPLETS avec TOUS les détails de chaque repas.`;
+
+      addNotification({ type: 'info', message: '🔄 Génération en cours... Étape 2/3 : Semaines 1-2' });
+      const partie2 = await callAPI(prompt2);
+      
+      // ============================================
+      // APPEL 3: Semaines 3 et 4 COMPLÈTES (si durée >= 4)
+      // ============================================
+      let partie3 = null;
+      if (duree >= 4) {
+        const prompt3 = `Tu génères les SEMAINES 3 et 4 COMPLÈTES d'un programme nutrition.
+${contexteBio}
+
+CONTEXTE: Les semaines 1-2 ont été générées. Maintenant génère les semaines 3 et 4 avec la même qualité et VARIÉTÉ.
+
+GÉNÈRE CE JSON:
+
+{
+  "semaine3": {
+    "numero": 3,
+    "theme": "Consolidation et Résultats Visibles",
+    "objectif": "Maintenir le rythme, premiers résultats significatifs",
+    "jours": [
+      {"jour": "Lundi", "theme": "", "petitDejeuner": {"plat": "", "description": "", "calories": 0, "proteines": 0, "glucides": 0, "lipides": 0}, "dejeuner": {}, "collation": {}, "diner": {}, "totalCalories": 0},
+      {"jour": "Mardi", "theme": "", "petitDejeuner": {}, "dejeuner": {}, "collation": {}, "diner": {}, "totalCalories": 0},
+      {"jour": "Mercredi", "theme": "", "petitDejeuner": {}, "dejeuner": {}, "collation": {}, "diner": {}, "totalCalories": 0},
+      {"jour": "Jeudi", "theme": "", "petitDejeuner": {}, "dejeuner": {}, "collation": {}, "diner": {}, "totalCalories": 0},
+      {"jour": "Vendredi", "theme": "", "petitDejeuner": {}, "dejeuner": {}, "collation": {}, "diner": {}, "totalCalories": 0},
+      {"jour": "Samedi", "theme": "", "petitDejeuner": {}, "dejeuner": {}, "collation": {}, "diner": {}, "totalCalories": 0},
+      {"jour": "Dimanche", "theme": "", "petitDejeuner": {}, "dejeuner": {}, "collation": {}, "diner": {}, "totalCalories": 0}
+    ],
+    "listeCourses": {"fruits": [], "legumes": [], "proteines": [], "feculents": [], "produitsFrais": [], "epicerie": [], "budgetTotal": "XX€"}
+  },
+  "semaine4": {
+    "numero": 4,
+    "theme": "Finalisation et Ancrage des Habitudes",
+    "objectif": "Atteindre l'objectif, préparer la suite",
+    "jours": [
+      {"jour": "Lundi", "theme": "", "petitDejeuner": {}, "dejeuner": {}, "collation": {}, "diner": {}, "totalCalories": 0},
+      {"jour": "Mardi", "theme": "", "petitDejeuner": {}, "dejeuner": {}, "collation": {}, "diner": {}, "totalCalories": 0},
+      {"jour": "Mercredi", "theme": "", "petitDejeuner": {}, "dejeuner": {}, "collation": {}, "diner": {}, "totalCalories": 0},
+      {"jour": "Jeudi", "theme": "", "petitDejeuner": {}, "dejeuner": {}, "collation": {}, "diner": {}, "totalCalories": 0},
+      {"jour": "Vendredi", "theme": "", "petitDejeuner": {}, "dejeuner": {}, "collation": {}, "diner": {}, "totalCalories": 0},
+      {"jour": "Samedi", "theme": "", "petitDejeuner": {}, "dejeuner": {}, "collation": {}, "diner": {}, "totalCalories": 0},
+      {"jour": "Dimanche", "theme": "Célébration des Résultats", "petitDejeuner": {}, "dejeuner": {}, "collation": {}, "diner": {}, "totalCalories": 0}
+    ],
+    "listeCourses": {"fruits": [], "legumes": [], "proteines": [], "feculents": [], "produitsFrais": [], "epicerie": [], "budgetTotal": "XX€"}
+  }
+}
+
+RÈGLES: Variété totale, différent des semaines 1-2, ${caloriesRecommandees} kcal/jour, TOUS les détails de chaque repas.`;
+
+        addNotification({ type: 'info', message: '🔄 Génération en cours... Étape 3/3 : Semaines 3-4' });
+        partie3 = await callAPI(prompt3);
+      }
+      
+      // ============================================
+      // ASSEMBLER LE PROGRAMME COMPLET
+      // ============================================
+      const programme = {
+        ...partie1,
+        semaines: []
+      };
+      
+      // Ajouter les semaines
+      if (partie2.semaine1) programme.semaines.push(partie2.semaine1);
+      if (partie2.semaine2) programme.semaines.push(partie2.semaine2);
+      if (partie3) {
+        if (partie3.semaine3) programme.semaines.push(partie3.semaine3);
+        if (partie3.semaine4) programme.semaines.push(partie3.semaine4);
       }
       
       // Ajouter les métadonnées
       programme.metadata = {
         clientNom: client.nom,
+        prenom: prenom,
         dateGeneration: new Date().toISOString(),
         poidsDepart: poids,
         poidsObjectif: objectifPoids,
-        duree: nutritionForm.duree
+        duree: duree,
+        taille: taille,
+        age: age,
+        imc: imc,
+        caloriesJour: caloriesRecommandees,
+        eau: eau
       };
       
       setGeneratedProgramme(programme);
       
-      // Sauvegarder dans la fiche cliente (optionnel)
+      // Sauvegarder
       try {
         if (client.airtable_id) {
           await apiUpdateCliente(client.airtable_id, {
@@ -5925,508 +5731,171 @@ CE PROGRAMME DOIT ÊTRE LE PLUS COMPLET ET TRANSFORMATEUR QUE CETTE CLIENTE AIT 
           });
         }
       } catch (e) {
-        console.warn('Programme généré mais non sauvegardé dans Airtable');
+        console.warn('Programme généré mais non sauvegardé');
       }
       
-      addNotification({
-        type: 'success',
-        message: `Programme SLIM TOUCH 360° généré pour ${client.nom} ! 🎯`
-      });
+      addNotification({ type: 'success', message: `✅ Programme SLIM TOUCH 360° COMPLET généré pour ${client.nom} !` });
       
     } catch (error) {
-      console.error('Erreur génération programme:', error);
-      addNotification({
-        type: 'error',
-        message: 'Erreur lors de la génération du programme. Réessayez.'
-      });
+      console.error('Erreur génération:', error);
+      addNotification({ type: 'error', message: 'Erreur: ' + error.message });
     } finally {
       setNutritionLoading(false);
     }
   };
   
   // Export PDF du programme nutrition
+
+  // Export PDF du programme SLIM TOUCH 360° COMPLET
   const exportNutritionPDF = (programme, client) => {
     if (!programme || programme.error) return;
     
-    // Helper pour gérer les différentes structures de données
-    const getRepasCalories = (repas) => {
-      if (!repas) return 0;
-      if (repas.macros?.calories) return repas.macros.calories;
-      if (repas.calories) return repas.calories;
-      return 0;
-    };
-    
-    const getRepasProteines = (repas) => {
-      if (!repas) return 0;
-      if (repas.macros?.proteines) return repas.macros.proteines;
-      return 0;
-    };
+    const prenom = programme.metadata?.prenom || client.nom?.split(' ')[0] || 'Cliente';
+    const poids = programme.metadata?.poidsDepart || client.poidsActuel || 70;
+    const objectif = programme.metadata?.poidsObjectif || client.objectif || 65;
+    const duree = programme.metadata?.duree || 4;
+    const taille = programme.metadata?.taille || 165;
+    const age = programme.metadata?.age || 35;
+    const calories = programme.resume?.caloriesJour || programme.metadata?.caloriesJour || 1400;
+    const eau = programme.metadata?.eau || 2.3;
     
     const content = `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Programme Nutrition Premium - ${client.nom}</title>
+  <title>Programme SLIM TOUCH 360° - ${client.nom}</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap');
     
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { 
-      font-family: 'Inter', sans-serif; 
-      background: #fff; 
-      color: #333;
-      line-height: 1.7;
-      font-size: 11pt;
-    }
+    body { font-family: 'Inter', sans-serif; background: #fff; color: #333; line-height: 1.6; font-size: 11pt; }
     
-    /* Cover Page */
-    .cover {
-      height: 100vh;
-      background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%);
-      color: white;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 40px;
-      page-break-after: always;
-      position: relative;
-    }
+    .page { padding: 40px 50px; page-break-after: always; min-height: 100vh; }
+    .page:last-child { page-break-after: auto; }
     
-    .cover::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c9a962' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-    }
-    
-    .cover-content { position: relative; z-index: 1; }
-    .cover-logo { font-family: 'Playfair Display', serif; font-size: 56px; color: #c9a962; margin-bottom: 10px; letter-spacing: 3px; }
-    .cover-tagline { font-size: 14px; color: #888; letter-spacing: 5px; text-transform: uppercase; margin-bottom: 50px; }
-    .cover-title { font-size: 36px; font-weight: 300; margin-bottom: 10px; }
-    .cover-subtitle { font-size: 16px; color: #c9a962; margin-bottom: 60px; }
-    .cover-client { font-size: 28px; color: white; margin-bottom: 5px; font-family: 'Playfair Display', serif; }
-    .cover-date { font-size: 14px; color: #666; }
-    
-    .cover-stats {
-      display: flex;
-      gap: 60px;
-      margin-top: 50px;
-      padding: 30px 50px;
-      background: rgba(255,255,255,0.05);
-      border-radius: 20px;
-      border: 1px solid rgba(201, 169, 98, 0.2);
-    }
-    
+    /* Cover */
+    .cover { background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+    .cover-logo { font-family: 'Playfair Display', serif; font-size: 52px; color: #c9a962; margin-bottom: 5px; letter-spacing: 3px; }
+    .cover-tagline { font-size: 14px; color: #c9a962; letter-spacing: 4px; text-transform: uppercase; margin-bottom: 40px; }
+    .cover-title { font-size: 32px; font-weight: 300; margin-bottom: 8px; }
+    .cover-pillars { font-size: 14px; color: #888; margin-bottom: 50px; }
+    .cover-client { font-size: 26px; color: white; margin-bottom: 5px; font-family: 'Playfair Display', serif; }
+    .cover-date { font-size: 13px; color: #666; margin-bottom: 40px; }
+    .cover-stats { display: flex; gap: 50px; padding: 25px 40px; background: rgba(255,255,255,0.05); border-radius: 16px; border: 1px solid rgba(201, 169, 98, 0.3); margin-bottom: 40px; }
     .cover-stat { text-align: center; }
-    .cover-stat-value { font-size: 42px; font-weight: 700; color: #c9a962; font-family: 'Playfair Display', serif; }
-    .cover-stat-label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 2px; margin-top: 5px; }
+    .cover-stat-value { font-size: 36px; font-weight: 700; color: #c9a962; font-family: 'Playfair Display', serif; }
+    .cover-stat-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; }
+    .cover-disclaimer { background: rgba(251, 191, 36, 0.15); border: 1px solid rgba(251, 191, 36, 0.4); border-radius: 12px; padding: 20px 25px; text-align: left; max-width: 650px; }
+    .cover-disclaimer-title { font-weight: 600; color: #fbbf24; margin-bottom: 10px; font-size: 13px; }
+    .cover-disclaimer-text { font-size: 10px; color: rgba(255,255,255,0.75); line-height: 1.5; }
+    .cover-disclaimer-text p { margin-bottom: 6px; }
     
-    /* Pages */
-    .page {
-      padding: 50px;
-      page-break-after: always;
-      min-height: 100vh;
-    }
+    /* Titles */
+    .page-title { font-family: 'Playfair Display', serif; font-size: 26px; color: #1a1a2e; margin-bottom: 25px; padding-bottom: 12px; border-bottom: 3px solid #c9a962; display: flex; align-items: center; gap: 12px; }
+    .page-title-icon { font-size: 28px; }
+    .section-title { font-size: 16px; font-weight: 600; color: #1a1a2e; margin: 25px 0 15px 0; display: flex; align-items: center; gap: 8px; }
+    .subsection-title { font-size: 14px; font-weight: 600; color: #c9a962; margin: 20px 0 10px 0; }
     
-    .page-title {
-      font-family: 'Playfair Display', serif;
-      font-size: 28px;
-      color: #1a1a2e;
-      margin-bottom: 30px;
-      padding-bottom: 15px;
-      border-bottom: 3px solid #c9a962;
-      display: flex;
-      align-items: center;
-      gap: 15px;
-    }
+    /* Cards */
+    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 25px; }
+    .stat-card { background: linear-gradient(135deg, #f8f9fa, #fff); padding: 18px; border-radius: 12px; text-align: center; border: 1px solid #e5e7eb; position: relative; overflow: hidden; }
+    .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #c9a962, #e0c285); }
+    .stat-card-value { font-size: 24px; font-weight: 700; color: #c9a962; font-family: 'Playfair Display', serif; }
+    .stat-card-label { font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
     
-    .page-title-icon {
-      width: 50px;
-      height: 50px;
-      background: linear-gradient(135deg, #c9a962, #e0c285);
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-    }
+    /* Boxes */
+    .info-box { padding: 18px 22px; border-radius: 12px; margin-bottom: 18px; }
+    .info-box-green { background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-left: 4px solid #22c55e; }
+    .info-box-blue { background: linear-gradient(135deg, #eff6ff, #dbeafe); border-left: 4px solid #3b82f6; }
+    .info-box-gold { background: linear-gradient(135deg, #fffbeb, #fef3c7); border-left: 4px solid #c9a962; }
+    .info-box-purple { background: linear-gradient(135deg, #faf5ff, #f3e8ff); border-left: 4px solid #8b5cf6; }
+    .info-box-pink { background: linear-gradient(135deg, #fdf2f8, #fce7f3); border-left: 4px solid #ec4899; }
+    .info-box-title { font-weight: 600; margin-bottom: 8px; font-size: 14px; }
+    .info-box-text { font-size: 12px; line-height: 1.6; }
     
-    /* Sections */
-    .section { margin-bottom: 35px; }
-    .section-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: #1a1a2e;
-      margin-bottom: 15px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    
-    /* Cards Grid */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 15px;
-      margin-bottom: 30px;
-    }
-    
-    .stat-card {
-      background: linear-gradient(135deg, #f8f9fa, #fff);
-      padding: 20px;
-      border-radius: 16px;
-      text-align: center;
-      border: 1px solid #e5e7eb;
-      position: relative;
-      overflow: hidden;
-    }
-    
-    .stat-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 4px;
-      background: linear-gradient(90deg, #c9a962, #e0c285);
-    }
-    
-    .stat-card-value { font-size: 28px; font-weight: 700; color: #c9a962; font-family: 'Playfair Display', serif; }
-    .stat-card-label { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; }
-    
-    /* Analysis Box */
-    .analysis-box {
-      background: linear-gradient(135deg, #f0fdf4, #dcfce7);
-      border-radius: 16px;
-      padding: 25px;
-      margin-bottom: 25px;
-      border-left: 5px solid #22c55e;
-    }
-    
-    .analysis-title { font-weight: 600; color: #166534; margin-bottom: 10px; font-size: 16px; }
-    .analysis-text { color: #15803d; line-height: 1.8; }
-    
-    /* Conseil Cards */
-    .conseil-card {
-      background: #fff;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 15px;
-      border-left: 4px solid #c9a962;
-    }
-    
-    .conseil-title { font-weight: 600; color: #1a1a2e; margin-bottom: 8px; }
-    .conseil-why { color: #666; font-size: 13px; margin-bottom: 8px; font-style: italic; }
-    .conseil-how { color: #333; }
+    /* Lists */
+    .check-list { list-style: none; }
+    .check-list li { padding: 8px 0; padding-left: 25px; position: relative; font-size: 12px; }
+    .check-list li::before { content: '✓'; position: absolute; left: 0; color: #22c55e; font-weight: bold; }
+    .bullet-list { list-style: none; }
+    .bullet-list li { padding: 6px 0; padding-left: 20px; position: relative; font-size: 12px; }
+    .bullet-list li::before { content: '•'; position: absolute; left: 0; color: #c9a962; font-weight: bold; }
     
     /* Day Card */
-    .jour-card {
-      background: #fff;
-      border: 1px solid #e5e7eb;
-      border-radius: 16px;
-      margin-bottom: 25px;
-      overflow: hidden;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    }
+    .day-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; margin-bottom: 20px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
+    .day-header { background: linear-gradient(135deg, #1a1a2e, #2d2d44); color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
+    .day-title { font-weight: 600; font-size: 15px; }
+    .day-theme { font-size: 11px; color: #c9a962; }
+    .day-calories { font-size: 12px; color: #888; }
+    .day-content { padding: 15px 20px; }
+    .meal { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
+    .meal:last-child { border-bottom: none; }
+    .meal-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+    .meal-icon.breakfast { background: linear-gradient(135deg, #fef3c7, #fde68a); }
+    .meal-icon.lunch { background: linear-gradient(135deg, #dbeafe, #bfdbfe); }
+    .meal-icon.snack { background: linear-gradient(135deg, #f3e8ff, #e9d5ff); }
+    .meal-icon.dinner { background: linear-gradient(135deg, #fce7f3, #fbcfe8); }
+    .meal-content { flex: 1; }
+    .meal-type { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+    .meal-name { font-weight: 600; color: #1a1a2e; font-size: 13px; margin-bottom: 3px; }
+    .meal-desc { font-size: 11px; color: #666; margin-bottom: 5px; }
+    .meal-macros { display: flex; gap: 12px; font-size: 10px; color: #888; }
+    .meal-macro { display: flex; align-items: center; gap: 3px; }
     
-    .jour-header {
-      background: linear-gradient(135deg, #1a1a2e, #2d2d44);
-      color: white;
-      padding: 15px 25px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
+    /* Protocol boxes */
+    .protocol-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .protocol-item { background: #f8f9fa; padding: 14px; border-radius: 10px; border-left: 3px solid #c9a962; }
+    .protocol-time { font-weight: 600; color: #c9a962; font-size: 13px; margin-bottom: 4px; }
+    .protocol-action { font-weight: 500; color: #1a1a2e; font-size: 12px; margin-bottom: 3px; }
+    .protocol-detail { font-size: 11px; color: #666; }
     
-    .jour-title { font-weight: 600; font-size: 16px; }
-    .jour-theme { font-size: 12px; color: #c9a962; }
-    .jour-total { font-size: 12px; color: #888; }
+    /* Exercise card */
+    .exercise-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px; margin-bottom: 10px; }
+    .exercise-name { font-weight: 600; color: #1a1a2e; font-size: 13px; margin-bottom: 4px; }
+    .exercise-desc { font-size: 11px; color: #666; margin-bottom: 4px; }
+    .exercise-reps { font-size: 11px; color: #c9a962; font-weight: 500; }
     
-    .jour-content { padding: 20px; }
+    /* Recipe card */
+    .recipe-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 25px; margin-bottom: 20px; page-break-inside: avoid; }
+    .recipe-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; padding-bottom: 15px; border-bottom: 2px solid #f0f0f0; }
+    .recipe-title { font-family: 'Playfair Display', serif; font-size: 20px; color: #1a1a2e; margin-bottom: 5px; }
+    .recipe-meta { display: flex; gap: 15px; font-size: 12px; color: #666; }
+    .recipe-ingredients { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 18px; }
+    .recipe-ingredient { font-size: 12px; padding: 6px 10px; background: #f8f9fa; border-radius: 6px; }
+    .recipe-steps { counter-reset: step; }
+    .recipe-step { display: flex; gap: 12px; padding: 10px 0; }
+    .recipe-step-num { width: 26px; height: 26px; background: linear-gradient(135deg, #c9a962, #e0c285); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 12px; flex-shrink: 0; }
+    .recipe-step-text { font-size: 12px; color: #333; }
     
-    .repas {
-      display: flex;
-      gap: 15px;
-      padding: 18px 0;
-      border-bottom: 1px solid #f0f0f0;
-    }
-    
-    .repas:last-child { border-bottom: none; }
-    
-    .repas-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 22px;
-      flex-shrink: 0;
-    }
-    
-    .repas-icon.breakfast { background: linear-gradient(135deg, #fef3c7, #fde68a); }
-    .repas-icon.lunch { background: linear-gradient(135deg, #dbeafe, #bfdbfe); }
-    .repas-icon.snack { background: linear-gradient(135deg, #f3e8ff, #e9d5ff); }
-    .repas-icon.dinner { background: linear-gradient(135deg, #fce7f3, #fbcfe8); }
-    
-    .repas-content { flex: 1; }
-    .repas-type { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }
-    .repas-plat { font-weight: 600; color: #1a1a2e; font-size: 15px; margin-bottom: 5px; }
-    .repas-description { font-size: 13px; color: #666; margin-bottom: 8px; }
-    
-    .repas-macros {
-      display: flex;
-      gap: 15px;
-      font-size: 11px;
-      color: #888;
-    }
-    
-    .repas-macro { display: flex; align-items: center; gap: 4px; }
-    .repas-macro-dot { width: 8px; height: 8px; border-radius: 50%; }
-    .repas-macro-dot.cal { background: #c9a962; }
-    .repas-macro-dot.prot { background: #ef4444; }
-    .repas-macro-dot.carb { background: #f59e0b; }
-    .repas-macro-dot.fat { background: #3b82f6; }
-    
-    /* Recipe Card */
-    .recette-card {
-      background: #fff;
-      border: 1px solid #e5e7eb;
-      border-radius: 16px;
-      padding: 30px;
-      margin-bottom: 25px;
-      page-break-inside: avoid;
-    }
-    
-    .recette-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 20px;
-      padding-bottom: 20px;
-      border-bottom: 2px solid #f0f0f0;
-    }
-    
-    .recette-title { font-family: 'Playfair Display', serif; font-size: 22px; color: #1a1a2e; margin-bottom: 5px; }
-    .recette-category { font-size: 12px; color: #c9a962; text-transform: uppercase; letter-spacing: 1px; }
-    
-    .recette-meta {
-      display: flex;
-      gap: 20px;
-      font-size: 13px;
-      color: #666;
-    }
-    
-    .recette-meta-item { display: flex; align-items: center; gap: 5px; }
-    
-    .recette-score {
-      background: linear-gradient(135deg, #22c55e, #16a34a);
-      color: white;
-      padding: 10px 15px;
-      border-radius: 12px;
-      text-align: center;
-    }
-    
-    .recette-score-value { font-size: 20px; font-weight: 700; }
-    .recette-score-label { font-size: 10px; text-transform: uppercase; }
-    
-    .recette-why {
-      background: linear-gradient(135deg, #fef3c7, #fde68a);
-      padding: 15px 20px;
-      border-radius: 12px;
-      margin-bottom: 20px;
-      font-size: 13px;
-      color: #92400e;
-    }
-    
-    .recette-section-title {
-      font-weight: 600;
-      color: #1a1a2e;
-      margin-bottom: 12px;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    
-    .recette-ingredients {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
-      margin-bottom: 25px;
-    }
-    
-    .recette-ingredient {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 13px;
-      padding: 8px 12px;
-      background: #f8f9fa;
-      border-radius: 8px;
-    }
-    
-    .recette-ingredient-dot { width: 6px; height: 6px; background: #c9a962; border-radius: 50%; flex-shrink: 0; }
-    
-    .recette-etapes { counter-reset: step; }
-    
-    .recette-etape {
-      display: flex;
-      gap: 15px;
-      padding: 15px 0;
-      border-bottom: 1px solid #f0f0f0;
-    }
-    
-    .recette-etape:last-child { border-bottom: none; }
-    
-    .recette-etape-num {
-      width: 32px;
-      height: 32px;
-      background: linear-gradient(135deg, #c9a962, #e0c285);
-      color: white;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 600;
-      font-size: 14px;
-      flex-shrink: 0;
-    }
-    
-    .recette-etape-content { flex: 1; }
-    .recette-etape-text { color: #333; }
-    .recette-etape-tip { font-size: 12px; color: #c9a962; margin-top: 5px; font-style: italic; }
-    
-    .recette-macros-grid {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 10px;
-      margin-top: 20px;
-      padding-top: 20px;
-      border-top: 2px solid #f0f0f0;
-    }
-    
-    .recette-macro-card { text-align: center; padding: 10px; background: #f8f9fa; border-radius: 8px; }
-    .recette-macro-value { font-size: 18px; font-weight: 700; color: #1a1a2e; }
-    .recette-macro-label { font-size: 10px; color: #888; text-transform: uppercase; }
-    
-    /* Shopping List */
-    .shopping-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 20px;
-    }
-    
-    .shopping-category {
-      background: #fff;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      padding: 20px;
-    }
-    
-    .shopping-category-title {
-      font-weight: 600;
-      color: #1a1a2e;
-      margin-bottom: 15px;
-      padding-bottom: 10px;
-      border-bottom: 2px solid #c9a962;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    
-    .shopping-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      padding: 8px 0;
-      border-bottom: 1px solid #f0f0f0;
-    }
-    
-    .shopping-item:last-child { border-bottom: none; }
-    
-    .shopping-checkbox {
-      width: 18px;
-      height: 18px;
-      border: 2px solid #c9a962;
-      border-radius: 4px;
-      flex-shrink: 0;
-      margin-top: 2px;
-    }
-    
-    .shopping-item-content { flex: 1; }
-    .shopping-item-name { font-weight: 500; color: #1a1a2e; }
-    .shopping-item-qty { font-size: 12px; color: #666; }
-    .shopping-item-price { font-size: 12px; color: #c9a962; }
-    
-    /* Tips Box */
-    .tips-box {
-      background: linear-gradient(135deg, #eff6ff, #dbeafe);
-      border-radius: 16px;
-      padding: 25px;
-      margin-bottom: 25px;
-    }
-    
-    .tips-title { font-weight: 600; color: #1e40af; margin-bottom: 15px; }
-    .tips-list { list-style: none; }
-    .tips-item { padding: 8px 0; padding-left: 25px; position: relative; color: #1e3a8a; }
-    .tips-item::before { content: '💡'; position: absolute; left: 0; }
+    /* Shopping list */
+    .shopping-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+    .shopping-category { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 15px; }
+    .shopping-category-title { font-weight: 600; color: #1a1a2e; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 2px solid #c9a962; font-size: 13px; }
+    .shopping-item { display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 11px; }
+    .shopping-checkbox { width: 14px; height: 14px; border: 2px solid #c9a962; border-radius: 3px; flex-shrink: 0; }
     
     /* FAQ */
-    .faq-item {
-      background: #fff;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 15px;
-    }
+    .faq-item { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 15px; margin-bottom: 12px; }
+    .faq-question { font-weight: 600; color: #1a1a2e; margin-bottom: 8px; font-size: 13px; }
+    .faq-answer { font-size: 12px; color: #666; line-height: 1.6; }
     
-    .faq-question { font-weight: 600; color: #1a1a2e; margin-bottom: 10px; display: flex; align-items: flex-start; gap: 10px; }
-    .faq-answer { color: #666; padding-left: 30px; }
+    /* Products */
+    .product-card { background: #f8f9fa; border-radius: 10px; padding: 14px; margin-bottom: 10px; }
+    .product-name { font-weight: 600; color: #1a1a2e; font-size: 13px; margin-bottom: 4px; }
+    .product-usage { font-size: 11px; color: #666; margin-bottom: 3px; }
+    .product-benefit { font-size: 11px; color: #22c55e; }
+    .product-price { font-size: 11px; color: #c9a962; margin-top: 3px; }
     
-    /* Motivation Box */
-    .motivation-box {
-      background: linear-gradient(135deg, #c9a962, #e0c285);
-      color: white;
-      border-radius: 20px;
-      padding: 40px;
-      text-align: center;
-      margin-top: 30px;
-    }
-    
-    .motivation-text {
-      font-family: 'Playfair Display', serif;
-      font-size: 20px;
-      font-style: italic;
-      line-height: 1.8;
-    }
+    /* Motivation box */
+    .motivation-box { background: linear-gradient(135deg, #c9a962, #e0c285); color: white; border-radius: 16px; padding: 30px; text-align: center; margin: 25px 0; }
+    .motivation-text { font-family: 'Playfair Display', serif; font-size: 16px; font-style: italic; line-height: 1.7; }
     
     /* Footer */
-    .footer {
-      text-align: center;
-      padding: 30px;
-      color: #888;
-      font-size: 11px;
-      border-top: 1px solid #e5e7eb;
-    }
+    .footer { text-align: center; padding: 25px; color: #888; font-size: 10px; border-top: 1px solid #e5e7eb; margin-top: 30px; }
     
     /* Disclaimer */
-    .disclaimer {
-      background: #fef3c7;
-      padding: 20px;
-      border-radius: 12px;
-      margin-top: 30px;
-      font-size: 11px;
-      color: #92400e;
-      border: 1px solid #fcd34d;
-    }
+    .disclaimer { background: #fef3c7; padding: 18px; border-radius: 10px; margin-top: 25px; font-size: 10px; color: #92400e; border: 1px solid #fcd34d; }
     
     @media print {
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -6435,275 +5904,442 @@ CE PROGRAMME DOIT ÊTRE LE PLUS COMPLET ET TRANSFORMATEUR QUE CETTE CLIENTE AIT 
   </style>
 </head>
 <body>
-  <!-- COVER PAGE -->
-  <div class="cover">
-    <div class="cover-content">
-      <div class="cover-logo">SLIM TOUCH</div>
-      <div class="cover-tagline">Programme de Transformation 360°</div>
-      <div class="cover-title">Programme SLIM TOUCH 360°</div>
-      <div class="cover-subtitle">Nutrition • Hydratation • Mouvement • Sommeil • Mindset</div>
-      
-      <div class="cover-client">${client.nom}</div>
-      <div class="cover-date">Généré le ${new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
-      
-      <div class="cover-stats">
-        <div class="cover-stat">
-          <div class="cover-stat-value">${programme.metadata?.poidsDepart || client.poidsActuel}</div>
-          <div class="cover-stat-label">Poids actuel (kg)</div>
-        </div>
-        <div class="cover-stat">
-          <div class="cover-stat-value" style="font-size: 32px;">→</div>
-          <div class="cover-stat-label"></div>
-        </div>
-        <div class="cover-stat">
-          <div class="cover-stat-value">${programme.metadata?.poidsObjectif || client.objectif}</div>
-          <div class="cover-stat-label">Objectif (kg)</div>
-        </div>
-        <div class="cover-stat">
-          <div class="cover-stat-value">${programme.metadata?.duree || 4}</div>
-          <div class="cover-stat-label">Semaines</div>
-        </div>
+  <!-- PAGE 1: COUVERTURE -->
+  <div class="page cover">
+    <div class="cover-logo">SLIM TOUCH</div>
+    <div class="cover-tagline">Programme de Transformation 360°</div>
+    <div class="cover-title">Votre Programme Personnalisé</div>
+    <div class="cover-pillars">🥗 Nutrition • 💧 Hydratation • 🏃 Mouvement • 😴 Sommeil • 🧠 Mindset</div>
+    
+    <div class="cover-client">${client.nom}</div>
+    <div class="cover-date">Généré le ${new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+    
+    <div class="cover-stats">
+      <div class="cover-stat">
+        <div class="cover-stat-value">${poids}</div>
+        <div class="cover-stat-label">Poids actuel (kg)</div>
       </div>
-      
-      <!-- DISCLAIMER LÉGAL -->
-      <div style="
-        margin-top: 40px;
-        padding: 20px 30px;
-        background: rgba(251, 191, 36, 0.15);
-        border: 1px solid rgba(251, 191, 36, 0.4);
-        border-radius: 12px;
-        text-align: left;
-        max-width: 700px;
-      ">
-        <div style="font-weight: 600; color: #fbbf24; margin-bottom: 10px; font-size: 14px;">
-          ⚖️ Mentions légales importantes
-        </div>
-        <div style="font-size: 11px; color: rgba(255,255,255,0.8); line-height: 1.6;">
-          <p style="margin-bottom: 8px;">
-            <strong>SLIM TOUCH</strong> propose des prestations de massage G5 à visée esthétique et de bien-être. 
-            Nos services ne constituent en aucun cas un acte médical, paramédical ou de kinésithérapie.
-          </p>
-          <p style="margin-bottom: 6px;">• Ce programme est fourni <strong>à titre informatif uniquement</strong> et ne remplace pas l'avis d'un médecin, diététicien ou nutritionniste diplômé.</p>
-          <p style="margin-bottom: 6px;">• Les résultats peuvent varier selon les individus. Les témoignages et résultats présentés ne garantissent pas des résultats similaires.</p>
-          <p style="margin-bottom: 6px;">• Un certificat médical de non contre-indication est obligatoire avant tout programme de soins.</p>
-          <p>• En cas de doute sur votre état de santé, consultez un professionnel de santé avant de commencer tout programme.</p>
-        </div>
+      <div class="cover-stat">
+        <div class="cover-stat-value" style="font-size: 28px;">→</div>
+        <div class="cover-stat-label"></div>
+      </div>
+      <div class="cover-stat">
+        <div class="cover-stat-value">${objectif}</div>
+        <div class="cover-stat-label">Objectif (kg)</div>
+      </div>
+      <div class="cover-stat">
+        <div class="cover-stat-value">${duree}</div>
+        <div class="cover-stat-label">Semaines</div>
+      </div>
+    </div>
+    
+    <div class="cover-disclaimer">
+      <div class="cover-disclaimer-title">⚖️ Mentions légales importantes</div>
+      <div class="cover-disclaimer-text">
+        <p><strong>SLIM TOUCH</strong> propose des prestations de massage G5 à visée esthétique et de bien-être. Nos services ne constituent en aucun cas un acte médical, paramédical ou de kinésithérapie.</p>
+        <p>• Ce programme est fourni <strong>à titre informatif uniquement</strong> et ne remplace pas l'avis d'un médecin, diététicien ou nutritionniste diplômé.</p>
+        <p>• Les résultats peuvent varier selon les individus. Les témoignages et résultats présentés ne garantissent pas des résultats similaires.</p>
+        <p>• Un certificat médical de non contre-indication est obligatoire avant tout programme de soins.</p>
+        <p>• En cas de doute sur votre état de santé, consultez un professionnel de santé avant de commencer tout programme.</p>
       </div>
     </div>
   </div>
   
-  <!-- PAGE 1: ANALYSE PERSONNALISÉE -->
+  <!-- PAGE 2: VOTRE ANALYSE PERSONNALISÉE -->
   <div class="page">
     <h1 class="page-title"><span class="page-title-icon">📊</span> Votre Analyse Personnalisée</h1>
     
     ${programme.analysePersonnalisee ? `
-    <div class="analysis-box">
-      <div class="analysis-title">🎯 Votre Profil Métabolique</div>
-      <div class="analysis-text">${programme.analysePersonnalisee.profilMetabolique || ''}</div>
+    <div class="info-box info-box-green">
+      <div class="info-box-title" style="color: #166534;">🎯 Votre Profil Métabolique</div>
+      <div class="info-box-text" style="color: #15803d;">${programme.analysePersonnalisee.profilMetabolique || ''}</div>
     </div>
     
     ${programme.analysePersonnalisee.strategieGlobale ? `
-    <div class="analysis-box" style="background: linear-gradient(135deg, #eff6ff, #dbeafe); border-color: #3b82f6;">
-      <div class="analysis-title" style="color: #1e40af;">🧠 Stratégie Nutritionnelle</div>
-      <div class="analysis-text" style="color: #1e3a8a;">${programme.analysePersonnalisee.strategieGlobale}</div>
+    <div class="info-box info-box-blue">
+      <div class="info-box-title" style="color: #1e40af;">🧠 Stratégie Globale</div>
+      <div class="info-box-text" style="color: #1e3a8a;">${programme.analysePersonnalisee.strategieGlobale}</div>
     </div>
     ` : ''}
     
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 25px;">
-      <div style="background: #fef2f2; padding: 20px; border-radius: 12px; border-left: 4px solid #ef4444;">
-        <div style="font-weight: 600; color: #dc2626; margin-bottom: 10px;">⚡ Défis identifiés</div>
-        <ul style="list-style: none; color: #991b1b;">
-          ${(programme.analysePersonnalisee.defisIdentifies || []).map(d => `<li style="padding: 5px 0;">• ${d}</li>`).join('')}
+    ${programme.analysePersonnalisee.synergieG5 ? `
+    <div class="info-box info-box-gold">
+      <div class="info-box-title" style="color: #92400e;">💆 Synergie avec vos Massages G5</div>
+      <div class="info-box-text" style="color: #a16207;">${programme.analysePersonnalisee.synergieG5}</div>
+    </div>
+    ` : ''}
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
+      <div style="background: #fef2f2; padding: 18px; border-radius: 12px; border-left: 4px solid #ef4444;">
+        <div style="font-weight: 600; color: #dc2626; margin-bottom: 10px; font-size: 14px;">⚡ Défis identifiés</div>
+        <ul class="bullet-list" style="color: #991b1b;">
+          ${(programme.analysePersonnalisee.defisIdentifies || []).map(d => `<li>${d}</li>`).join('')}
         </ul>
       </div>
-      <div style="background: #f0fdf4; padding: 20px; border-radius: 12px; border-left: 4px solid #22c55e;">
-        <div style="font-weight: 600; color: #16a34a; margin-bottom: 10px;">✨ Vos atouts</div>
-        <ul style="list-style: none; color: #166534;">
-          ${(programme.analysePersonnalisee.atoutsNutritionnels || []).map(a => `<li style="padding: 5px 0;">• ${a}</li>`).join('')}
+      <div style="background: #f0fdf4; padding: 18px; border-radius: 12px; border-left: 4px solid #22c55e;">
+        <div style="font-weight: 600; color: #16a34a; margin-bottom: 10px; font-size: 14px;">✨ Vos atouts</div>
+        <ul class="bullet-list" style="color: #166534;">
+          ${(programme.analysePersonnalisee.atoutsNutritionnels || []).map(a => `<li>${a}</li>`).join('')}
         </ul>
       </div>
     </div>
     ` : ''}
     
-    <!-- Résumé Macros -->
-    <div class="section" style="margin-top: 35px;">
-      <h2 class="section-title">📈 Vos Objectifs Nutritionnels Quotidiens</h2>
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-card-value">${programme.resume?.caloriesJour || 1400}</div>
-          <div class="stat-card-label">Calories / jour</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-card-value">${programme.resume?.proteines || '90g'}</div>
-          <div class="stat-card-label">Protéines</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-card-value">${programme.resume?.glucides || '130g'}</div>
-          <div class="stat-card-label">Glucides</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-card-value">${programme.resume?.lipides || '55g'}</div>
-          <div class="stat-card-label">Lipides</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-card-value">${programme.resume?.fibres || '30g'}</div>
-          <div class="stat-card-label">Fibres</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-card-value">${programme.resume?.hydratation || '2L'}</div>
-          <div class="stat-card-label">Eau / jour</div>
-        </div>
+    <h2 class="section-title">📈 Vos Objectifs Nutritionnels Quotidiens</h2>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-card-value">${programme.resume?.caloriesJour || calories}</div>
+        <div class="stat-card-label">Calories / jour</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-value">${programme.resume?.proteines || '90g'}</div>
+        <div class="stat-card-label">Protéines</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-value">${programme.resume?.glucides || '130g'}</div>
+        <div class="stat-card-label">Glucides</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-value">${programme.resume?.lipides || '55g'}</div>
+        <div class="stat-card-label">Lipides</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-value">${programme.resume?.fibres || '30g'}</div>
+        <div class="stat-card-label">Fibres</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-value">${programme.resume?.hydratation || eau + 'L'}</div>
+        <div class="stat-card-label">Eau / jour</div>
       </div>
     </div>
   </div>
   
-  <!-- PAGE 2: CONSEILS PERSONNALISÉS -->
+  <!-- PAGE 3: PILIER HYDRATATION -->
   <div class="page">
-    <h1 class="page-title"><span class="page-title-icon">💡</span> Vos Conseils Personnalisés</h1>
+    <h1 class="page-title"><span class="page-title-icon">💧</span> Pilier Hydratation</h1>
     
-    ${(programme.conseilsPersonnalises || programme.conseils || []).slice(0, 5).map((conseil, i) => `
-    <div class="conseil-card">
-      <div class="conseil-title">${typeof conseil === 'object' ? conseil.conseil : conseil}</div>
-      ${typeof conseil === 'object' && conseil.pourquoi ? `<div class="conseil-why">📚 ${conseil.pourquoi}</div>` : ''}
-      ${typeof conseil === 'object' && conseil.comment ? `<div class="conseil-how">✅ ${conseil.comment}</div>` : ''}
+    ${programme.pilierHydratation ? `
+    <div class="info-box info-box-blue">
+      <div class="info-box-title" style="color: #1e40af;">Pourquoi l'hydratation est CRUCIALE</div>
+      <div class="info-box-text" style="color: #1e3a8a;">${programme.pilierHydratation.importance || "L'hydratation optimale est essentielle pour éliminer les toxines délogées par les massages G5 et favoriser la perte de poids."}</div>
     </div>
-    `).join('')}
     
-    ${programme.chronoNutrition ? `
-    <div class="section" style="margin-top: 30px;">
-      <h2 class="section-title">⏰ Chrono-nutrition : Vos Horaires Optimaux</h2>
-      <div style="background: linear-gradient(135deg, #fdf4ff, #fae8ff); padding: 25px; border-radius: 16px; border-left: 4px solid #a855f7;">
-        <p style="color: #7e22ce; margin-bottom: 15px;">${programme.chronoNutrition.explication || ''}</p>
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
-          <div style="text-align: center; padding: 15px; background: white; border-radius: 12px;">
-            <div style="font-size: 24px; margin-bottom: 5px;">🌅</div>
-            <div style="font-weight: 600; color: #1a1a2e;">Petit-déjeuner</div>
-            <div style="color: #a855f7; font-size: 14px;">${programme.chronoNutrition.petitDejeunerIdeal || '7h-8h'}</div>
-          </div>
-          <div style="text-align: center; padding: 15px; background: white; border-radius: 12px;">
-            <div style="font-size: 24px; margin-bottom: 5px;">☀️</div>
-            <div style="font-weight: 600; color: #1a1a2e;">Déjeuner</div>
-            <div style="color: #a855f7; font-size: 14px;">${programme.chronoNutrition.dejeunerIdeal || '12h-13h'}</div>
-          </div>
-          <div style="text-align: center; padding: 15px; background: white; border-radius: 12px;">
-            <div style="font-size: 24px; margin-bottom: 5px;">🌙</div>
-            <div style="font-weight: 600; color: #1a1a2e;">Dîner</div>
-            <div style="color: #a855f7; font-size: 14px;">${programme.chronoNutrition.dinerIdeal || '19h-20h'}</div>
-          </div>
-        </div>
+    <h2 class="section-title">⏰ Votre Protocole Hydratation Quotidien</h2>
+    <div class="protocol-grid">
+      ${programme.pilierHydratation.protocole ? Object.entries(programme.pilierHydratation.protocole).map(([key, val]) => `
+      <div class="protocol-item">
+        <div class="protocol-time">${val.heure || key}</div>
+        <div class="protocol-action">${val.quantite || ''} - ${val.type || ''}</div>
+        <div class="protocol-detail">${val.pourquoi || ''}</div>
       </div>
+      `).join('') : ''}
+    </div>
+    
+    <h2 class="section-title">🍵 Infusions Drainantes Recommandées</h2>
+    <div style="display: grid; gap: 10px;">
+      ${(programme.pilierHydratation.infusionsDrainantes || []).map(inf => `
+      <div class="product-card">
+        <div class="product-name">${inf.nom}</div>
+        <div class="product-usage">📋 ${inf.posologie || ''} - ${inf.moment || ''}</div>
+        <div class="product-benefit">✨ ${inf.bienfaits || ''}</div>
+      </div>
+      `).join('')}
+    </div>
+    
+    <h2 class="section-title">🚨 Avant et Après vos Massages G5</h2>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+      <div class="info-box info-box-gold">
+        <div class="info-box-title" style="color: #92400e;">AVANT le massage (1h)</div>
+        <div class="info-box-text" style="color: #a16207;">${programme.pilierHydratation.avantMassageG5 || 'Boire 500ml d\'eau pour hydrater les tissus'}</div>
+      </div>
+      <div class="info-box info-box-green">
+        <div class="info-box-title" style="color: #166534;">APRÈS le massage (2h)</div>
+        <div class="info-box-text" style="color: #15803d;">${programme.pilierHydratation.apresMassageG5 || 'Boire 750ml pour éliminer les toxines délogées'}</div>
+      </div>
+    </div>
+    
+    <h2 class="section-title">💡 Astuces pour bien s'hydrater</h2>
+    <ul class="check-list">
+      ${(programme.pilierHydratation.astuces || ['Gardez une gourde de 1L visible', 'Mettez des rappels sur votre téléphone', 'Buvez un verre à chaque pause']).map(a => `<li>${a}</li>`).join('')}
+    </ul>
+    ` : `
+    <div class="info-box info-box-blue">
+      <div class="info-box-title" style="color: #1e40af;">Objectif: ${eau}L d'eau par jour</div>
+      <div class="info-box-text" style="color: #1e3a8a;">L'hydratation est essentielle pour éliminer les toxines délogées par les massages G5.</div>
+    </div>
+    `}
+  </div>
+  
+  <!-- PAGE 4: PILIER MOUVEMENT -->
+  <div class="page">
+    <h1 class="page-title"><span class="page-title-icon">🏃</span> Pilier Mouvement</h1>
+    
+    ${programme.pilierMouvement ? `
+    <div class="info-box info-box-gold">
+      <div class="info-box-title" style="color: #92400e;">Philosophie SLIM TOUCH</div>
+      <div class="info-box-text" style="color: #a16207;">${programme.pilierMouvement.philosophie || "Pas de sport intensif ! Des micro-mouvements quotidiens qui activent le drainage lymphatique."}</div>
+    </div>
+    
+    <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr); margin: 20px 0;">
+      <div class="stat-card">
+        <div class="stat-card-value">${programme.pilierMouvement.objectifs?.pasQuotidiens || 8000}</div>
+        <div class="stat-card-label">Pas / jour</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-value">${programme.pilierMouvement.objectifs?.minutesActivite || 45}</div>
+        <div class="stat-card-label">Min. activité</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-value">5 min</div>
+        <div class="stat-card-label">Gainage / jour</div>
+      </div>
+    </div>
+    
+    ${programme.pilierMouvement.routineReveil ? `
+    <h2 class="section-title">🌅 Routine Réveil (${programme.pilierMouvement.routineReveil.duree || '8 min'})</h2>
+    <div style="display: grid; gap: 8px;">
+      ${(programme.pilierMouvement.routineReveil.exercices || []).map(ex => `
+      <div class="exercise-card">
+        <div class="exercise-name">${ex.nom}</div>
+        <div class="exercise-desc">${ex.description || ''}</div>
+        <div class="exercise-reps">${ex.repetitions || ''}</div>
+      </div>
+      `).join('')}
+    </div>
+    ` : ''}
+    
+    ${programme.pilierMouvement.routineAvantG5 ? `
+    <h2 class="section-title">🔥 Avant votre Massage G5 (${programme.pilierMouvement.routineAvantG5.duree || '10 min'})</h2>
+    <p style="font-size: 12px; color: #666; margin-bottom: 12px;">${programme.pilierMouvement.routineAvantG5.pourquoi || ''}</p>
+    <div style="display: grid; gap: 8px;">
+      ${(programme.pilierMouvement.routineAvantG5.exercices || []).map(ex => `
+      <div class="exercise-card">
+        <div class="exercise-name">${ex.nom}</div>
+        <div class="exercise-desc">${ex.description || ''}</div>
+        <div class="exercise-reps">${ex.repetitions || ''}</div>
+      </div>
+      `).join('')}
+    </div>
+    ` : ''}
+    ` : ''}
+  </div>
+  
+  <!-- PAGE 5: PILIER MOUVEMENT (suite) + SOMMEIL -->
+  <div class="page">
+    ${programme.pilierMouvement?.routineSoir ? `
+    <h1 class="page-title"><span class="page-title-icon">🏋️</span> Exercices du Soir & Zones Ciblées</h1>
+    
+    <h2 class="section-title">🌙 Routine Soir - Gainage & Détente (${programme.pilierMouvement.routineSoir.duree || '12 min'})</h2>
+    <div style="display: grid; gap: 8px; margin-bottom: 25px;">
+      ${(programme.pilierMouvement.routineSoir.exercices || []).slice(0, 5).map(ex => `
+      <div class="exercise-card">
+        <div class="exercise-name">${ex.nom}</div>
+        <div class="exercise-desc">${ex.description || ''}</div>
+        <div class="exercise-reps">${ex.repetitions || ''}</div>
+      </div>
+      `).join('')}
+    </div>
+    
+    ${programme.pilierMouvement.exercicesZoneCible?.ventre ? `
+    <h2 class="section-title">🎯 Exercices Zone Ventre</h2>
+    <div style="display: grid; gap: 8px;">
+      ${(programme.pilierMouvement.exercicesZoneCible.ventre || []).map(ex => `
+      <div class="exercise-card">
+        <div class="exercise-name">${ex.nom}</div>
+        <div class="exercise-desc">${ex.description || ''}</div>
+        <div class="exercise-reps">${ex.frequence || ''} - <span style="color: #22c55e;">${ex.efficacite || ''}</span></div>
+      </div>
+      `).join('')}
+    </div>
+    ` : ''}
+    
+    <h2 class="section-title">💡 Intégration au Quotidien</h2>
+    <ul class="check-list">
+      ${(programme.pilierMouvement.integrationQuotidien || ['Prendre les escaliers', 'Marche de 15 min après déjeuner', 'Se garer plus loin']).slice(0, 6).map(tip => `<li>${tip}</li>`).join('')}
+    </ul>
+    ` : `
+    <h1 class="page-title"><span class="page-title-icon">🏋️</span> Exercices Recommandés</h1>
+    <p>Des exercices ciblés pour compléter vos massages G5.</p>
+    `}
+  </div>
+  
+  <!-- PAGE 6: PILIER SOMMEIL -->
+  <div class="page">
+    <h1 class="page-title"><span class="page-title-icon">😴</span> Pilier Sommeil</h1>
+    
+    ${programme.pilierSommeil ? `
+    <div class="info-box info-box-purple">
+      <div class="info-box-title" style="color: #6b21a8;">Pourquoi le sommeil est NON NÉGOCIABLE</div>
+      <div class="info-box-text" style="color: #7e22ce;">${programme.pilierSommeil.importance || "Le manque de sommeil augmente la faim de 28% et sabote vos efforts de perte de poids."}</div>
+    </div>
+    
+    <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr); margin: 20px 0;">
+      <div class="stat-card">
+        <div class="stat-card-value">7-8h</div>
+        <div class="stat-card-label">Sommeil / nuit</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-value">${programme.pilierSommeil.horairesRecommandes?.coucher || '22h30'}</div>
+        <div class="stat-card-label">Coucher idéal</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-value">${programme.pilierSommeil.horairesRecommandes?.lever || '6h30'}</div>
+        <div class="stat-card-label">Lever idéal</div>
+      </div>
+    </div>
+    
+    <h2 class="section-title">🌙 Votre Routine du Soir</h2>
+    <div class="protocol-grid">
+      ${programme.pilierSommeil.routineSoir ? Object.entries(programme.pilierSommeil.routineSoir).slice(0, 6).map(([key, val]) => `
+      <div class="protocol-item">
+        <div class="protocol-time">${val.heure || key}</div>
+        <div class="protocol-action">${val.action || ''}</div>
+        <div class="protocol-detail">${val.conseil || ''}</div>
+      </div>
+      `).join('') : ''}
+    </div>
+    
+    <h2 class="section-title">🛏️ Environnement Idéal</h2>
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+      ${programme.pilierSommeil.environnementIdeal ? Object.entries(programme.pilierSommeil.environnementIdeal).map(([key, val]) => `
+      <div style="background: #f8f9fa; padding: 12px; border-radius: 8px;">
+        <div style="font-weight: 600; color: #1a1a2e; font-size: 12px; text-transform: capitalize;">${key}</div>
+        <div style="font-size: 11px; color: #666;">${val}</div>
+      </div>
+      `).join('') : ''}
+    </div>
+    
+    <h2 class="section-title">🍌 Aliments Favorisant le Sommeil</h2>
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
+      ${(programme.pilierSommeil.alimentsFavorables || []).slice(0, 6).map(al => `
+      <div style="background: #f0fdf4; padding: 10px; border-radius: 8px;">
+        <div style="font-weight: 500; color: #166534; font-size: 12px;">${al.aliment}</div>
+        <div style="font-size: 10px; color: #15803d;">${al.pourquoi}</div>
+      </div>
+      `).join('')}
     </div>
     ` : ''}
   </div>
   
-  <!-- PAGE 3: ALIMENTS STARS & À ÉVITER -->
+  <!-- PAGE 7: PILIER MINDSET -->
   <div class="page">
-    <h1 class="page-title"><span class="page-title-icon">🌟</span> Vos Aliments Stars & À Éviter</h1>
+    <h1 class="page-title"><span class="page-title-icon">🧠</span> Pilier Mindset</h1>
     
-    ${programme.alimentsSuperStars ? `
-    <div class="section">
-      <h2 class="section-title">⭐ Aliments à privilégier pour VOUS</h2>
-      <div style="display: grid; gap: 15px;">
-        ${(programme.alimentsSuperStars || []).slice(0, 5).map(aliment => `
-        <div style="background: linear-gradient(135deg, #f0fdf4, #dcfce7); padding: 20px; border-radius: 12px; display: flex; gap: 20px; align-items: flex-start;">
-          <div style="font-size: 32px;">${aliment.aliment?.includes('saumon') || aliment.aliment?.includes('poisson') ? '🐟' : aliment.aliment?.includes('œuf') ? '🥚' : aliment.aliment?.includes('légume') || aliment.aliment?.includes('brocoli') ? '🥦' : aliment.aliment?.includes('avocat') ? '🥑' : '🍽️'}</div>
-          <div style="flex: 1;">
-            <div style="font-weight: 600; color: #166534; font-size: 16px;">${aliment.aliment || ''}</div>
-            <div style="color: #15803d; margin-top: 5px; font-size: 13px;">${aliment.pourquoi || ''}</div>
-            <div style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
-              ${(aliment.nutrimentsCles || []).map(n => `<span style="background: white; padding: 4px 10px; border-radius: 20px; font-size: 11px; color: #166534;">${n}</span>`).join('')}
-            </div>
-            ${aliment.frequenceRecommandee ? `<div style="margin-top: 8px; font-size: 12px; color: #22c55e;">📅 ${aliment.frequenceRecommandee}</div>` : ''}
-          </div>
-        </div>
-        `).join('')}
-      </div>
+    ${programme.pilierMindset ? `
+    <div class="info-box info-box-pink">
+      <div class="info-box-title" style="color: #be185d;">80% de la réussite est MENTALE</div>
+      <div class="info-box-text" style="color: #db2777;">${programme.pilierMindset.importance || "Votre état d'esprit déterminera votre succès. Ce pilier est votre arme secrète."}</div>
+    </div>
+    
+    ${programme.pilierMindset.visualisation ? `
+    <h2 class="section-title">🎯 Visualisation Matinale (5 min)</h2>
+    <div class="info-box info-box-gold">
+      <div class="info-box-text" style="color: #92400e;">${programme.pilierMindset.visualisation.methode || ''}</div>
     </div>
     ` : ''}
     
-    ${programme.alimentsAEviter ? `
-    <div class="section" style="margin-top: 30px;">
-      <h2 class="section-title">🚫 Aliments à limiter</h2>
-      <div style="display: grid; gap: 12px;">
-        ${(programme.alimentsAEviter || []).slice(0, 4).map(aliment => `
-        <div style="background: #fef2f2; padding: 15px 20px; border-radius: 12px; border-left: 4px solid #ef4444; display: flex; justify-content: space-between; align-items: center;">
-          <div>
-            <div style="font-weight: 600; color: #dc2626;">${aliment.aliment || ''}</div>
-            <div style="color: #991b1b; font-size: 13px; margin-top: 3px;">${aliment.pourquoi || ''}</div>
-          </div>
-          ${aliment.alternative ? `<div style="background: #dcfce7; padding: 8px 15px; border-radius: 20px; font-size: 12px; color: #166534;">✓ Alternative : ${aliment.alternative}</div>` : ''}
-        </div>
-        `).join('')}
+    <h2 class="section-title">💪 Vos Affirmations Quotidiennes</h2>
+    <div style="display: grid; gap: 8px;">
+      ${(programme.pilierMindset.affirmationsQuotidiennes || []).slice(0, 6).map(aff => `
+      <div style="background: linear-gradient(135deg, #fdf2f8, #fce7f3); padding: 12px 16px; border-radius: 8px; border-left: 3px solid #ec4899;">
+        <span style="color: #be185d; font-size: 12px; font-style: italic;">"${aff}"</span>
       </div>
+      `).join('')}
     </div>
+    
+    ${programme.pilierMindset.gestionEcarts ? `
+    <h2 class="section-title">🍕 Gestion des Écarts (sans culpabilité !)</h2>
+    <div class="info-box info-box-green">
+      <div class="info-box-title" style="color: #166534;">Philosophie</div>
+      <div class="info-box-text" style="color: #15803d;">${programme.pilierMindset.gestionEcarts.philosophie || ''}</div>
+    </div>
+    <div style="margin-top: 12px;">
+      <div style="font-weight: 600; color: #1a1a2e; margin-bottom: 8px; font-size: 13px;">Après un écart :</div>
+      <ul class="check-list">
+        ${(programme.pilierMindset.gestionEcarts.apresUnEcart || []).slice(0, 5).map(tip => `<li>${tip}</li>`).join('')}
+      </ul>
+    </div>
+    ` : ''}
+    
+    ${programme.pilierMindset.mantras ? `
+    <h2 class="section-title">📿 Mantras Anti-Fringales</h2>
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+      ${Object.entries(programme.pilierMindset.mantras).slice(0, 4).map(([key, val]) => `
+      <div style="background: #f8f9fa; padding: 12px; border-radius: 8px;">
+        <div style="font-size: 10px; color: #c9a962; text-transform: uppercase; margin-bottom: 4px;">${key}</div>
+        <div style="font-size: 11px; color: #333; font-style: italic;">"${val}"</div>
+      </div>
+      `).join('')}
+    </div>
+    ` : ''}
     ` : ''}
   </div>
   
   <!-- PAGES SEMAINES -->
-  ${(programme.semaines || []).map((semaine, semaineIdx) => `
+  ${(programme.semaines || []).map((semaine, sIdx) => `
   <div class="page">
-    <h1 class="page-title"><span class="page-title-icon">📅</span> Semaine ${semaine.numero || semaineIdx + 1}</h1>
-    <div style="background: linear-gradient(135deg, #c9a962, #e0c285); color: white; padding: 20px; border-radius: 12px; margin-bottom: 25px;">
-      <div style="font-size: 20px; font-weight: 600; margin-bottom: 5px;">${semaine.theme || 'Programme de la semaine'}</div>
-      <div style="font-size: 14px; opacity: 0.9;">${semaine.objectifScientifique || semaine.objectif || ''}</div>
-      ${semaine.focusNutritionnel ? `<div style="font-size: 13px; margin-top: 10px; opacity: 0.8;">🎯 Focus : ${semaine.focusNutritionnel}</div>` : ''}
+    <h1 class="page-title"><span class="page-title-icon">📅</span> Semaine ${semaine.numero || sIdx + 1}</h1>
+    
+    <div style="background: linear-gradient(135deg, #c9a962, #e0c285); color: white; padding: 18px 22px; border-radius: 12px; margin-bottom: 20px;">
+      <div style="font-size: 18px; font-weight: 600; margin-bottom: 4px;">${semaine.theme || 'Programme de la semaine'}</div>
+      <div style="font-size: 13px; opacity: 0.9;">${semaine.objectif || semaine.objectifScientifique || ''}</div>
     </div>
     
-    ${(semaine.jours || []).slice(0, 3).map(jour => `
-    <div class="jour-card">
-      <div class="jour-header">
+    ${(semaine.jours || []).slice(0, 4).map(jour => `
+    <div class="day-card">
+      <div class="day-header">
         <div>
-          <div class="jour-title">${jour.jour}</div>
-          ${jour.themeJour ? `<div class="jour-theme">${jour.themeJour}</div>` : ''}
+          <div class="day-title">${jour.jour}</div>
+          ${jour.theme || jour.themeJour ? `<div class="day-theme">${jour.theme || jour.themeJour}</div>` : ''}
         </div>
-        <div class="jour-total">${jour.totalJour?.calories || (getRepasCalories(jour.petitDejeuner) + getRepasCalories(jour.dejeuner) + getRepasCalories(jour.diner) + getRepasCalories(jour.collation))} kcal</div>
+        <div class="day-calories">${jour.totalCalories || jour.totalJour?.calories || '~1400'} kcal</div>
       </div>
-      <div class="jour-content">
-        <div class="repas">
-          <div class="repas-icon breakfast">🌅</div>
-          <div class="repas-content">
-            <div class="repas-type">Petit-déjeuner</div>
-            <div class="repas-plat">${jour.petitDejeuner?.plat || 'Non défini'}</div>
-            ${jour.petitDejeuner?.description ? `<div class="repas-description">${jour.petitDejeuner.description}</div>` : ''}
-            <div class="repas-macros">
-              <span class="repas-macro"><span class="repas-macro-dot cal"></span>${getRepasCalories(jour.petitDejeuner)} kcal</span>
-              ${getRepasProteines(jour.petitDejeuner) ? `<span class="repas-macro"><span class="repas-macro-dot prot"></span>${getRepasProteines(jour.petitDejeuner)}g prot</span>` : ''}
+      <div class="day-content">
+        <div class="meal">
+          <div class="meal-icon breakfast">🌅</div>
+          <div class="meal-content">
+            <div class="meal-type">Petit-déjeuner</div>
+            <div class="meal-name">${jour.petitDejeuner?.plat || 'Non défini'}</div>
+            <div class="meal-desc">${jour.petitDejeuner?.description || ''}</div>
+            <div class="meal-macros">
+              <span class="meal-macro">${jour.petitDejeuner?.calories || 0} kcal</span>
+              <span class="meal-macro">${jour.petitDejeuner?.proteines || 0}g prot</span>
             </div>
           </div>
         </div>
-        <div class="repas">
-          <div class="repas-icon lunch">☀️</div>
-          <div class="repas-content">
-            <div class="repas-type">Déjeuner</div>
-            <div class="repas-plat">${jour.dejeuner?.plat || 'Non défini'}</div>
-            ${jour.dejeuner?.description ? `<div class="repas-description">${jour.dejeuner.description}</div>` : ''}
-            <div class="repas-macros">
-              <span class="repas-macro"><span class="repas-macro-dot cal"></span>${getRepasCalories(jour.dejeuner)} kcal</span>
-              ${getRepasProteines(jour.dejeuner) ? `<span class="repas-macro"><span class="repas-macro-dot prot"></span>${getRepasProteines(jour.dejeuner)}g prot</span>` : ''}
+        <div class="meal">
+          <div class="meal-icon lunch">☀️</div>
+          <div class="meal-content">
+            <div class="meal-type">Déjeuner</div>
+            <div class="meal-name">${jour.dejeuner?.plat || 'Non défini'}</div>
+            <div class="meal-desc">${jour.dejeuner?.description || ''}</div>
+            <div class="meal-macros">
+              <span class="meal-macro">${jour.dejeuner?.calories || 0} kcal</span>
+              <span class="meal-macro">${jour.dejeuner?.proteines || 0}g prot</span>
             </div>
           </div>
         </div>
         ${jour.collation ? `
-        <div class="repas">
-          <div class="repas-icon snack">🍎</div>
-          <div class="repas-content">
-            <div class="repas-type">Collation</div>
-            <div class="repas-plat">${jour.collation?.plat || ''}</div>
-            <div class="repas-macros">
-              <span class="repas-macro"><span class="repas-macro-dot cal"></span>${getRepasCalories(jour.collation)} kcal</span>
+        <div class="meal">
+          <div class="meal-icon snack">🍎</div>
+          <div class="meal-content">
+            <div class="meal-type">Collation</div>
+            <div class="meal-name">${jour.collation?.plat || ''}</div>
+            <div class="meal-macros">
+              <span class="meal-macro">${jour.collation?.calories || 0} kcal</span>
             </div>
           </div>
         </div>
         ` : ''}
-        <div class="repas">
-          <div class="repas-icon dinner">🌙</div>
-          <div class="repas-content">
-            <div class="repas-type">Dîner</div>
-            <div class="repas-plat">${jour.diner?.plat || 'Non défini'}</div>
-            ${jour.diner?.description ? `<div class="repas-description">${jour.diner.description}</div>` : ''}
-            <div class="repas-macros">
-              <span class="repas-macro"><span class="repas-macro-dot cal"></span>${getRepasCalories(jour.diner)} kcal</span>
-              ${getRepasProteines(jour.diner) ? `<span class="repas-macro"><span class="repas-macro-dot prot"></span>${getRepasProteines(jour.diner)}g prot</span>` : ''}
+        <div class="meal">
+          <div class="meal-icon dinner">🌙</div>
+          <div class="meal-content">
+            <div class="meal-type">Dîner</div>
+            <div class="meal-name">${jour.diner?.plat || 'Non défini'}</div>
+            <div class="meal-desc">${jour.diner?.description || ''}</div>
+            <div class="meal-macros">
+              <span class="meal-macro">${jour.diner?.calories || 0} kcal</span>
+              <span class="meal-macro">${jour.diner?.proteines || 0}g prot</span>
             </div>
           </div>
         </div>
@@ -6712,52 +6348,51 @@ CE PROGRAMME DOIT ÊTRE LE PLUS COMPLET ET TRANSFORMATEUR QUE CETTE CLIENTE AIT 
     `).join('')}
   </div>
   
-  <!-- Suite de la semaine si plus de 3 jours -->
-  ${(semaine.jours || []).length > 3 ? `
+  <!-- Suite de la semaine si plus de 4 jours -->
+  ${(semaine.jours || []).length > 4 ? `
   <div class="page">
-    <h1 class="page-title"><span class="page-title-icon">📅</span> Semaine ${semaine.numero || semaineIdx + 1} (suite)</h1>
-    ${(semaine.jours || []).slice(3).map(jour => `
-    <div class="jour-card">
-      <div class="jour-header">
+    <h1 class="page-title"><span class="page-title-icon">📅</span> Semaine ${semaine.numero || sIdx + 1} (suite)</h1>
+    ${(semaine.jours || []).slice(4).map(jour => `
+    <div class="day-card">
+      <div class="day-header">
         <div>
-          <div class="jour-title">${jour.jour}</div>
-          ${jour.themeJour ? `<div class="jour-theme">${jour.themeJour}</div>` : ''}
+          <div class="day-title">${jour.jour}</div>
+          ${jour.theme || jour.themeJour ? `<div class="day-theme">${jour.theme || jour.themeJour}</div>` : ''}
         </div>
-        <div class="jour-total">${jour.totalJour?.calories || (getRepasCalories(jour.petitDejeuner) + getRepasCalories(jour.dejeuner) + getRepasCalories(jour.diner) + getRepasCalories(jour.collation))} kcal</div>
+        <div class="day-calories">${jour.totalCalories || '~1400'} kcal</div>
       </div>
-      <div class="jour-content">
-        <div class="repas">
-          <div class="repas-icon breakfast">🌅</div>
-          <div class="repas-content">
-            <div class="repas-type">Petit-déjeuner</div>
-            <div class="repas-plat">${jour.petitDejeuner?.plat || 'Non défini'}</div>
-            <div class="repas-macros"><span class="repas-macro"><span class="repas-macro-dot cal"></span>${getRepasCalories(jour.petitDejeuner)} kcal</span></div>
+      <div class="day-content">
+        <div class="meal">
+          <div class="meal-icon breakfast">🌅</div>
+          <div class="meal-content">
+            <div class="meal-type">Petit-déjeuner</div>
+            <div class="meal-name">${jour.petitDejeuner?.plat || 'Non défini'}</div>
+            <div class="meal-macros"><span class="meal-macro">${jour.petitDejeuner?.calories || 0} kcal</span></div>
           </div>
         </div>
-        <div class="repas">
-          <div class="repas-icon lunch">☀️</div>
-          <div class="repas-content">
-            <div class="repas-type">Déjeuner</div>
-            <div class="repas-plat">${jour.dejeuner?.plat || 'Non défini'}</div>
-            <div class="repas-macros"><span class="repas-macro"><span class="repas-macro-dot cal"></span>${getRepasCalories(jour.dejeuner)} kcal</span></div>
+        <div class="meal">
+          <div class="meal-icon lunch">☀️</div>
+          <div class="meal-content">
+            <div class="meal-type">Déjeuner</div>
+            <div class="meal-name">${jour.dejeuner?.plat || 'Non défini'}</div>
+            <div class="meal-macros"><span class="meal-macro">${jour.dejeuner?.calories || 0} kcal</span></div>
           </div>
         </div>
         ${jour.collation ? `
-        <div class="repas">
-          <div class="repas-icon snack">🍎</div>
-          <div class="repas-content">
-            <div class="repas-type">Collation</div>
-            <div class="repas-plat">${jour.collation?.plat || ''}</div>
-            <div class="repas-macros"><span class="repas-macro"><span class="repas-macro-dot cal"></span>${getRepasCalories(jour.collation)} kcal</span></div>
+        <div class="meal">
+          <div class="meal-icon snack">🍎</div>
+          <div class="meal-content">
+            <div class="meal-type">Collation</div>
+            <div class="meal-name">${jour.collation?.plat || ''}</div>
           </div>
         </div>
         ` : ''}
-        <div class="repas">
-          <div class="repas-icon dinner">🌙</div>
-          <div class="repas-content">
-            <div class="repas-type">Dîner</div>
-            <div class="repas-plat">${jour.diner?.plat || 'Non défini'}</div>
-            <div class="repas-macros"><span class="repas-macro"><span class="repas-macro-dot cal"></span>${getRepasCalories(jour.diner)} kcal</span></div>
+        <div class="meal">
+          <div class="meal-icon dinner">🌙</div>
+          <div class="meal-content">
+            <div class="meal-type">Dîner</div>
+            <div class="meal-name">${jour.diner?.plat || 'Non défini'}</div>
+            <div class="meal-macros"><span class="meal-macro">${jour.diner?.calories || 0} kcal</span></div>
           </div>
         </div>
       </div>
@@ -6765,138 +6400,86 @@ CE PROGRAMME DOIT ÊTRE LE PLUS COMPLET ET TRANSFORMATEUR QUE CETTE CLIENTE AIT 
     `).join('')}
   </div>
   ` : ''}
-  `).join('')}
   
-  <!-- PAGE LISTE DE COURSES -->
-  ${(programme.listesCourses || [programme.listeCoursesSemaine1]).filter(Boolean).slice(0, 1).map((liste, idx) => `
+  <!-- Liste de courses de la semaine -->
+  ${semaine.listeCourses ? `
   <div class="page">
-    <h1 class="page-title"><span class="page-title-icon">🛒</span> Liste de Courses - Semaine ${liste.semaine || 1}</h1>
+    <h1 class="page-title"><span class="page-title-icon">🛒</span> Liste de Courses - Semaine ${semaine.numero || sIdx + 1}</h1>
     
-    <div style="background: linear-gradient(135deg, #c9a962, #e0c285); color: white; padding: 20px; border-radius: 12px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center;">
+    <div style="background: linear-gradient(135deg, #c9a962, #e0c285); color: white; padding: 15px 20px; border-radius: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
       <div>
-        <div style="font-size: 14px; opacity: 0.9;">Budget estimé</div>
-        <div style="font-size: 28px; font-weight: 700;">${liste.budgetTotal || liste.budgetEstime || '60-80€'}</div>
+        <div style="font-size: 13px; opacity: 0.9;">Budget estimé</div>
+        <div style="font-size: 24px; font-weight: 700;">${semaine.listeCourses.budgetTotal || '60-80€'}</div>
       </div>
-      <div style="text-align: right; font-size: 13px; opacity: 0.9;">
-        Tout ce dont vous avez besoin<br>pour une semaine de succès ! 🎯
-      </div>
+      <div style="text-align: right; font-size: 12px; opacity: 0.9;">Tout ce dont vous avez besoin<br>pour une semaine de succès ! 🎯</div>
     </div>
     
     <div class="shopping-grid">
-      ${Object.entries(liste).filter(([key]) => !['semaine', 'budgetTotal', 'budgetEstime', 'astucesEconomies'].includes(key)).map(([categorie, items]) => `
+      ${Object.entries(semaine.listeCourses).filter(([key]) => !['budgetTotal', 'astucesEconomies'].includes(key) && Array.isArray(semaine.listeCourses[key])).map(([cat, items]) => `
       <div class="shopping-category">
         <div class="shopping-category-title">
-          ${categorie === 'fruits' ? '🍎' : categorie === 'legumes' ? '🥦' : categorie === 'proteinesAnimales' ? '🥩' : categorie === 'proteinesVegetales' ? '🌱' : categorie === 'produitsFrais' ? '🥛' : categorie === 'feculentsComplexes' || categorie === 'feculents' ? '🌾' : categorie === 'bonnesGraisses' ? '🫒' : categorie === 'epicerie' ? '🧂' : '📦'}
-          ${categorie.charAt(0).toUpperCase() + categorie.slice(1).replace(/([A-Z])/g, ' $1')}
+          ${cat === 'fruits' ? '🍎' : cat === 'legumes' ? '🥦' : cat === 'proteines' ? '🥩' : cat === 'feculents' ? '🌾' : cat === 'produitsFrais' ? '🥛' : cat === 'epicerie' ? '🧂' : '📦'}
+          ${cat.charAt(0).toUpperCase() + cat.slice(1)}
         </div>
-        ${(Array.isArray(items) ? items : []).map(item => `
+        ${(items || []).map(item => `
         <div class="shopping-item">
           <div class="shopping-checkbox"></div>
-          <div class="shopping-item-content">
-            <div class="shopping-item-name">${typeof item === 'object' ? item.item : item}</div>
-            ${typeof item === 'object' && item.quantite ? `<div class="shopping-item-qty">Quantité : ${item.quantite}</div>` : ''}
-            ${typeof item === 'object' && item.prix_estime ? `<div class="shopping-item-price">≈ ${item.prix_estime}</div>` : ''}
-          </div>
+          <span>${typeof item === 'object' ? item.item : item}${typeof item === 'object' && item.quantite ? ` - ${item.quantite}` : ''}${typeof item === 'object' && item.prix ? ` (${item.prix})` : ''}</span>
         </div>
         `).join('')}
       </div>
       `).join('')}
     </div>
-    
-    ${liste.astucesEconomies ? `
-    <div class="tips-box" style="margin-top: 25px;">
-      <div class="tips-title">💰 Astuces pour économiser</div>
-      <ul class="tips-list">
-        ${(liste.astucesEconomies || []).map(astuce => `<li class="tips-item">${astuce}</li>`).join('')}
-      </ul>
-    </div>
-    ` : ''}
   </div>
+  ` : ''}
   `).join('')}
   
   <!-- PAGE RECETTES SIGNATURES -->
-  ${(programme.recettesSignatures || programme.recettesPhares || []).length > 0 ? `
+  ${(programme.recettesSignatures || []).length > 0 ? `
   <div class="page">
     <h1 class="page-title"><span class="page-title-icon">👨‍🍳</span> Vos Recettes Signatures</h1>
     
-    ${(programme.recettesSignatures || programme.recettesPhares || []).slice(0, 2).map(recette => `
-    <div class="recette-card">
-      <div class="recette-header">
+    ${(programme.recettesSignatures || []).slice(0, 3).map(recette => `
+    <div class="recipe-card">
+      <div class="recipe-header">
         <div>
-          <div class="recette-title">${recette.nom}</div>
-          <div class="recette-category">${recette.categorie || 'Plat principal'}</div>
-          <div class="recette-meta" style="margin-top: 10px;">
-            <span class="recette-meta-item">⏱️ ${recette.tempsTotal || recette.tempsPreparation || '30 min'}</span>
-            <span class="recette-meta-item">👥 ${recette.portions || 2} pers.</span>
-            <span class="recette-meta-item">📊 ${recette.difficulte || 'Facile'}</span>
+          <div class="recipe-title">${recette.nom}</div>
+          <div class="recipe-meta">
+            <span>⏱️ ${recette.tempsPrepa || recette.tempsTotal || '15 min'}</span>
+            <span>🔥 ${recette.calories || 400} kcal</span>
+            <span>💪 ${recette.proteines || 25}g prot</span>
           </div>
         </div>
-        ${recette.scoreNutritionnel ? `
-        <div class="recette-score">
-          <div class="recette-score-value">${recette.scoreNutritionnel}</div>
-          <div class="recette-score-label">Score Santé</div>
-        </div>
-        ` : ''}
       </div>
       
-      ${recette.pourquoiCetteRecette ? `
-      <div class="recette-why">
-        <strong>💡 Pourquoi cette recette pour vous :</strong> ${recette.pourquoiCetteRecette}
+      ${recette.pourquoi ? `
+      <div style="background: #fef3c7; padding: 12px 15px; border-radius: 8px; margin-bottom: 15px; font-size: 12px; color: #92400e;">
+        <strong>💡 Pourquoi cette recette :</strong> ${recette.pourquoi}
       </div>
       ` : ''}
       
-      <div class="recette-section-title">📝 Ingrédients</div>
-      <div class="recette-ingredients">
-        ${(recette.ingredients || []).map(ing => `
-        <div class="recette-ingredient">
-          <span class="recette-ingredient-dot"></span>
-          ${typeof ing === 'object' ? `${ing.item} - ${ing.quantite}` : ing}
+      <div style="margin-bottom: 15px;">
+        <div style="font-weight: 600; color: #1a1a2e; margin-bottom: 8px; font-size: 13px;">📝 Ingrédients</div>
+        <div class="recipe-ingredients">
+          ${(recette.ingredients || []).map(ing => `<div class="recipe-ingredient">${typeof ing === 'object' ? `${ing.item || ing} - ${ing.quantite || ''}` : ing}</div>`).join('')}
         </div>
-        `).join('')}
       </div>
       
-      <div class="recette-section-title">👩‍🍳 Préparation</div>
-      <div class="recette-etapes">
-        ${(recette.etapesDetaillees || recette.etapes || []).map((etape, i) => `
-        <div class="recette-etape">
-          <div class="recette-etape-num">${i + 1}</div>
-          <div class="recette-etape-content">
-            <div class="recette-etape-text">${typeof etape === 'object' ? etape.instruction : etape}</div>
-            ${typeof etape === 'object' && etape.astuce ? `<div class="recette-etape-tip">💡 ${etape.astuce}</div>` : ''}
+      <div>
+        <div style="font-weight: 600; color: #1a1a2e; margin-bottom: 8px; font-size: 13px;">👩‍🍳 Préparation</div>
+        <div class="recipe-steps">
+          ${(recette.etapes || []).map((etape, i) => `
+          <div class="recipe-step">
+            <div class="recipe-step-num">${i + 1}</div>
+            <div class="recipe-step-text">${typeof etape === 'object' ? etape.instruction : etape}</div>
           </div>
-        </div>
-        `).join('')}
-      </div>
-      
-      ${(recette.macrosParPortion || recette.calories) ? `
-      <div class="recette-macros-grid">
-        <div class="recette-macro-card">
-          <div class="recette-macro-value">${recette.macrosParPortion?.calories || recette.calories || 0}</div>
-          <div class="recette-macro-label">Calories</div>
-        </div>
-        <div class="recette-macro-card">
-          <div class="recette-macro-value">${recette.macrosParPortion?.proteines || 0}g</div>
-          <div class="recette-macro-label">Protéines</div>
-        </div>
-        <div class="recette-macro-card">
-          <div class="recette-macro-value">${recette.macrosParPortion?.glucides || 0}g</div>
-          <div class="recette-macro-label">Glucides</div>
-        </div>
-        <div class="recette-macro-card">
-          <div class="recette-macro-value">${recette.macrosParPortion?.lipides || 0}g</div>
-          <div class="recette-macro-label">Lipides</div>
-        </div>
-        <div class="recette-macro-card">
-          <div class="recette-macro-value">${recette.macrosParPortion?.fibres || 0}g</div>
-          <div class="recette-macro-label">Fibres</div>
+          `).join('')}
         </div>
       </div>
-      ` : ''}
       
-      ${recette.noteDuChef ? `
-      <div style="margin-top: 20px; padding: 15px; background: linear-gradient(135deg, #fef3c7, #fde68a); border-radius: 12px;">
-        <strong style="color: #92400e;">👨‍🍳 Note du Chef :</strong>
-        <span style="color: #a16207;">${recette.noteDuChef}</span>
+      ${recette.astuce ? `
+      <div style="margin-top: 12px; padding: 12px; background: #fef3c7; border-radius: 8px; font-size: 11px; color: #92400e;">
+        <strong>💡 Astuce :</strong> ${recette.astuce}
       </div>
       ` : ''}
     </div>
@@ -6904,70 +6487,69 @@ CE PROGRAMME DOIT ÊTRE LE PLUS COMPLET ET TRANSFORMATEUR QUE CETTE CLIENTE AIT 
   </div>
   ` : ''}
   
-  <!-- PAGE GESTION DES ÉCARTS & FAQ -->
+  <!-- PAGE PRODUITS RECOMMANDÉS -->
+  ${programme.produitsRecommandes ? `
   <div class="page">
-    <h1 class="page-title"><span class="page-title-icon">🎯</span> Conseils de Réussite</h1>
+    <h1 class="page-title"><span class="page-title-icon">🧴</span> Produits Recommandés</h1>
     
-    ${programme.gestionEcarts ? `
-    <div class="section">
-      <h2 class="section-title">🍕 Gestion des Écarts (sans culpabilité !)</h2>
-      <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 25px;">
-        <p style="color: #666; margin-bottom: 20px; font-style: italic;">${programme.gestionEcarts.philosophie || 'Les écarts font partie de la vie et ne ruinent pas vos progrès.'}</p>
-        
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-          <div style="background: #f0fdf4; padding: 20px; border-radius: 12px;">
-            <div style="font-weight: 600; color: #166534; margin-bottom: 10px;">✅ Repas plaisir autorisé</div>
-            <p style="color: #15803d; font-size: 14px;">${programme.gestionEcarts.strategieRepasLibre || '1-2 repas plaisir par semaine sans culpabilité'}</p>
-          </div>
-          <div style="background: #fef2f2; padding: 20px; border-radius: 12px;">
-            <div style="font-weight: 600; color: #dc2626; margin-bottom: 10px;">🔄 Après un écart</div>
-            <p style="color: #991b1b; font-size: 14px;">${programme.gestionEcarts.recuperationApresExces || 'Reprenez simplement le programme au repas suivant'}</p>
-          </div>
-        </div>
-        
-        ${programme.gestionEcarts.gestionFringales ? `
-        <div style="margin-top: 20px;">
-          <div style="font-weight: 600; color: #1a1a2e; margin-bottom: 10px;">💪 Anti-fringales</div>
-          <ul style="list-style: none; display: grid; gap: 8px;">
-            ${(programme.gestionEcarts.gestionFringales || []).map(tip => `<li style="padding: 10px 15px; background: #f8f9fa; border-radius: 8px; font-size: 14px;">• ${tip}</li>`).join('')}
-          </ul>
-        </div>
-        ` : ''}
+    <p style="color: #666; margin-bottom: 20px; font-size: 12px;">${programme.produitsRecommandes.intro || 'Ces produits de qualité amplifient vos résultats. Non obligatoires mais recommandés.'}</p>
+    
+    <h2 class="section-title">💆 Soins Corps</h2>
+    <div style="display: grid; gap: 10px; margin-bottom: 20px;">
+      ${(programme.produitsRecommandes.soinCorps || []).map(prod => `
+      <div class="product-card">
+        <div class="product-name">${prod.nom}</div>
+        <div class="product-usage">📋 ${prod.utilisation || ''}</div>
+        <div class="product-benefit">✨ ${prod.benefices || ''}</div>
+        <div class="product-price">💰 ${prod.prix || ''}</div>
       </div>
+      `).join('')}
     </div>
-    ` : ''}
     
-    ${programme.suiviProgression ? `
-    <div class="section" style="margin-top: 30px;">
-      <h2 class="section-title">📈 Suivi de Votre Progression</h2>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-        <div style="background: #f0fdf4; padding: 20px; border-radius: 12px;">
-          <div style="font-weight: 600; color: #166534; margin-bottom: 10px;">✨ Signes que ça fonctionne</div>
-          <ul style="list-style: none; color: #15803d; font-size: 14px;">
-            ${(programme.suiviProgression.signesPositifs || []).map(s => `<li style="padding: 5px 0;">✓ ${s}</li>`).join('')}
-          </ul>
-        </div>
-        <div style="background: #eff6ff; padding: 20px; border-radius: 12px;">
-          <div style="font-weight: 600; color: #1e40af; margin-bottom: 10px;">📊 Indicateurs à suivre</div>
-          <ul style="list-style: none; color: #1e3a8a; font-size: 14px;">
-            ${(programme.suiviProgression.indicateursASuivre || []).map(i => `<li style="padding: 5px 0;">📍 ${i}</li>`).join('')}
-          </ul>
-        </div>
+    <h2 class="section-title">💧 Hydratation</h2>
+    <div style="display: grid; gap: 10px; margin-bottom: 20px;">
+      ${(programme.produitsRecommandes.hydratation || []).map(prod => `
+      <div class="product-card">
+        <div class="product-name">${prod.nom}</div>
+        <div class="product-usage">📋 ${prod.utilisation || ''}</div>
+        <div class="product-benefit">✨ ${prod.benefices || ''}</div>
+        <div class="product-price">💰 ${prod.prix || ''}</div>
       </div>
+      `).join('')}
     </div>
-    ` : ''}
     
-    ${programme.faq && programme.faq.length > 0 ? `
-    <div class="section" style="margin-top: 30px;">
-      <h2 class="section-title">❓ Questions Fréquentes</h2>
-      ${(programme.faq || []).slice(0, 4).map(item => `
-      <div class="faq-item">
-        <div class="faq-question">❔ ${item.question}</div>
-        <div class="faq-answer">${item.reponse}</div>
+    ${programme.produitsRecommandes.complements ? `
+    <h2 class="section-title">💊 Compléments</h2>
+    <div style="display: grid; gap: 10px; margin-bottom: 20px;">
+      ${(programme.produitsRecommandes.complements || []).map(prod => `
+      <div class="product-card">
+        <div class="product-name">${prod.nom}</div>
+        <div class="product-usage">📋 ${prod.utilisation || ''}</div>
+        <div class="product-benefit">✨ ${prod.benefices || ''}</div>
+        <div class="product-price">💰 ${prod.prix || ''}</div>
       </div>
       `).join('')}
     </div>
     ` : ''}
+    
+    <h2 class="section-title">🎯 Par ordre de priorité</h2>
+    <ol style="padding-left: 20px; color: #333; font-size: 12px;">
+      ${(programme.produitsRecommandes.priorites || []).map(p => `<li style="padding: 5px 0;">${p}</li>`).join('')}
+    </ol>
+  </div>
+  ` : ''}
+  
+  <!-- PAGE FAQ -->
+  ${(programme.faq || []).length > 0 ? `
+  <div class="page">
+    <h1 class="page-title"><span class="page-title-icon">❓</span> Questions Fréquentes</h1>
+    
+    ${(programme.faq || []).map(item => `
+    <div class="faq-item">
+      <div class="faq-question">❔ ${item.question}</div>
+      <div class="faq-answer">${item.reponse}</div>
+    </div>
+    `).join('')}
     
     ${programme.messageMotivation ? `
     <div class="motivation-box">
@@ -6976,15 +6558,16 @@ CE PROGRAMME DOIT ÊTRE LE PLUS COMPLET ET TRANSFORMATEUR QUE CETTE CLIENTE AIT 
     ` : ''}
     
     <div class="disclaimer">
-      <strong>⚠️ Avertissement important :</strong> Ce programme nutritionnel est généré à titre informatif par une intelligence artificielle et ne remplace en aucun cas l'avis d'un médecin, diététicien ou nutritionniste diplômé. Consultez un professionnel de santé avant tout changement alimentaire important, particulièrement si vous avez des pathologies, prenez des médicaments, êtes enceinte ou allaitez.
+      <strong>⚠️ Rappel important :</strong> Ce programme est généré à titre informatif par une intelligence artificielle et ne remplace en aucun cas l'avis d'un médecin, diététicien ou nutritionniste diplômé. Consultez un professionnel de santé avant tout changement alimentaire important.
     </div>
   </div>
+  ` : ''}
   
   <!-- FOOTER -->
   <div class="footer">
-    <p style="font-size: 14px; color: #c9a962; margin-bottom: 5px;">✨ SLIM TOUCH - Programme Nutritionnel Personnalisé</p>
+    <p style="font-size: 13px; color: #c9a962; margin-bottom: 5px;">✨ SLIM TOUCH - Programme de Transformation 360°</p>
     <p>Généré le ${new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-    <p style="margin-top: 10px;">${client.nom} • Programme de ${programme.metadata?.duree || 4} semaines</p>
+    <p style="margin-top: 8px;">${client.nom} • Programme de ${duree} semaines</p>
   </div>
 </body>
 </html>`;
@@ -6996,6 +6579,7 @@ CE PROGRAMME DOIT ÊTRE LE PLUS COMPLET ET TRANSFORMATEUR QUE CETTE CLIENTE AIT 
       printWindow.print();
     };
   };
+  
   
   // Générer une facture PDF
   const generateFacturePDF = (paiement, client) => {
