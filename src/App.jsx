@@ -6439,9 +6439,9 @@ CE PROGRAMME DOIT ÊTRE LE PLUS COMPLET ET TRANSFORMATEUR QUE CETTE CLIENTE AIT 
   <div class="cover">
     <div class="cover-content">
       <div class="cover-logo">SLIM TOUCH</div>
-      <div class="cover-tagline">Excellence Nutritionnelle</div>
-      <div class="cover-title">Programme Nutritionnel Personnalisé</div>
-      <div class="cover-subtitle">Créé par Intelligence Artificielle Nutritionniste Expert</div>
+      <div class="cover-tagline">Programme de Transformation 360°</div>
+      <div class="cover-title">Programme SLIM TOUCH 360°</div>
+      <div class="cover-subtitle">Nutrition • Hydratation • Mouvement • Sommeil • Mindset</div>
       
       <div class="cover-client">${client.nom}</div>
       <div class="cover-date">Généré le ${new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
@@ -6462,6 +6462,31 @@ CE PROGRAMME DOIT ÊTRE LE PLUS COMPLET ET TRANSFORMATEUR QUE CETTE CLIENTE AIT 
         <div class="cover-stat">
           <div class="cover-stat-value">${programme.metadata?.duree || 4}</div>
           <div class="cover-stat-label">Semaines</div>
+        </div>
+      </div>
+      
+      <!-- DISCLAIMER LÉGAL -->
+      <div style="
+        margin-top: 40px;
+        padding: 20px 30px;
+        background: rgba(251, 191, 36, 0.15);
+        border: 1px solid rgba(251, 191, 36, 0.4);
+        border-radius: 12px;
+        text-align: left;
+        max-width: 700px;
+      ">
+        <div style="font-weight: 600; color: #fbbf24; margin-bottom: 10px; font-size: 14px;">
+          ⚖️ Mentions légales importantes
+        </div>
+        <div style="font-size: 11px; color: rgba(255,255,255,0.8); line-height: 1.6;">
+          <p style="margin-bottom: 8px;">
+            <strong>SLIM TOUCH</strong> propose des prestations de massage G5 à visée esthétique et de bien-être. 
+            Nos services ne constituent en aucun cas un acte médical, paramédical ou de kinésithérapie.
+          </p>
+          <p style="margin-bottom: 6px;">• Ce programme est fourni <strong>à titre informatif uniquement</strong> et ne remplace pas l'avis d'un médecin, diététicien ou nutritionniste diplômé.</p>
+          <p style="margin-bottom: 6px;">• Les résultats peuvent varier selon les individus. Les témoignages et résultats présentés ne garantissent pas des résultats similaires.</p>
+          <p style="margin-bottom: 6px;">• Un certificat médical de non contre-indication est obligatoire avant tout programme de soins.</p>
+          <p>• En cas de doute sur votre état de santé, consultez un professionnel de santé avant de commencer tout programme.</p>
         </div>
       </div>
     </div>
@@ -8556,71 +8581,6 @@ CE PROGRAMME DOIT ÊTRE LE PLUS COMPLET ET TRANSFORMATEUR QUE CETTE CLIENTE AIT 
           {/* ============================================ */}
           {currentView === 'dashboard' && !selectedClient && (
             <div className="animate-in">
-              
-              {/* Disclaimer légal - affiché une fois par session */}
-              {!sessionStorage.getItem('disclaimerAccepted') && (
-                <div style={{
-                  background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(251, 191, 36, 0.05))',
-                  border: '1px solid #f59e0b',
-                  borderRadius: '16px',
-                  padding: '1.5rem',
-                  marginBottom: '1.5rem',
-                  position: 'relative'
-                }}>
-                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-                    <div style={{ 
-                      width: '48px', 
-                      height: '48px', 
-                      background: 'rgba(251, 191, 36, 0.2)',
-                      borderRadius: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0
-                    }}>
-                      <AlertTriangle size={24} style={{ color: '#f59e0b' }} />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <h4 style={{ color: '#b45309', marginBottom: '0.75rem', fontSize: '1rem' }}>
-                        ⚖️ Informations importantes - Mentions légales
-                      </h4>
-                      <div style={{ color: '#92400e', fontSize: '0.85rem', lineHeight: '1.6' }}>
-                        <p style={{ marginBottom: '0.5rem' }}>
-                          <strong>SLIM TOUCH</strong> propose des prestations de massage G5 à visée esthétique et de bien-être. 
-                          Nos services ne constituent en aucun cas un acte médical, paramédical ou de kinésithérapie.
-                        </p>
-                        <p style={{ marginBottom: '0.5rem' }}>
-                          • Les programmes nutritionnels générés par IA sont fournis <strong>à titre informatif uniquement</strong> et ne remplacent pas l'avis d'un médecin, diététicien ou nutritionniste diplômé.
-                        </p>
-                        <p style={{ marginBottom: '0.5rem' }}>
-                          • Les résultats peuvent varier selon les individus. Les témoignages et résultats présentés ne garantissent pas des résultats similaires.
-                        </p>
-                        <p style={{ marginBottom: '0.5rem' }}>
-                          • Un certificat médical de non contre-indication est obligatoire avant tout programme de soins.
-                        </p>
-                        <p>
-                          • En cas de doute sur votre état de santé, consultez un professionnel de santé avant de commencer tout programme.
-                        </p>
-                      </div>
-                      <button 
-                        className="btn btn-sm"
-                        style={{ 
-                          marginTop: '1rem',
-                          background: '#f59e0b',
-                          color: 'white',
-                          border: 'none'
-                        }}
-                        onClick={() => {
-                          sessionStorage.setItem('disclaimerAccepted', 'true');
-                          window.location.reload();
-                        }}
-                      >
-                        ✓ J'ai lu et compris
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
               
               {/* Stats pour Directrice */}
               {currentUser.isDirector ? (
