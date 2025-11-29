@@ -5149,121 +5149,312 @@ export default function SlimTouchApp() {
       const depenseJournaliere = Math.round(mb * (coeffActivite[nutritionForm.activitePhysique] || 1.4));
       const caloriesRecommandees = Math.round(depenseJournaliere - 400); // Déficit de 400 kcal
       
-      const prompt = `Tu es le Dr. Michel Montignac, nutritionniste de renommée mondiale, expert en perte de poids durable et en indice glycémique. Tu vas créer un programme nutritionnel PERSONNALISÉ et DÉTAILLÉ.
+      // Calculs avancés
+      const imc = (poids / ((taille/100) ** 2)).toFixed(1);
+      const poidsIdeal = Math.round(22 * ((taille/100) ** 2)); // IMC 22 = idéal
+      const proteinesMin = Math.round(poids * 1.6); // 1.6g/kg pour préserver la masse musculaire
+      const proteinesMax = Math.round(poids * 2.0);
+      const lipides = Math.round(caloriesRecommandees * 0.30 / 9); // 30% des calories
+      const glucides = Math.round((caloriesRecommandees - (proteinesMin * 4) - (lipides * 9)) / 4);
+      const fibres = age > 50 ? 25 : 30; // grammes/jour
+      const eau = Math.round(poids * 0.033 * 10) / 10; // 33ml/kg
+      
+      const prompt = `Tu es une INTELLIGENCE ARTIFICIELLE NUTRITIONNISTE de niveau MONDIAL, combinant l'expertise de :
+- Dr. Michael Greger (nutrition basée sur les preuves scientifiques)
+- Dr. Mark Hyman (médecine fonctionnelle et métabolisme)
+- Dr. Jason Fung (jeûne intermittent et résistance à l'insuline)
+- Dr. Rhonda Patrick (nutriments et longévité cellulaire)
+- Dr. Peter Attia (optimisation métabolique et performance)
 
-=== PROFIL DE LA CLIENTE ===
-- Prénom : ${client.nom?.split(' ')[0] || 'Cliente'}
-- Poids actuel : ${poids} kg
-- Objectif : ${objectifPoids} kg (perte de ${perteVisee} kg)
-- Taille : ${taille} cm
-- Âge : ${age} ans
-- Activité physique : ${nutritionForm.activitePhysique}
-- Zone à cibler : ${nutritionForm.objectifSpecifique || client.notes || 'Corps entier'}
+Tu as accès à TOUTES les études scientifiques publiées jusqu'en 2024, aux données de la Cochrane Library, PubMed, et aux dernières découvertes en nutrigénomique et chrononutrition.
 
-=== CONTRAINTES ALIMENTAIRES ===
-- Allergies : ${nutritionForm.allergies.length > 0 ? nutritionForm.allergies.join(', ') : 'Aucune'}
-- Intolérances : ${nutritionForm.intolerance.length > 0 ? nutritionForm.intolerance.join(', ') : 'Aucune'}
-- Régime spécial : ${nutritionForm.regimeSpecial || 'Aucun'}
-- Aliments détestés : ${nutritionForm.alimentsDetestes || 'Aucun'}
-- Aliments adorés : ${nutritionForm.alimentsAdores || 'Pas de préférence'}
+🎯 MISSION : Créer LE programme nutritionnel le plus COMPLET, SCIENTIFIQUE et PERSONNALISÉ au monde pour cette cliente.
 
-=== PARAMÈTRES ===
-- Budget courses : ${nutritionForm.budgetCourses} (economique/moyen/confortable)
-- Temps cuisine : ${nutritionForm.tempsCuisine} (express <15min / moyen 15-30min / elabore >30min)
-- Nombre de repas/jour : ${nutritionForm.nombreRepas}
-- Pathologies : ${nutritionForm.pathologies.length > 0 ? nutritionForm.pathologies.join(', ') : 'Aucune'}
-- Durée du programme : ${nutritionForm.duree} semaines
+══════════════════════════════════════════════════════════════
+📊 DONNÉES BIOMÉTRIQUES COMPLÈTES
+══════════════════════════════════════════════════════════════
+• Prénom : ${client.nom?.split(' ')[0] || 'Cliente'}
+• Âge : ${age} ans
+• Sexe : Femme
+• Poids actuel : ${poids} kg
+• Taille : ${taille} cm
+• IMC actuel : ${imc} (${parseFloat(imc) < 18.5 ? 'insuffisance pondérale' : parseFloat(imc) < 25 ? 'normal' : parseFloat(imc) < 30 ? 'surpoids' : 'obésité'})
+• Poids objectif : ${objectifPoids} kg
+• Poids idéal santé (IMC 22) : ${poidsIdeal} kg
+• Perte visée : ${perteVisee} kg
+• Zone(s) cible(s) : ${nutritionForm.objectifSpecifique || 'Perte globale harmonieuse'}
 
-=== CALCULS MÉTABOLIQUES ===
-- Métabolisme basal : ${Math.round(mb)} kcal
-- Dépense journalière estimée : ${depenseJournaliere} kcal
-- Apport calorique recommandé : ${caloriesRecommandees} kcal/jour (déficit de 400 kcal)
-- Répartition macros recommandée : 30% protéines, 35% glucides (IG bas), 35% lipides
+══════════════════════════════════════════════════════════════
+🔬 CALCULS MÉTABOLIQUES SCIENTIFIQUES
+══════════════════════════════════════════════════════════════
+• Métabolisme basal (Mifflin-St Jeor) : ${Math.round(mb)} kcal/jour
+• Niveau d'activité : ${nutritionForm.activitePhysique} (coefficient ${coeffActivite[nutritionForm.activitePhysique] || 1.4})
+• TDEE (dépense totale) : ${depenseJournaliere} kcal/jour
+• Apport calorique cible : ${caloriesRecommandees} kcal/jour (déficit de 400 kcal = perte ~0.4kg/semaine)
+• Effet thermique des aliments estimé : ${Math.round(caloriesRecommandees * 0.10)} kcal
 
-=== FORMAT DE RÉPONSE OBLIGATOIRE (JSON) ===
-Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ni après, structuré exactement comme suit :
+RÉPARTITION MACRONUTRIMENTS OPTIMALE :
+• Protéines : ${proteinesMin}-${proteinesMax}g/jour (${Math.round(proteinesMin*4/caloriesRecommandees*100)}% - essentiel pour préserver la masse musculaire en déficit)
+• Lipides : ${lipides}g/jour (30% - privilégier oméga-3, acides gras mono-insaturés)
+• Glucides : ${glucides}g/jour (priorité IG bas <55, charge glycémique contrôlée)
+• Fibres : minimum ${fibres}g/jour (satiété, microbiote, transit)
+• Hydratation : ${eau}L d'eau/jour minimum
+
+══════════════════════════════════════════════════════════════
+⚠️ CONTRAINTES & PERSONNALISATION
+══════════════════════════════════════════════════════════════
+• Allergies : ${nutritionForm.allergies.length > 0 ? nutritionForm.allergies.join(', ') : 'Aucune déclarée'}
+• Intolérances : ${nutritionForm.intolerance.length > 0 ? nutritionForm.intolerance.join(', ') : 'Aucune déclarée'}
+• Régime alimentaire : ${nutritionForm.regimeSpecial || 'Omnivore sans restriction'}
+• Aliments à EXCLURE : ${nutritionForm.alimentsDetestes || 'Aucun'}
+• Aliments PRÉFÉRÉS à intégrer : ${nutritionForm.alimentsAdores || 'Pas de préférence particulière'}
+• Pathologies/Conditions : ${nutritionForm.pathologies.length > 0 ? nutritionForm.pathologies.join(', ') : 'Aucune déclarée'}
+
+CONTRAINTES PRATIQUES :
+• Budget : ${nutritionForm.budgetCourses === 'economique' ? '40-60€/semaine - privilégier légumineuses, œufs, légumes de saison, protéines économiques' : nutritionForm.budgetCourses === 'moyen' ? '60-90€/semaine - bon équilibre qualité/prix' : '90€+/semaine - produits premium, bio, poissons nobles'}
+• Temps cuisine : ${nutritionForm.tempsCuisine === 'express' ? 'Maximum 15 min - batch cooking, recettes ultra-simples' : nutritionForm.tempsCuisine === 'moyen' ? '15-30 min - recettes accessibles' : '30+ min - recettes élaborées possibles'}
+• Repas par jour : ${nutritionForm.nombreRepas} (${nutritionForm.nombreRepas === '3' ? 'structure classique' : nutritionForm.nombreRepas === '4' ? 'avec 1 collation stratégique' : 'avec 2 collations pour stabiliser la glycémie'})
+• Durée du programme : ${nutritionForm.duree} semaines
+
+══════════════════════════════════════════════════════════════
+📋 FORMAT JSON OBLIGATOIRE - STRUCTURE ULTRA-DÉTAILLÉE
+══════════════════════════════════════════════════════════════
 
 {
+  "analysePersonnalisee": {
+    "profilMetabolique": "Analyse détaillée du profil métabolique de la cliente et stratégie adaptée",
+    "defisIdentifies": ["Défi 1 spécifique à son profil", "Défi 2", "Défi 3"],
+    "atoutsNutritionnels": ["Atout 1 à exploiter", "Atout 2"],
+    "strategieGlobale": "Explication de la stratégie nutritionnelle choisie et pourquoi elle est optimale pour ce profil"
+  },
   "resume": {
     "caloriesJour": ${caloriesRecommandees},
-    "proteines": "XX g/jour",
-    "glucides": "XX g/jour",
-    "lipides": "XX g/jour",
-    "perteEstimee": "${perteVisee} kg en ${nutritionForm.duree} semaines",
-    "hydratation": "X litres/jour"
+    "proteines": "${proteinesMin}-${proteinesMax}g",
+    "glucides": "${glucides}g",
+    "lipides": "${lipides}g",
+    "fibres": "${fibres}g",
+    "hydratation": "${eau}L",
+    "perteEstimee": "${Math.round(perteVisee * 10) / 10}kg en ${nutritionForm.duree} semaines",
+    "rythmePerteRecommande": "0.4-0.5 kg/semaine (optimal pour préserver la masse musculaire)"
   },
-  "conseils": [
-    "Conseil personnalisé 1 basé sur le profil",
-    "Conseil personnalisé 2",
-    "Conseil personnalisé 3",
-    "Conseil personnalisé 4",
-    "Conseil personnalisé 5"
+  "principesScientifiques": [
+    {
+      "principe": "Nom du principe scientifique",
+      "explication": "Explication vulgarisée mais précise",
+      "applicationPratique": "Comment c'est appliqué dans ce programme",
+      "sourcesScientifiques": "Référence aux études (ex: 'Méta-analyse 2023, Journal of Nutrition')"
+    }
+  ],
+  "conseilsPersonnalises": [
+    {
+      "conseil": "Conseil ultra-personnalisé basé sur le profil",
+      "pourquoi": "Explication scientifique de pourquoi ce conseil est crucial pour CETTE cliente",
+      "comment": "Instructions pratiques détaillées pour appliquer ce conseil",
+      "beneficesAttendus": "Ce que la cliente peut espérer en suivant ce conseil"
+    }
+  ],
+  "chronoNutrition": {
+    "explication": "Pourquoi le timing des repas est crucial pour cette cliente",
+    "petitDejeunerIdeal": "Horaire optimal et pourquoi",
+    "dejeunerIdeal": "Horaire optimal et pourquoi",
+    "dinerIdeal": "Horaire optimal et pourquoi (au moins 3h avant le coucher)",
+    "fenetreAlimentaire": "Durée recommandée entre premier et dernier repas"
+  },
+  "supplementsRecommandes": [
+    {
+      "supplement": "Nom du supplément si vraiment nécessaire",
+      "dosage": "Dosage précis",
+      "timing": "Quand le prendre",
+      "pourquoi": "Justification scientifique",
+      "duree": "Durée de supplémentation recommandée",
+      "precautions": "Précautions éventuelles"
+    }
+  ],
+  "alimentsSuperStars": [
+    {
+      "aliment": "Nom de l'aliment à privilégier",
+      "pourquoi": "Pourquoi cet aliment est particulièrement bénéfique pour CE profil",
+      "nutrimentsCles": ["Nutriment 1", "Nutriment 2"],
+      "frequenceRecommandee": "Combien de fois par semaine",
+      "meilleurePreparation": "Comment le préparer pour maximiser les bénéfices"
+    }
+  ],
+  "alimentsAEviter": [
+    {
+      "aliment": "Aliment à limiter ou éviter",
+      "pourquoi": "Raison scientifique spécifique à ce profil",
+      "alternative": "Alternative saine et satisfaisante"
+    }
   ],
   "semaines": [
     {
       "numero": 1,
-      "theme": "Titre de la semaine (ex: Détox et mise en route)",
-      "objectif": "Objectif spécifique de cette semaine",
+      "theme": "Thème scientifique de la semaine (ex: 'Rééquilibrage de la glycémie et détoxification hépatique')",
+      "objectifScientifique": "Objectif physiologique précis de cette semaine",
+      "focusNutritionnel": "Sur quoi on met l'accent cette semaine et pourquoi",
+      "conseilSemaine": "Conseil comportemental spécifique pour cette semaine",
       "jours": [
         {
           "jour": "Lundi",
+          "themeJour": "Mini-thème ou focus du jour",
           "petitDejeuner": {
-            "plat": "Nom du plat",
-            "ingredients": ["ingrédient 1", "ingrédient 2"],
-            "calories": 350,
-            "preparation": "Instructions courtes"
+            "plat": "Nom appétissant du plat",
+            "description": "Description qui donne envie",
+            "ingredients": [
+              {"item": "ingrédient 1", "quantite": "quantité précise", "benefice": "pourquoi cet ingrédient"}
+            ],
+            "macros": {"calories": 350, "proteines": 20, "glucides": 35, "lipides": 15, "fibres": 6},
+            "indiceClygemique": "Bas/Moyen/Haut",
+            "tempsPreparation": "X min",
+            "preparation": "Instructions détaillées étape par étape",
+            "astucesChef": "Astuce pour rendre le plat encore meilleur",
+            "variante": "Variante possible si besoin de changement",
+            "beneficesSante": "Pourquoi ce petit-déjeuner est optimal pour commencer la journée"
           },
           "dejeuner": {
-            "plat": "Nom du plat",
-            "ingredients": ["ingrédient 1", "ingrédient 2"],
-            "calories": 450,
-            "preparation": "Instructions courtes"
+            "plat": "Nom appétissant",
+            "description": "Description appétissante",
+            "ingredients": [
+              {"item": "ingrédient", "quantite": "quantité", "benefice": "bénéfice"}
+            ],
+            "macros": {"calories": 450, "proteines": 35, "glucides": 40, "lipides": 18, "fibres": 8},
+            "indiceClygemique": "Bas",
+            "tempsPreparation": "X min",
+            "preparation": "Instructions détaillées",
+            "astucesChef": "Astuce",
+            "variante": "Variante",
+            "beneficesSante": "Bénéfices santé de ce repas"
           },
           "collation": {
             "plat": "Nom de la collation",
-            "calories": 150
+            "ingredients": ["ingrédient avec quantité"],
+            "macros": {"calories": 150, "proteines": 8, "glucides": 15, "lipides": 6},
+            "timing": "Moment optimal pour cette collation",
+            "pourquoi": "Pourquoi cette collation à ce moment"
           },
           "diner": {
-            "plat": "Nom du plat",
-            "ingredients": ["ingrédient 1", "ingrédient 2"],
-            "calories": 400,
-            "preparation": "Instructions courtes"
-          }
+            "plat": "Nom appétissant",
+            "description": "Description",
+            "ingredients": [
+              {"item": "ingrédient", "quantite": "quantité", "benefice": "bénéfice"}
+            ],
+            "macros": {"calories": 400, "proteines": 30, "glucides": 30, "lipides": 18, "fibres": 10},
+            "indiceClygemique": "Bas",
+            "tempsPreparation": "X min",
+            "preparation": "Instructions détaillées",
+            "astucesChef": "Astuce",
+            "pourquoiLeSoir": "Pourquoi ce type de repas est idéal le soir"
+          },
+          "hydratation": "Objectif hydratation du jour et astuces",
+          "activitePhysiqueConseillee": "Suggestion d'activité adaptée pour ce jour",
+          "totalJour": {"calories": 1350, "proteines": 93, "glucides": 120, "lipides": 57, "fibres": 28}
         }
-      ]
+      ],
+      "bilanSemaine": {
+        "calories": "Total calories semaine",
+        "deficitTotal": "Déficit cumulé",
+        "pertePotentielle": "Perte de poids estimée cette semaine",
+        "objectifAtteint": "Ce que le corps aura accompli"
+      }
     }
   ],
-  "listeCoursesSemaine1": {
-    "fruits": ["pommes x4", "bananes x3", "citrons x2"],
-    "legumes": ["courgettes x3", "tomates x6", "salade x2"],
-    "proteines": ["poulet 500g", "oeufs x12", "saumon 300g"],
-    "feculents": ["riz complet 500g", "quinoa 300g"],
-    "produitsFrais": ["yaourt grec x4", "fromage blanc 500g"],
-    "epicerie": ["huile olive", "épices"],
-    "budgetEstime": "XX€"
-  },
-  "recettesPhares": [
+  "listesCourses": [
+    {
+      "semaine": 1,
+      "fruits": [{"item": "Pommes Bio Gala", "quantite": "6", "prix_estime": "3€", "conservation": "1 semaine au frigo"}],
+      "legumes": [{"item": "Brocoli", "quantite": "2 têtes", "prix_estime": "2.50€", "conservation": "4-5 jours"}],
+      "proteinesAnimales": [{"item": "Filet de poulet fermier", "quantite": "600g", "prix_estime": "8€", "conservation": "3 jours ou congeler"}],
+      "proteinesVegetales": [{"item": "Lentilles vertes", "quantite": "500g", "prix_estime": "2€", "conservation": "Plusieurs mois"}],
+      "produitsFrais": [{"item": "Yaourt grec 0%", "quantite": "4 pots", "prix_estime": "3€", "pourquoi": "Riche en protéines, probiotiques"}],
+      "feculentsComplexes": [{"item": "Quinoa", "quantite": "400g", "prix_estime": "4€", "pourquoi": "Protéines complètes, IG bas"}],
+      "bonnesGraisses": [{"item": "Huile d'olive extra vierge", "quantite": "50cl", "prix_estime": "6€", "utilisation": "Assaisonnement à froid"}],
+      "epicerie": [{"item": "Curcuma + poivre noir", "quantite": "1 pot", "prix_estime": "3€", "benefice": "Anti-inflammatoire puissant"}],
+      "budgetTotal": "XX€",
+      "astucesEconomies": ["Astuce 1 pour économiser", "Astuce 2"]
+    }
+  ],
+  "recettesSignatures": [
     {
       "nom": "Nom de la recette signature",
+      "categorie": "Petit-déjeuner/Déjeuner/Dîner",
+      "difficulte": "Facile/Moyen/Élaboré",
+      "tempsTotal": "XX min",
       "tempsPreparation": "XX min",
-      "ingredients": ["ingrédient 1 - quantité", "ingrédient 2 - quantité"],
-      "etapes": ["Étape 1", "Étape 2", "Étape 3"],
-      "calories": 400,
-      "astuce": "Astuce du chef"
+      "tempsCuisson": "XX min",
+      "portions": 2,
+      "conservation": "Comment et combien de temps conserver",
+      "scoreNutritionnel": "9/10",
+      "pourquoiCetteRecette": "Pourquoi cette recette est parfaite pour ce profil",
+      "ingredients": [
+        {"item": "Ingrédient", "quantite": "Quantité précise", "substitut": "Alternative si besoin", "role": "Rôle dans la recette"}
+      ],
+      "materielNecessaire": ["Poêle anti-adhésive", "Mixeur"],
+      "etapesDetaillees": [
+        {"etape": 1, "instruction": "Instruction détaillée", "astuce": "Astuce pro pour cette étape", "duree": "2 min"},
+        {"etape": 2, "instruction": "Instruction", "astuce": "Astuce", "duree": "5 min"}
+      ],
+      "macrosParPortion": {"calories": 400, "proteines": 30, "glucides": 35, "lipides": 15, "fibres": 8},
+      "beneficesSante": ["Bénéfice 1", "Bénéfice 2", "Bénéfice 3"],
+      "variantes": [
+        {"nom": "Variante végétarienne", "modification": "Remplacer X par Y"},
+        {"nom": "Version express", "modification": "Simplification pour gagner du temps"}
+      ],
+      "accordsParfaits": "Avec quoi accompagner ce plat",
+      "noteDuChef": "Conseil du chef pour sublimer cette recette"
     }
-  ]
+  ],
+  "planBatchCooking": {
+    "explication": "Comment préparer plusieurs repas en une seule session pour gagner du temps",
+    "jourPreparation": "Dimanche (2h de préparation)",
+    "recettesABatcher": ["Recette 1 qui se conserve bien", "Recette 2"],
+    "contenantsNecessaires": ["X boîtes hermétiques", "Bocaux en verre"],
+    "ordrePreparation": ["1. Commencer par...", "2. Pendant que X cuit, préparer Y...", "3. Finaliser..."],
+    "conservationOptimale": "Comment stocker pour la semaine"
+  },
+  "gestionEcarts": {
+    "philosophie": "Les écarts font partie de la vie et ne ruinent pas les progrès",
+    "strategieRepasLibre": "Comment intégrer 1-2 repas plaisir par semaine sans culpabilité",
+    "recuperationApresExces": "Quoi faire le lendemain d'un écart pour revenir sur les rails",
+    "alimentsPlaisirAutorises": ["Aliment plaisir 1 (version saine)", "Aliment 2"],
+    "gestionFringales": ["Astuce 1 contre les fringales", "Astuce 2", "Astuce 3"]
+  },
+  "suiviProgression": {
+    "indicateursASuivre": ["Poids (1x/semaine, même jour, même heure)", "Mensurations (toutes les 2 semaines)", "Énergie (échelle 1-10)", "Qualité du sommeil"],
+    "signesPositifs": ["Signe 1 que le programme fonctionne", "Signe 2", "Signe 3"],
+    "signesAjustementNecessaire": ["Si X, alors ajuster Y", "Si fatigue persistante, augmenter glucides de 20g"],
+    "plateauPrevention": "Comment éviter et gérer les plateaux de perte de poids"
+  },
+  "faq": [
+    {
+      "question": "Question fréquente 1 adaptée au profil",
+      "reponse": "Réponse détaillée et scientifique"
+    },
+    {
+      "question": "Puis-je boire de l'alcool ?",
+      "reponse": "Réponse nuancée et pratique"
+    }
+  ],
+  "messageMotivation": "Message personnalisé et motivant pour cette cliente, avec son prénom, qui lui donne envie de commencer et de tenir sur la durée"
 }
 
-IMPORTANT : 
-- Génère un programme COMPLET pour ${nutritionForm.duree} semaines (${nutritionForm.duree} objets dans le tableau "semaines")
-- Chaque semaine doit avoir 7 jours complets (Lundi à Dimanche)
-- Varie les repas, ne répète JAMAIS le même plat 2 jours de suite
-- Adapte les recettes au temps de cuisine (${nutritionForm.tempsCuisine})
-- Adapte au budget (${nutritionForm.budgetCourses})
-- Respecte TOUTES les contraintes alimentaires
-- Les recettes doivent être réalistes et les ingrédients trouvables en supermarché français`;
+══════════════════════════════════════════════════════════════
+🎯 INSTRUCTIONS CRITIQUES POUR UN PROGRAMME PARFAIT
+══════════════════════════════════════════════════════════════
 
-      // Appel via webhook n8n (proxy pour éviter les erreurs CORS en production)
+1. PERSONNALISATION MAXIMALE : Chaque élément doit être adapté à CE profil spécifique, pas de généralités
+2. SCIENCE VULGARISÉE : Explique le "pourquoi" de chaque recommandation de façon accessible mais précise
+3. VARIÉTÉ ABSOLUE : JAMAIS le même plat 2 jours de suite, JAMAIS les mêmes ingrédients trop souvent
+4. PLAISIR GUSTATIF : Les recettes doivent donner ENVIE, pas l'impression de régime triste
+5. PRATICITÉ : Respecter strictement le temps de cuisine (${nutritionForm.tempsCuisine}) et budget (${nutritionForm.budgetCourses})
+6. PROGRESSION : Chaque semaine doit avoir un thème et objectif qui fait progresser vers l'objectif final
+7. COMPLÉTUDE : Génère TOUTES les ${nutritionForm.duree} semaines avec 7 jours COMPLETS chacune
+8. INGRÉDIENTS FRANÇAIS : Tous les ingrédients doivent être trouvables en supermarché français standard
+9. RECETTES SIGNATURES : 5-6 recettes détaillées qui deviendront les favorites de la cliente
+10. BIENVEILLANCE : Ton encourageant, pas culpabilisant, qui donne confiance
+
+CE PROGRAMME DOIT ÊTRE LE MEILLEUR QUE CETTE CLIENTE PUISSE RECEVOIR DE SA VIE.`;
+
+      // Appel via webhook n8n (proxy OpenAI GPT-4o)
       const response = await fetch('https://n8n.srv819641.hstgr.cloud/webhook/generate-nutrition', {
         method: 'POST',
         headers: {
@@ -5351,12 +5542,26 @@ IMPORTANT :
   const exportNutritionPDF = (programme, client) => {
     if (!programme || programme.error) return;
     
+    // Helper pour gérer les différentes structures de données
+    const getRepasCalories = (repas) => {
+      if (!repas) return 0;
+      if (repas.macros?.calories) return repas.macros.calories;
+      if (repas.calories) return repas.calories;
+      return 0;
+    };
+    
+    const getRepasProteines = (repas) => {
+      if (!repas) return 0;
+      if (repas.macros?.proteines) return repas.macros.proteines;
+      return 0;
+    };
+    
     const content = `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Programme Nutrition - ${client.nom}</title>
+  <title>Programme Nutrition Premium - ${client.nom}</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap');
     
@@ -5365,9 +5570,11 @@ IMPORTANT :
       font-family: 'Inter', sans-serif; 
       background: #fff; 
       color: #333;
-      line-height: 1.6;
+      line-height: 1.7;
+      font-size: 11pt;
     }
     
+    /* Cover Page */
     .cover {
       height: 100vh;
       background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%);
@@ -5379,56 +5586,46 @@ IMPORTANT :
       text-align: center;
       padding: 40px;
       page-break-after: always;
+      position: relative;
     }
     
-    .cover-logo {
-      font-family: 'Playfair Display', serif;
-      font-size: 48px;
-      color: #c9a962;
-      margin-bottom: 20px;
+    .cover::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c9a962' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
     }
     
-    .cover-title {
-      font-size: 32px;
-      margin-bottom: 10px;
-    }
-    
-    .cover-subtitle {
-      font-size: 18px;
-      color: #888;
-      margin-bottom: 40px;
-    }
-    
-    .cover-client {
-      font-size: 24px;
-      color: #c9a962;
-      margin-bottom: 10px;
-    }
+    .cover-content { position: relative; z-index: 1; }
+    .cover-logo { font-family: 'Playfair Display', serif; font-size: 56px; color: #c9a962; margin-bottom: 10px; letter-spacing: 3px; }
+    .cover-tagline { font-size: 14px; color: #888; letter-spacing: 5px; text-transform: uppercase; margin-bottom: 50px; }
+    .cover-title { font-size: 36px; font-weight: 300; margin-bottom: 10px; }
+    .cover-subtitle { font-size: 16px; color: #c9a962; margin-bottom: 60px; }
+    .cover-client { font-size: 28px; color: white; margin-bottom: 5px; font-family: 'Playfair Display', serif; }
+    .cover-date { font-size: 14px; color: #666; }
     
     .cover-stats {
       display: flex;
-      gap: 40px;
-      margin-top: 40px;
+      gap: 60px;
+      margin-top: 50px;
+      padding: 30px 50px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 20px;
+      border: 1px solid rgba(201, 169, 98, 0.2);
     }
     
-    .cover-stat {
-      text-align: center;
-    }
+    .cover-stat { text-align: center; }
+    .cover-stat-value { font-size: 42px; font-weight: 700; color: #c9a962; font-family: 'Playfair Display', serif; }
+    .cover-stat-label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 2px; margin-top: 5px; }
     
-    .cover-stat-value {
-      font-size: 36px;
-      font-weight: 700;
-      color: #c9a962;
-    }
-    
-    .cover-stat-label {
-      font-size: 14px;
-      color: #888;
-    }
-    
+    /* Pages */
     .page {
-      padding: 40px;
+      padding: 50px;
       page-break-after: always;
+      min-height: 100vh;
     }
     
     .page-title {
@@ -5438,12 +5635,24 @@ IMPORTANT :
       margin-bottom: 30px;
       padding-bottom: 15px;
       border-bottom: 3px solid #c9a962;
+      display: flex;
+      align-items: center;
+      gap: 15px;
     }
     
-    .section {
-      margin-bottom: 30px;
+    .page-title-icon {
+      width: 50px;
+      height: 50px;
+      background: linear-gradient(135deg, #c9a962, #e0c285);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
     }
     
+    /* Sections */
+    .section { margin-bottom: 35px; }
     .section-title {
       font-size: 18px;
       font-weight: 600;
@@ -5454,178 +5663,227 @@ IMPORTANT :
       gap: 10px;
     }
     
-    .resume-grid {
+    /* Cards Grid */
+    .stats-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
+      gap: 15px;
       margin-bottom: 30px;
     }
     
-    .resume-card {
-      background: #f8f9fa;
+    .stat-card {
+      background: linear-gradient(135deg, #f8f9fa, #fff);
       padding: 20px;
-      border-radius: 12px;
+      border-radius: 16px;
       text-align: center;
-      border-left: 4px solid #c9a962;
-    }
-    
-    .resume-card-value {
-      font-size: 24px;
-      font-weight: 700;
-      color: #c9a962;
-    }
-    
-    .resume-card-label {
-      font-size: 12px;
-      color: #666;
-      text-transform: uppercase;
-    }
-    
-    .conseil {
-      background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-      padding: 15px 20px;
-      border-radius: 8px;
-      margin-bottom: 10px;
-      border-left: 4px solid #22c55e;
-    }
-    
-    .jour-card {
-      background: #fff;
       border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      margin-bottom: 20px;
+      position: relative;
       overflow: hidden;
     }
     
-    .jour-header {
-      background: linear-gradient(135deg, #1a1a2e 0%, #2d2d44 100%);
-      color: white;
-      padding: 15px 20px;
-      font-weight: 600;
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #c9a962, #e0c285);
     }
     
-    .jour-content {
-      padding: 20px;
+    .stat-card-value { font-size: 28px; font-weight: 700; color: #c9a962; font-family: 'Playfair Display', serif; }
+    .stat-card-label { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; }
+    
+    /* Analysis Box */
+    .analysis-box {
+      background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+      border-radius: 16px;
+      padding: 25px;
+      margin-bottom: 25px;
+      border-left: 5px solid #22c55e;
     }
+    
+    .analysis-title { font-weight: 600; color: #166534; margin-bottom: 10px; font-size: 16px; }
+    .analysis-text { color: #15803d; line-height: 1.8; }
+    
+    /* Conseil Cards */
+    .conseil-card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 15px;
+      border-left: 4px solid #c9a962;
+    }
+    
+    .conseil-title { font-weight: 600; color: #1a1a2e; margin-bottom: 8px; }
+    .conseil-why { color: #666; font-size: 13px; margin-bottom: 8px; font-style: italic; }
+    .conseil-how { color: #333; }
+    
+    /* Day Card */
+    .jour-card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      margin-bottom: 25px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    
+    .jour-header {
+      background: linear-gradient(135deg, #1a1a2e, #2d2d44);
+      color: white;
+      padding: 15px 25px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .jour-title { font-weight: 600; font-size: 16px; }
+    .jour-theme { font-size: 12px; color: #c9a962; }
+    .jour-total { font-size: 12px; color: #888; }
+    
+    .jour-content { padding: 20px; }
     
     .repas {
+      display: flex;
+      gap: 15px;
+      padding: 18px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .repas:last-child { border-bottom: none; }
+    
+    .repas-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+    
+    .repas-icon.breakfast { background: linear-gradient(135deg, #fef3c7, #fde68a); }
+    .repas-icon.lunch { background: linear-gradient(135deg, #dbeafe, #bfdbfe); }
+    .repas-icon.snack { background: linear-gradient(135deg, #f3e8ff, #e9d5ff); }
+    .repas-icon.dinner { background: linear-gradient(135deg, #fce7f3, #fbcfe8); }
+    
+    .repas-content { flex: 1; }
+    .repas-type { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }
+    .repas-plat { font-weight: 600; color: #1a1a2e; font-size: 15px; margin-bottom: 5px; }
+    .repas-description { font-size: 13px; color: #666; margin-bottom: 8px; }
+    
+    .repas-macros {
+      display: flex;
+      gap: 15px;
+      font-size: 11px;
+      color: #888;
+    }
+    
+    .repas-macro { display: flex; align-items: center; gap: 4px; }
+    .repas-macro-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .repas-macro-dot.cal { background: #c9a962; }
+    .repas-macro-dot.prot { background: #ef4444; }
+    .repas-macro-dot.carb { background: #f59e0b; }
+    .repas-macro-dot.fat { background: #3b82f6; }
+    
+    /* Recipe Card */
+    .recette-card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 30px;
+      margin-bottom: 25px;
+      page-break-inside: avoid;
+    }
+    
+    .recette-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #f0f0f0;
+    }
+    
+    .recette-title { font-family: 'Playfair Display', serif; font-size: 22px; color: #1a1a2e; margin-bottom: 5px; }
+    .recette-category { font-size: 12px; color: #c9a962; text-transform: uppercase; letter-spacing: 1px; }
+    
+    .recette-meta {
+      display: flex;
+      gap: 20px;
+      font-size: 13px;
+      color: #666;
+    }
+    
+    .recette-meta-item { display: flex; align-items: center; gap: 5px; }
+    
+    .recette-score {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: white;
+      padding: 10px 15px;
+      border-radius: 12px;
+      text-align: center;
+    }
+    
+    .recette-score-value { font-size: 20px; font-weight: 700; }
+    .recette-score-label { font-size: 10px; text-transform: uppercase; }
+    
+    .recette-why {
+      background: linear-gradient(135deg, #fef3c7, #fde68a);
+      padding: 15px 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      color: #92400e;
+    }
+    
+    .recette-section-title {
+      font-weight: 600;
+      color: #1a1a2e;
+      margin-bottom: 12px;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .recette-ingredients {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-bottom: 25px;
+    }
+    
+    .recette-ingredient {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      padding: 8px 12px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+    
+    .recette-ingredient-dot { width: 6px; height: 6px; background: #c9a962; border-radius: 50%; flex-shrink: 0; }
+    
+    .recette-etapes { counter-reset: step; }
+    
+    .recette-etape {
       display: flex;
       gap: 15px;
       padding: 15px 0;
       border-bottom: 1px solid #f0f0f0;
     }
     
-    .repas:last-child {
-      border-bottom: none;
-    }
+    .recette-etape:last-child { border-bottom: none; }
     
-    .repas-icon {
-      width: 40px;
-      height: 40px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 20px;
-      flex-shrink: 0;
-    }
-    
-    .repas-icon.breakfast { background: #fef3c7; }
-    .repas-icon.lunch { background: #dbeafe; }
-    .repas-icon.snack { background: #f3e8ff; }
-    .repas-icon.dinner { background: #fce7f3; }
-    
-    .repas-content {
-      flex: 1;
-    }
-    
-    .repas-title {
-      font-weight: 600;
-      color: #1a1a2e;
-      margin-bottom: 5px;
-    }
-    
-    .repas-plat {
-      color: #c9a962;
-      font-weight: 500;
-    }
-    
-    .repas-calories {
-      font-size: 12px;
-      color: #888;
-    }
-    
-    .liste-courses {
-      columns: 2;
-      column-gap: 30px;
-    }
-    
-    .liste-categorie {
-      break-inside: avoid;
-      margin-bottom: 20px;
-    }
-    
-    .liste-categorie-title {
-      font-weight: 600;
-      color: #1a1a2e;
-      margin-bottom: 10px;
-      padding-bottom: 5px;
-      border-bottom: 2px solid #c9a962;
-    }
-    
-    .liste-item {
-      padding: 5px 0;
-      padding-left: 20px;
-      position: relative;
-    }
-    
-    .liste-item:before {
-      content: "□";
-      position: absolute;
-      left: 0;
-      color: #c9a962;
-    }
-    
-    .recette {
-      background: #fff;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      padding: 25px;
-      margin-bottom: 20px;
-    }
-    
-    .recette-title {
-      font-family: 'Playfair Display', serif;
-      font-size: 20px;
-      color: #1a1a2e;
-      margin-bottom: 15px;
-    }
-    
-    .recette-meta {
-      display: flex;
-      gap: 20px;
-      margin-bottom: 20px;
-      color: #888;
-      font-size: 14px;
-    }
-    
-    .recette-etapes {
-      counter-reset: step;
-    }
-    
-    .recette-etape {
-      padding: 10px 0 10px 40px;
-      position: relative;
-    }
-    
-    .recette-etape:before {
-      counter-increment: step;
-      content: counter(step);
-      position: absolute;
-      left: 0;
-      width: 28px;
-      height: 28px;
-      background: #c9a962;
+    .recette-etape-num {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #c9a962, #e0c285);
       color: white;
       border-radius: 50%;
       display: flex;
@@ -5633,242 +5891,669 @@ IMPORTANT :
       justify-content: center;
       font-weight: 600;
       font-size: 14px;
+      flex-shrink: 0;
     }
     
+    .recette-etape-content { flex: 1; }
+    .recette-etape-text { color: #333; }
+    .recette-etape-tip { font-size: 12px; color: #c9a962; margin-top: 5px; font-style: italic; }
+    
+    .recette-macros-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 2px solid #f0f0f0;
+    }
+    
+    .recette-macro-card { text-align: center; padding: 10px; background: #f8f9fa; border-radius: 8px; }
+    .recette-macro-value { font-size: 18px; font-weight: 700; color: #1a1a2e; }
+    .recette-macro-label { font-size: 10px; color: #888; text-transform: uppercase; }
+    
+    /* Shopping List */
+    .shopping-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+    
+    .shopping-category {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    
+    .shopping-category-title {
+      font-weight: 600;
+      color: #1a1a2e;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #c9a962;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .shopping-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .shopping-item:last-child { border-bottom: none; }
+    
+    .shopping-checkbox {
+      width: 18px;
+      height: 18px;
+      border: 2px solid #c9a962;
+      border-radius: 4px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    
+    .shopping-item-content { flex: 1; }
+    .shopping-item-name { font-weight: 500; color: #1a1a2e; }
+    .shopping-item-qty { font-size: 12px; color: #666; }
+    .shopping-item-price { font-size: 12px; color: #c9a962; }
+    
+    /* Tips Box */
+    .tips-box {
+      background: linear-gradient(135deg, #eff6ff, #dbeafe);
+      border-radius: 16px;
+      padding: 25px;
+      margin-bottom: 25px;
+    }
+    
+    .tips-title { font-weight: 600; color: #1e40af; margin-bottom: 15px; }
+    .tips-list { list-style: none; }
+    .tips-item { padding: 8px 0; padding-left: 25px; position: relative; color: #1e3a8a; }
+    .tips-item::before { content: '💡'; position: absolute; left: 0; }
+    
+    /* FAQ */
+    .faq-item {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 15px;
+    }
+    
+    .faq-question { font-weight: 600; color: #1a1a2e; margin-bottom: 10px; display: flex; align-items: flex-start; gap: 10px; }
+    .faq-answer { color: #666; padding-left: 30px; }
+    
+    /* Motivation Box */
+    .motivation-box {
+      background: linear-gradient(135deg, #c9a962, #e0c285);
+      color: white;
+      border-radius: 20px;
+      padding: 40px;
+      text-align: center;
+      margin-top: 30px;
+    }
+    
+    .motivation-text {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      font-style: italic;
+      line-height: 1.8;
+    }
+    
+    /* Footer */
     .footer {
       text-align: center;
-      padding: 20px;
+      padding: 30px;
       color: #888;
-      font-size: 12px;
+      font-size: 11px;
       border-top: 1px solid #e5e7eb;
     }
     
+    /* Disclaimer */
     .disclaimer {
       background: #fef3c7;
       padding: 20px;
       border-radius: 12px;
       margin-top: 30px;
-      font-size: 12px;
+      font-size: 11px;
       color: #92400e;
+      border: 1px solid #fcd34d;
     }
     
     @media print {
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .page { page-break-after: always; }
     }
   </style>
 </head>
 <body>
-  <!-- Page de couverture -->
+  <!-- COVER PAGE -->
   <div class="cover">
-    <div class="cover-logo">SLIM TOUCH</div>
-    <div class="cover-title">Programme Nutritionnel Personnalisé</div>
-    <div class="cover-subtitle">Créé par notre IA Nutritionniste Expert</div>
-    <div class="cover-client">${client.nom}</div>
-    <div class="cover-stats">
-      <div class="cover-stat">
-        <div class="cover-stat-value">${programme.metadata?.poidsDepart || client.poidsActuel}kg</div>
-        <div class="cover-stat-label">Poids de départ</div>
-      </div>
-      <div class="cover-stat">
-        <div class="cover-stat-value">→</div>
-        <div class="cover-stat-label"></div>
-      </div>
-      <div class="cover-stat">
-        <div class="cover-stat-value">${programme.metadata?.poidsObjectif || client.objectif}kg</div>
-        <div class="cover-stat-label">Objectif</div>
-      </div>
-    </div>
-    <div style="margin-top: 60px; color: #666;">
-      Programme de ${programme.metadata?.duree || 4} semaines<br>
-      Généré le ${new Date().toLocaleDateString('fr-FR')}
-    </div>
-  </div>
-  
-  <!-- Page Résumé -->
-  <div class="page">
-    <h1 class="page-title">📊 Votre Programme en Résumé</h1>
-    
-    <div class="resume-grid">
-      <div class="resume-card">
-        <div class="resume-card-value">${programme.resume?.caloriesJour || 1400}</div>
-        <div class="resume-card-label">Calories / jour</div>
-      </div>
-      <div class="resume-card">
-        <div class="resume-card-value">${programme.resume?.proteines || '90g'}</div>
-        <div class="resume-card-label">Protéines</div>
-      </div>
-      <div class="resume-card">
-        <div class="resume-card-value">${programme.resume?.glucides || '130g'}</div>
-        <div class="resume-card-label">Glucides</div>
-      </div>
-      <div class="resume-card">
-        <div class="resume-card-value">${programme.resume?.lipides || '55g'}</div>
-        <div class="resume-card-label">Lipides</div>
-      </div>
-      <div class="resume-card">
-        <div class="resume-card-value">${programme.resume?.hydratation || '2L'}</div>
-        <div class="resume-card-label">Hydratation</div>
-      </div>
-      <div class="resume-card">
-        <div class="resume-card-value">${programme.resume?.perteEstimee || '-4kg'}</div>
-        <div class="resume-card-label">Perte estimée</div>
-      </div>
-    </div>
-    
-    <div class="section">
-      <h2 class="section-title">💡 Conseils Personnalisés</h2>
-      ${(programme.conseils || []).map(c => `<div class="conseil">✓ ${c}</div>`).join('')}
-    </div>
-    
-    <div class="disclaimer">
-      <strong>⚠️ Avertissement :</strong> Ce programme nutritionnel est généré à titre informatif et ne remplace pas l'avis d'un médecin ou diététicien diplômé. Consultez un professionnel de santé avant tout changement alimentaire important, notamment si vous avez des pathologies particulières.
-    </div>
-  </div>
-  
-  <!-- Pages des semaines -->
-  ${(programme.semaines || []).map((semaine, idx) => `
-    <div class="page">
-      <h1 class="page-title">📅 Semaine ${semaine.numero || idx + 1} - ${semaine.theme || 'Programme'}</h1>
-      <p style="color: #666; margin-bottom: 30px;">${semaine.objectif || ''}</p>
+    <div class="cover-content">
+      <div class="cover-logo">SLIM TOUCH</div>
+      <div class="cover-tagline">Excellence Nutritionnelle</div>
+      <div class="cover-title">Programme Nutritionnel Personnalisé</div>
+      <div class="cover-subtitle">Créé par Intelligence Artificielle Nutritionniste Expert</div>
       
-      ${(semaine.jours || []).slice(0, 4).map(jour => `
-        <div class="jour-card">
-          <div class="jour-header">${jour.jour}</div>
-          <div class="jour-content">
-            <div class="repas">
-              <div class="repas-icon breakfast">🌅</div>
-              <div class="repas-content">
-                <div class="repas-title">Petit-déjeuner</div>
-                <div class="repas-plat">${jour.petitDejeuner?.plat || 'Non défini'}</div>
-                <div class="repas-calories">${jour.petitDejeuner?.calories || 0} kcal</div>
-              </div>
-            </div>
-            <div class="repas">
-              <div class="repas-icon lunch">☀️</div>
-              <div class="repas-content">
-                <div class="repas-title">Déjeuner</div>
-                <div class="repas-plat">${jour.dejeuner?.plat || 'Non défini'}</div>
-                <div class="repas-calories">${jour.dejeuner?.calories || 0} kcal</div>
-              </div>
-            </div>
-            ${jour.collation ? `
-            <div class="repas">
-              <div class="repas-icon snack">🍎</div>
-              <div class="repas-content">
-                <div class="repas-title">Collation</div>
-                <div class="repas-plat">${jour.collation?.plat || ''}</div>
-                <div class="repas-calories">${jour.collation?.calories || 0} kcal</div>
-              </div>
-            </div>
-            ` : ''}
-            <div class="repas">
-              <div class="repas-icon dinner">🌙</div>
-              <div class="repas-content">
-                <div class="repas-title">Dîner</div>
-                <div class="repas-plat">${jour.diner?.plat || 'Non défini'}</div>
-                <div class="repas-calories">${jour.diner?.calories || 0} kcal</div>
-              </div>
-            </div>
-          </div>
+      <div class="cover-client">${client.nom}</div>
+      <div class="cover-date">Généré le ${new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+      
+      <div class="cover-stats">
+        <div class="cover-stat">
+          <div class="cover-stat-value">${programme.metadata?.poidsDepart || client.poidsActuel}</div>
+          <div class="cover-stat-label">Poids actuel (kg)</div>
         </div>
-      `).join('')}
+        <div class="cover-stat">
+          <div class="cover-stat-value" style="font-size: 32px;">→</div>
+          <div class="cover-stat-label"></div>
+        </div>
+        <div class="cover-stat">
+          <div class="cover-stat-value">${programme.metadata?.poidsObjectif || client.objectif}</div>
+          <div class="cover-stat-label">Objectif (kg)</div>
+        </div>
+        <div class="cover-stat">
+          <div class="cover-stat-value">${programme.metadata?.duree || 4}</div>
+          <div class="cover-stat-label">Semaines</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- PAGE 1: ANALYSE PERSONNALISÉE -->
+  <div class="page">
+    <h1 class="page-title"><span class="page-title-icon">📊</span> Votre Analyse Personnalisée</h1>
+    
+    ${programme.analysePersonnalisee ? `
+    <div class="analysis-box">
+      <div class="analysis-title">🎯 Votre Profil Métabolique</div>
+      <div class="analysis-text">${programme.analysePersonnalisee.profilMetabolique || ''}</div>
     </div>
     
-    ${(semaine.jours || []).length > 4 ? `
-    <div class="page">
-      <h1 class="page-title">📅 Semaine ${semaine.numero || idx + 1} (suite)</h1>
-      ${(semaine.jours || []).slice(4).map(jour => `
-        <div class="jour-card">
-          <div class="jour-header">${jour.jour}</div>
-          <div class="jour-content">
-            <div class="repas">
-              <div class="repas-icon breakfast">🌅</div>
-              <div class="repas-content">
-                <div class="repas-title">Petit-déjeuner</div>
-                <div class="repas-plat">${jour.petitDejeuner?.plat || 'Non défini'}</div>
-                <div class="repas-calories">${jour.petitDejeuner?.calories || 0} kcal</div>
-              </div>
-            </div>
-            <div class="repas">
-              <div class="repas-icon lunch">☀️</div>
-              <div class="repas-content">
-                <div class="repas-title">Déjeuner</div>
-                <div class="repas-plat">${jour.dejeuner?.plat || 'Non défini'}</div>
-                <div class="repas-calories">${jour.dejeuner?.calories || 0} kcal</div>
-              </div>
-            </div>
-            ${jour.collation ? `
-            <div class="repas">
-              <div class="repas-icon snack">🍎</div>
-              <div class="repas-content">
-                <div class="repas-title">Collation</div>
-                <div class="repas-plat">${jour.collation?.plat || ''}</div>
-                <div class="repas-calories">${jour.collation?.calories || 0} kcal</div>
-              </div>
-            </div>
-            ` : ''}
-            <div class="repas">
-              <div class="repas-icon dinner">🌙</div>
-              <div class="repas-content">
-                <div class="repas-title">Dîner</div>
-                <div class="repas-plat">${jour.diner?.plat || 'Non défini'}</div>
-                <div class="repas-calories">${jour.diner?.calories || 0} kcal</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      `).join('')}
+    ${programme.analysePersonnalisee.strategieGlobale ? `
+    <div class="analysis-box" style="background: linear-gradient(135deg, #eff6ff, #dbeafe); border-color: #3b82f6;">
+      <div class="analysis-title" style="color: #1e40af;">🧠 Stratégie Nutritionnelle</div>
+      <div class="analysis-text" style="color: #1e3a8a;">${programme.analysePersonnalisee.strategieGlobale}</div>
     </div>
     ` : ''}
-  `).join('')}
-  
-  <!-- Page Liste de courses -->
-  <div class="page">
-    <h1 class="page-title">🛒 Liste de Courses - Semaine 1</h1>
-    <p style="color: #666; margin-bottom: 30px;">Budget estimé : ${programme.listeCoursesSemaine1?.budgetEstime || '60-80€'}</p>
     
-    <div class="liste-courses">
-      ${Object.entries(programme.listeCoursesSemaine1 || {})
-        .filter(([key]) => key !== 'budgetEstime')
-        .map(([categorie, items]) => `
-          <div class="liste-categorie">
-            <div class="liste-categorie-title">${categorie.charAt(0).toUpperCase() + categorie.slice(1)}</div>
-            ${(Array.isArray(items) ? items : []).map(item => `<div class="liste-item">${item}</div>`).join('')}
-          </div>
-        `).join('')}
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 25px;">
+      <div style="background: #fef2f2; padding: 20px; border-radius: 12px; border-left: 4px solid #ef4444;">
+        <div style="font-weight: 600; color: #dc2626; margin-bottom: 10px;">⚡ Défis identifiés</div>
+        <ul style="list-style: none; color: #991b1b;">
+          ${(programme.analysePersonnalisee.defisIdentifies || []).map(d => `<li style="padding: 5px 0;">• ${d}</li>`).join('')}
+        </ul>
+      </div>
+      <div style="background: #f0fdf4; padding: 20px; border-radius: 12px; border-left: 4px solid #22c55e;">
+        <div style="font-weight: 600; color: #16a34a; margin-bottom: 10px;">✨ Vos atouts</div>
+        <ul style="list-style: none; color: #166534;">
+          ${(programme.analysePersonnalisee.atoutsNutritionnels || []).map(a => `<li style="padding: 5px 0;">• ${a}</li>`).join('')}
+        </ul>
+      </div>
+    </div>
+    ` : ''}
+    
+    <!-- Résumé Macros -->
+    <div class="section" style="margin-top: 35px;">
+      <h2 class="section-title">📈 Vos Objectifs Nutritionnels Quotidiens</h2>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-card-value">${programme.resume?.caloriesJour || 1400}</div>
+          <div class="stat-card-label">Calories / jour</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value">${programme.resume?.proteines || '90g'}</div>
+          <div class="stat-card-label">Protéines</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value">${programme.resume?.glucides || '130g'}</div>
+          <div class="stat-card-label">Glucides</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value">${programme.resume?.lipides || '55g'}</div>
+          <div class="stat-card-label">Lipides</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value">${programme.resume?.fibres || '30g'}</div>
+          <div class="stat-card-label">Fibres</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value">${programme.resume?.hydratation || '2L'}</div>
+          <div class="stat-card-label">Eau / jour</div>
+        </div>
+      </div>
     </div>
   </div>
   
-  <!-- Page Recettes -->
-  ${(programme.recettesPhares || []).length > 0 ? `
+  <!-- PAGE 2: CONSEILS PERSONNALISÉS -->
   <div class="page">
-    <h1 class="page-title">👩‍🍳 Recettes Signatures</h1>
+    <h1 class="page-title"><span class="page-title-icon">💡</span> Vos Conseils Personnalisés</h1>
     
-    ${(programme.recettesPhares || []).map(recette => `
-      <div class="recette">
-        <h3 class="recette-title">${recette.nom}</h3>
-        <div class="recette-meta">
-          <span>⏱️ ${recette.tempsPreparation}</span>
-          <span>🔥 ${recette.calories} kcal</span>
+    ${(programme.conseilsPersonnalises || programme.conseils || []).slice(0, 5).map((conseil, i) => `
+    <div class="conseil-card">
+      <div class="conseil-title">${typeof conseil === 'object' ? conseil.conseil : conseil}</div>
+      ${typeof conseil === 'object' && conseil.pourquoi ? `<div class="conseil-why">📚 ${conseil.pourquoi}</div>` : ''}
+      ${typeof conseil === 'object' && conseil.comment ? `<div class="conseil-how">✅ ${conseil.comment}</div>` : ''}
+    </div>
+    `).join('')}
+    
+    ${programme.chronoNutrition ? `
+    <div class="section" style="margin-top: 30px;">
+      <h2 class="section-title">⏰ Chrono-nutrition : Vos Horaires Optimaux</h2>
+      <div style="background: linear-gradient(135deg, #fdf4ff, #fae8ff); padding: 25px; border-radius: 16px; border-left: 4px solid #a855f7;">
+        <p style="color: #7e22ce; margin-bottom: 15px;">${programme.chronoNutrition.explication || ''}</p>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+          <div style="text-align: center; padding: 15px; background: white; border-radius: 12px;">
+            <div style="font-size: 24px; margin-bottom: 5px;">🌅</div>
+            <div style="font-weight: 600; color: #1a1a2e;">Petit-déjeuner</div>
+            <div style="color: #a855f7; font-size: 14px;">${programme.chronoNutrition.petitDejeunerIdeal || '7h-8h'}</div>
+          </div>
+          <div style="text-align: center; padding: 15px; background: white; border-radius: 12px;">
+            <div style="font-size: 24px; margin-bottom: 5px;">☀️</div>
+            <div style="font-weight: 600; color: #1a1a2e;">Déjeuner</div>
+            <div style="color: #a855f7; font-size: 14px;">${programme.chronoNutrition.dejeunerIdeal || '12h-13h'}</div>
+          </div>
+          <div style="text-align: center; padding: 15px; background: white; border-radius: 12px;">
+            <div style="font-size: 24px; margin-bottom: 5px;">🌙</div>
+            <div style="font-weight: 600; color: #1a1a2e;">Dîner</div>
+            <div style="color: #a855f7; font-size: 14px;">${programme.chronoNutrition.dinerIdeal || '19h-20h'}</div>
+          </div>
         </div>
-        <div style="margin-bottom: 15px;">
-          <strong>Ingrédients :</strong>
-          <ul style="margin-top: 5px; padding-left: 20px;">
-            ${(recette.ingredients || []).map(ing => `<li>${ing}</li>`).join('')}
-          </ul>
-        </div>
-        <div class="recette-etapes">
-          ${(recette.etapes || []).map(etape => `<div class="recette-etape">${etape}</div>`).join('')}
-        </div>
-        ${recette.astuce ? `<div style="margin-top: 15px; padding: 10px; background: #fef3c7; border-radius: 8px; font-size: 14px;"><strong>💡 Astuce :</strong> ${recette.astuce}</div>` : ''}
       </div>
+    </div>
+    ` : ''}
+  </div>
+  
+  <!-- PAGE 3: ALIMENTS STARS & À ÉVITER -->
+  <div class="page">
+    <h1 class="page-title"><span class="page-title-icon">🌟</span> Vos Aliments Stars & À Éviter</h1>
+    
+    ${programme.alimentsSuperStars ? `
+    <div class="section">
+      <h2 class="section-title">⭐ Aliments à privilégier pour VOUS</h2>
+      <div style="display: grid; gap: 15px;">
+        ${(programme.alimentsSuperStars || []).slice(0, 5).map(aliment => `
+        <div style="background: linear-gradient(135deg, #f0fdf4, #dcfce7); padding: 20px; border-radius: 12px; display: flex; gap: 20px; align-items: flex-start;">
+          <div style="font-size: 32px;">${aliment.aliment?.includes('saumon') || aliment.aliment?.includes('poisson') ? '🐟' : aliment.aliment?.includes('œuf') ? '🥚' : aliment.aliment?.includes('légume') || aliment.aliment?.includes('brocoli') ? '🥦' : aliment.aliment?.includes('avocat') ? '🥑' : '🍽️'}</div>
+          <div style="flex: 1;">
+            <div style="font-weight: 600; color: #166534; font-size: 16px;">${aliment.aliment || ''}</div>
+            <div style="color: #15803d; margin-top: 5px; font-size: 13px;">${aliment.pourquoi || ''}</div>
+            <div style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
+              ${(aliment.nutrimentsCles || []).map(n => `<span style="background: white; padding: 4px 10px; border-radius: 20px; font-size: 11px; color: #166534;">${n}</span>`).join('')}
+            </div>
+            ${aliment.frequenceRecommandee ? `<div style="margin-top: 8px; font-size: 12px; color: #22c55e;">📅 ${aliment.frequenceRecommandee}</div>` : ''}
+          </div>
+        </div>
+        `).join('')}
+      </div>
+    </div>
+    ` : ''}
+    
+    ${programme.alimentsAEviter ? `
+    <div class="section" style="margin-top: 30px;">
+      <h2 class="section-title">🚫 Aliments à limiter</h2>
+      <div style="display: grid; gap: 12px;">
+        ${(programme.alimentsAEviter || []).slice(0, 4).map(aliment => `
+        <div style="background: #fef2f2; padding: 15px 20px; border-radius: 12px; border-left: 4px solid #ef4444; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-weight: 600; color: #dc2626;">${aliment.aliment || ''}</div>
+            <div style="color: #991b1b; font-size: 13px; margin-top: 3px;">${aliment.pourquoi || ''}</div>
+          </div>
+          ${aliment.alternative ? `<div style="background: #dcfce7; padding: 8px 15px; border-radius: 20px; font-size: 12px; color: #166534;">✓ Alternative : ${aliment.alternative}</div>` : ''}
+        </div>
+        `).join('')}
+      </div>
+    </div>
+    ` : ''}
+  </div>
+  
+  <!-- PAGES SEMAINES -->
+  ${(programme.semaines || []).map((semaine, semaineIdx) => `
+  <div class="page">
+    <h1 class="page-title"><span class="page-title-icon">📅</span> Semaine ${semaine.numero || semaineIdx + 1}</h1>
+    <div style="background: linear-gradient(135deg, #c9a962, #e0c285); color: white; padding: 20px; border-radius: 12px; margin-bottom: 25px;">
+      <div style="font-size: 20px; font-weight: 600; margin-bottom: 5px;">${semaine.theme || 'Programme de la semaine'}</div>
+      <div style="font-size: 14px; opacity: 0.9;">${semaine.objectifScientifique || semaine.objectif || ''}</div>
+      ${semaine.focusNutritionnel ? `<div style="font-size: 13px; margin-top: 10px; opacity: 0.8;">🎯 Focus : ${semaine.focusNutritionnel}</div>` : ''}
+    </div>
+    
+    ${(semaine.jours || []).slice(0, 3).map(jour => `
+    <div class="jour-card">
+      <div class="jour-header">
+        <div>
+          <div class="jour-title">${jour.jour}</div>
+          ${jour.themeJour ? `<div class="jour-theme">${jour.themeJour}</div>` : ''}
+        </div>
+        <div class="jour-total">${jour.totalJour?.calories || (getRepasCalories(jour.petitDejeuner) + getRepasCalories(jour.dejeuner) + getRepasCalories(jour.diner) + getRepasCalories(jour.collation))} kcal</div>
+      </div>
+      <div class="jour-content">
+        <div class="repas">
+          <div class="repas-icon breakfast">🌅</div>
+          <div class="repas-content">
+            <div class="repas-type">Petit-déjeuner</div>
+            <div class="repas-plat">${jour.petitDejeuner?.plat || 'Non défini'}</div>
+            ${jour.petitDejeuner?.description ? `<div class="repas-description">${jour.petitDejeuner.description}</div>` : ''}
+            <div class="repas-macros">
+              <span class="repas-macro"><span class="repas-macro-dot cal"></span>${getRepasCalories(jour.petitDejeuner)} kcal</span>
+              ${getRepasProteines(jour.petitDejeuner) ? `<span class="repas-macro"><span class="repas-macro-dot prot"></span>${getRepasProteines(jour.petitDejeuner)}g prot</span>` : ''}
+            </div>
+          </div>
+        </div>
+        <div class="repas">
+          <div class="repas-icon lunch">☀️</div>
+          <div class="repas-content">
+            <div class="repas-type">Déjeuner</div>
+            <div class="repas-plat">${jour.dejeuner?.plat || 'Non défini'}</div>
+            ${jour.dejeuner?.description ? `<div class="repas-description">${jour.dejeuner.description}</div>` : ''}
+            <div class="repas-macros">
+              <span class="repas-macro"><span class="repas-macro-dot cal"></span>${getRepasCalories(jour.dejeuner)} kcal</span>
+              ${getRepasProteines(jour.dejeuner) ? `<span class="repas-macro"><span class="repas-macro-dot prot"></span>${getRepasProteines(jour.dejeuner)}g prot</span>` : ''}
+            </div>
+          </div>
+        </div>
+        ${jour.collation ? `
+        <div class="repas">
+          <div class="repas-icon snack">🍎</div>
+          <div class="repas-content">
+            <div class="repas-type">Collation</div>
+            <div class="repas-plat">${jour.collation?.plat || ''}</div>
+            <div class="repas-macros">
+              <span class="repas-macro"><span class="repas-macro-dot cal"></span>${getRepasCalories(jour.collation)} kcal</span>
+            </div>
+          </div>
+        </div>
+        ` : ''}
+        <div class="repas">
+          <div class="repas-icon dinner">🌙</div>
+          <div class="repas-content">
+            <div class="repas-type">Dîner</div>
+            <div class="repas-plat">${jour.diner?.plat || 'Non défini'}</div>
+            ${jour.diner?.description ? `<div class="repas-description">${jour.diner.description}</div>` : ''}
+            <div class="repas-macros">
+              <span class="repas-macro"><span class="repas-macro-dot cal"></span>${getRepasCalories(jour.diner)} kcal</span>
+              ${getRepasProteines(jour.diner) ? `<span class="repas-macro"><span class="repas-macro-dot prot"></span>${getRepasProteines(jour.diner)}g prot</span>` : ''}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    `).join('')}
+  </div>
+  
+  <!-- Suite de la semaine si plus de 3 jours -->
+  ${(semaine.jours || []).length > 3 ? `
+  <div class="page">
+    <h1 class="page-title"><span class="page-title-icon">📅</span> Semaine ${semaine.numero || semaineIdx + 1} (suite)</h1>
+    ${(semaine.jours || []).slice(3).map(jour => `
+    <div class="jour-card">
+      <div class="jour-header">
+        <div>
+          <div class="jour-title">${jour.jour}</div>
+          ${jour.themeJour ? `<div class="jour-theme">${jour.themeJour}</div>` : ''}
+        </div>
+        <div class="jour-total">${jour.totalJour?.calories || (getRepasCalories(jour.petitDejeuner) + getRepasCalories(jour.dejeuner) + getRepasCalories(jour.diner) + getRepasCalories(jour.collation))} kcal</div>
+      </div>
+      <div class="jour-content">
+        <div class="repas">
+          <div class="repas-icon breakfast">🌅</div>
+          <div class="repas-content">
+            <div class="repas-type">Petit-déjeuner</div>
+            <div class="repas-plat">${jour.petitDejeuner?.plat || 'Non défini'}</div>
+            <div class="repas-macros"><span class="repas-macro"><span class="repas-macro-dot cal"></span>${getRepasCalories(jour.petitDejeuner)} kcal</span></div>
+          </div>
+        </div>
+        <div class="repas">
+          <div class="repas-icon lunch">☀️</div>
+          <div class="repas-content">
+            <div class="repas-type">Déjeuner</div>
+            <div class="repas-plat">${jour.dejeuner?.plat || 'Non défini'}</div>
+            <div class="repas-macros"><span class="repas-macro"><span class="repas-macro-dot cal"></span>${getRepasCalories(jour.dejeuner)} kcal</span></div>
+          </div>
+        </div>
+        ${jour.collation ? `
+        <div class="repas">
+          <div class="repas-icon snack">🍎</div>
+          <div class="repas-content">
+            <div class="repas-type">Collation</div>
+            <div class="repas-plat">${jour.collation?.plat || ''}</div>
+            <div class="repas-macros"><span class="repas-macro"><span class="repas-macro-dot cal"></span>${getRepasCalories(jour.collation)} kcal</span></div>
+          </div>
+        </div>
+        ` : ''}
+        <div class="repas">
+          <div class="repas-icon dinner">🌙</div>
+          <div class="repas-content">
+            <div class="repas-type">Dîner</div>
+            <div class="repas-plat">${jour.diner?.plat || 'Non défini'}</div>
+            <div class="repas-macros"><span class="repas-macro"><span class="repas-macro-dot cal"></span>${getRepasCalories(jour.diner)} kcal</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    `).join('')}
+  </div>
+  ` : ''}
+  `).join('')}
+  
+  <!-- PAGE LISTE DE COURSES -->
+  ${(programme.listesCourses || [programme.listeCoursesSemaine1]).filter(Boolean).slice(0, 1).map((liste, idx) => `
+  <div class="page">
+    <h1 class="page-title"><span class="page-title-icon">🛒</span> Liste de Courses - Semaine ${liste.semaine || 1}</h1>
+    
+    <div style="background: linear-gradient(135deg, #c9a962, #e0c285); color: white; padding: 20px; border-radius: 12px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <div style="font-size: 14px; opacity: 0.9;">Budget estimé</div>
+        <div style="font-size: 28px; font-weight: 700;">${liste.budgetTotal || liste.budgetEstime || '60-80€'}</div>
+      </div>
+      <div style="text-align: right; font-size: 13px; opacity: 0.9;">
+        Tout ce dont vous avez besoin<br>pour une semaine de succès ! 🎯
+      </div>
+    </div>
+    
+    <div class="shopping-grid">
+      ${Object.entries(liste).filter(([key]) => !['semaine', 'budgetTotal', 'budgetEstime', 'astucesEconomies'].includes(key)).map(([categorie, items]) => `
+      <div class="shopping-category">
+        <div class="shopping-category-title">
+          ${categorie === 'fruits' ? '🍎' : categorie === 'legumes' ? '🥦' : categorie === 'proteinesAnimales' ? '🥩' : categorie === 'proteinesVegetales' ? '🌱' : categorie === 'produitsFrais' ? '🥛' : categorie === 'feculentsComplexes' || categorie === 'feculents' ? '🌾' : categorie === 'bonnesGraisses' ? '🫒' : categorie === 'epicerie' ? '🧂' : '📦'}
+          ${categorie.charAt(0).toUpperCase() + categorie.slice(1).replace(/([A-Z])/g, ' $1')}
+        </div>
+        ${(Array.isArray(items) ? items : []).map(item => `
+        <div class="shopping-item">
+          <div class="shopping-checkbox"></div>
+          <div class="shopping-item-content">
+            <div class="shopping-item-name">${typeof item === 'object' ? item.item : item}</div>
+            ${typeof item === 'object' && item.quantite ? `<div class="shopping-item-qty">Quantité : ${item.quantite}</div>` : ''}
+            ${typeof item === 'object' && item.prix_estime ? `<div class="shopping-item-price">≈ ${item.prix_estime}</div>` : ''}
+          </div>
+        </div>
+        `).join('')}
+      </div>
+      `).join('')}
+    </div>
+    
+    ${liste.astucesEconomies ? `
+    <div class="tips-box" style="margin-top: 25px;">
+      <div class="tips-title">💰 Astuces pour économiser</div>
+      <ul class="tips-list">
+        ${(liste.astucesEconomies || []).map(astuce => `<li class="tips-item">${astuce}</li>`).join('')}
+      </ul>
+    </div>
+    ` : ''}
+  </div>
+  `).join('')}
+  
+  <!-- PAGE RECETTES SIGNATURES -->
+  ${(programme.recettesSignatures || programme.recettesPhares || []).length > 0 ? `
+  <div class="page">
+    <h1 class="page-title"><span class="page-title-icon">👨‍🍳</span> Vos Recettes Signatures</h1>
+    
+    ${(programme.recettesSignatures || programme.recettesPhares || []).slice(0, 2).map(recette => `
+    <div class="recette-card">
+      <div class="recette-header">
+        <div>
+          <div class="recette-title">${recette.nom}</div>
+          <div class="recette-category">${recette.categorie || 'Plat principal'}</div>
+          <div class="recette-meta" style="margin-top: 10px;">
+            <span class="recette-meta-item">⏱️ ${recette.tempsTotal || recette.tempsPreparation || '30 min'}</span>
+            <span class="recette-meta-item">👥 ${recette.portions || 2} pers.</span>
+            <span class="recette-meta-item">📊 ${recette.difficulte || 'Facile'}</span>
+          </div>
+        </div>
+        ${recette.scoreNutritionnel ? `
+        <div class="recette-score">
+          <div class="recette-score-value">${recette.scoreNutritionnel}</div>
+          <div class="recette-score-label">Score Santé</div>
+        </div>
+        ` : ''}
+      </div>
+      
+      ${recette.pourquoiCetteRecette ? `
+      <div class="recette-why">
+        <strong>💡 Pourquoi cette recette pour vous :</strong> ${recette.pourquoiCetteRecette}
+      </div>
+      ` : ''}
+      
+      <div class="recette-section-title">📝 Ingrédients</div>
+      <div class="recette-ingredients">
+        ${(recette.ingredients || []).map(ing => `
+        <div class="recette-ingredient">
+          <span class="recette-ingredient-dot"></span>
+          ${typeof ing === 'object' ? `${ing.item} - ${ing.quantite}` : ing}
+        </div>
+        `).join('')}
+      </div>
+      
+      <div class="recette-section-title">👩‍🍳 Préparation</div>
+      <div class="recette-etapes">
+        ${(recette.etapesDetaillees || recette.etapes || []).map((etape, i) => `
+        <div class="recette-etape">
+          <div class="recette-etape-num">${i + 1}</div>
+          <div class="recette-etape-content">
+            <div class="recette-etape-text">${typeof etape === 'object' ? etape.instruction : etape}</div>
+            ${typeof etape === 'object' && etape.astuce ? `<div class="recette-etape-tip">💡 ${etape.astuce}</div>` : ''}
+          </div>
+        </div>
+        `).join('')}
+      </div>
+      
+      ${(recette.macrosParPortion || recette.calories) ? `
+      <div class="recette-macros-grid">
+        <div class="recette-macro-card">
+          <div class="recette-macro-value">${recette.macrosParPortion?.calories || recette.calories || 0}</div>
+          <div class="recette-macro-label">Calories</div>
+        </div>
+        <div class="recette-macro-card">
+          <div class="recette-macro-value">${recette.macrosParPortion?.proteines || 0}g</div>
+          <div class="recette-macro-label">Protéines</div>
+        </div>
+        <div class="recette-macro-card">
+          <div class="recette-macro-value">${recette.macrosParPortion?.glucides || 0}g</div>
+          <div class="recette-macro-label">Glucides</div>
+        </div>
+        <div class="recette-macro-card">
+          <div class="recette-macro-value">${recette.macrosParPortion?.lipides || 0}g</div>
+          <div class="recette-macro-label">Lipides</div>
+        </div>
+        <div class="recette-macro-card">
+          <div class="recette-macro-value">${recette.macrosParPortion?.fibres || 0}g</div>
+          <div class="recette-macro-label">Fibres</div>
+        </div>
+      </div>
+      ` : ''}
+      
+      ${recette.noteDuChef ? `
+      <div style="margin-top: 20px; padding: 15px; background: linear-gradient(135deg, #fef3c7, #fde68a); border-radius: 12px;">
+        <strong style="color: #92400e;">👨‍🍳 Note du Chef :</strong>
+        <span style="color: #a16207;">${recette.noteDuChef}</span>
+      </div>
+      ` : ''}
+    </div>
     `).join('')}
   </div>
   ` : ''}
   
+  <!-- PAGE GESTION DES ÉCARTS & FAQ -->
+  <div class="page">
+    <h1 class="page-title"><span class="page-title-icon">🎯</span> Conseils de Réussite</h1>
+    
+    ${programme.gestionEcarts ? `
+    <div class="section">
+      <h2 class="section-title">🍕 Gestion des Écarts (sans culpabilité !)</h2>
+      <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 25px;">
+        <p style="color: #666; margin-bottom: 20px; font-style: italic;">${programme.gestionEcarts.philosophie || 'Les écarts font partie de la vie et ne ruinent pas vos progrès.'}</p>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+          <div style="background: #f0fdf4; padding: 20px; border-radius: 12px;">
+            <div style="font-weight: 600; color: #166534; margin-bottom: 10px;">✅ Repas plaisir autorisé</div>
+            <p style="color: #15803d; font-size: 14px;">${programme.gestionEcarts.strategieRepasLibre || '1-2 repas plaisir par semaine sans culpabilité'}</p>
+          </div>
+          <div style="background: #fef2f2; padding: 20px; border-radius: 12px;">
+            <div style="font-weight: 600; color: #dc2626; margin-bottom: 10px;">🔄 Après un écart</div>
+            <p style="color: #991b1b; font-size: 14px;">${programme.gestionEcarts.recuperationApresExces || 'Reprenez simplement le programme au repas suivant'}</p>
+          </div>
+        </div>
+        
+        ${programme.gestionEcarts.gestionFringales ? `
+        <div style="margin-top: 20px;">
+          <div style="font-weight: 600; color: #1a1a2e; margin-bottom: 10px;">💪 Anti-fringales</div>
+          <ul style="list-style: none; display: grid; gap: 8px;">
+            ${(programme.gestionEcarts.gestionFringales || []).map(tip => `<li style="padding: 10px 15px; background: #f8f9fa; border-radius: 8px; font-size: 14px;">• ${tip}</li>`).join('')}
+          </ul>
+        </div>
+        ` : ''}
+      </div>
+    </div>
+    ` : ''}
+    
+    ${programme.suiviProgression ? `
+    <div class="section" style="margin-top: 30px;">
+      <h2 class="section-title">📈 Suivi de Votre Progression</h2>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div style="background: #f0fdf4; padding: 20px; border-radius: 12px;">
+          <div style="font-weight: 600; color: #166534; margin-bottom: 10px;">✨ Signes que ça fonctionne</div>
+          <ul style="list-style: none; color: #15803d; font-size: 14px;">
+            ${(programme.suiviProgression.signesPositifs || []).map(s => `<li style="padding: 5px 0;">✓ ${s}</li>`).join('')}
+          </ul>
+        </div>
+        <div style="background: #eff6ff; padding: 20px; border-radius: 12px;">
+          <div style="font-weight: 600; color: #1e40af; margin-bottom: 10px;">📊 Indicateurs à suivre</div>
+          <ul style="list-style: none; color: #1e3a8a; font-size: 14px;">
+            ${(programme.suiviProgression.indicateursASuivre || []).map(i => `<li style="padding: 5px 0;">📍 ${i}</li>`).join('')}
+          </ul>
+        </div>
+      </div>
+    </div>
+    ` : ''}
+    
+    ${programme.faq && programme.faq.length > 0 ? `
+    <div class="section" style="margin-top: 30px;">
+      <h2 class="section-title">❓ Questions Fréquentes</h2>
+      ${(programme.faq || []).slice(0, 4).map(item => `
+      <div class="faq-item">
+        <div class="faq-question">❔ ${item.question}</div>
+        <div class="faq-answer">${item.reponse}</div>
+      </div>
+      `).join('')}
+    </div>
+    ` : ''}
+    
+    ${programme.messageMotivation ? `
+    <div class="motivation-box">
+      <div class="motivation-text">"${programme.messageMotivation}"</div>
+    </div>
+    ` : ''}
+    
+    <div class="disclaimer">
+      <strong>⚠️ Avertissement important :</strong> Ce programme nutritionnel est généré à titre informatif par une intelligence artificielle et ne remplace en aucun cas l'avis d'un médecin, diététicien ou nutritionniste diplômé. Consultez un professionnel de santé avant tout changement alimentaire important, particulièrement si vous avez des pathologies, prenez des médicaments, êtes enceinte ou allaitez.
+    </div>
+  </div>
+  
+  <!-- FOOTER -->
   <div class="footer">
-    <p>Programme généré par SLIM TOUCH - IA Nutritionniste</p>
-    <p>${new Date().toLocaleDateString('fr-FR')} • ${client.nom}</p>
+    <p style="font-size: 14px; color: #c9a962; margin-bottom: 5px;">✨ SLIM TOUCH - Programme Nutritionnel Personnalisé</p>
+    <p>Généré le ${new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+    <p style="margin-top: 10px;">${client.nom} • Programme de ${programme.metadata?.duree || 4} semaines</p>
   </div>
 </body>
 </html>`;
