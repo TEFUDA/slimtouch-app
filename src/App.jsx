@@ -12324,9 +12324,9 @@ SLIM TOUCH - Programme de Transformation 360°`);
                                 }}
                               >
                                 <option value="">-- Attribuer praticienne --</option>
-                                {employees.filter(e => !e.isDirector).map(emp => (
+                                {employees.map(emp => (
                                   <option key={emp.id} value={emp.airtable_id || emp.id}>
-                                    {emp.nom}
+                                    {emp.nom} {emp.isDirector ? '(Directrice)' : ''}
                                   </option>
                                 ))}
                               </select>
