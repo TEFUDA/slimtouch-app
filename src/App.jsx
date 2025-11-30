@@ -9618,7 +9618,7 @@ SLIM TOUCH - Programme de Transformation 360°`);
                       >
                         Tous
                       </div>
-                      {employees.filter(e => !e.isDirector).map(emp => (
+                      {employees.map(emp => (
                         <div 
                           key={emp.id} 
                           className={`tab ${planningFilter === emp.id.toString() ? 'active' : ''}`}
@@ -9628,7 +9628,7 @@ SLIM TOUCH - Programme de Transformation 360°`);
                             color: planningFilter === emp.id.toString() ? EMPLOYEE_COLORS[String(emp.id)]?.text : undefined
                           }}
                         >
-                          {emp.nom.split(' ')[0]}
+                          {emp.nom.split(' ')[0]} {emp.isDirector ? '👑' : ''}
                         </div>
                       ))}
                     </div>
@@ -9672,7 +9672,7 @@ SLIM TOUCH - Programme de Transformation 360°`);
                     justifyContent: 'center',
                     border: '1px solid var(--border)'
                   }}>
-                    {employees.filter(e => !e.isDirector).map(emp => {
+                    {employees.map(emp => {
                       const colors = EMPLOYEE_COLORS[emp.id] || getEmployeeColor(emp.id);
                       return (
                         <div 
@@ -9882,7 +9882,7 @@ SLIM TOUCH - Programme de Transformation 360°`);
                         Heure
                       </div>
                       {/* Colonnes praticiennes */}
-                      {employees.filter(e => !e.isDirector).map(emp => {
+                      {employees.map(emp => {
                         const colors = EMPLOYEE_COLORS[String(emp.id)] || getEmployeeColor(emp.id);
                         return (
                           <div 
@@ -9898,7 +9898,7 @@ SLIM TOUCH - Programme de Transformation 360°`);
                               color: colors.text
                             }}
                           >
-                            {emp.nom.split(' ')[0]}
+                            {emp.nom.split(' ')[0]} {emp.isDirector ? '👑' : ''}
                           </div>
                         );
                       })}
@@ -9935,7 +9935,7 @@ SLIM TOUCH - Programme de Transformation 360°`);
                           </div>
                           
                           {/* Colonnes par praticienne */}
-                          {employees.filter(e => !e.isDirector).map(emp => {
+                          {employees.map(emp => {
                             const colors = EMPLOYEE_COLORS[String(emp.id)] || getEmployeeColor(emp.id);
                             // RDV de cette praticienne à cette heure
                             const empRdvs = getRdvsForDay(selectedDayView).filter(rdv => {
@@ -10292,7 +10292,7 @@ SLIM TOUCH - Programme de Transformation 360°`);
                     >
                       Tous
                     </div>
-                    {employees.filter(e => !e.isDirector).map(emp => (
+                    {employees.map(emp => (
                       <div 
                         key={emp.id} 
                         className={`tab ${suiviFilter === emp.id.toString() ? 'active' : ''}`}
@@ -10302,7 +10302,7 @@ SLIM TOUCH - Programme de Transformation 360°`);
                           color: suiviFilter === emp.id.toString() ? EMPLOYEE_COLORS[emp.id]?.text : undefined
                         }}
                       >
-                        {emp.nom.split(' ')[0]}
+                        {emp.nom.split(' ')[0]} {emp.isDirector ? '👑' : ''}
                       </div>
                     ))}
                   </div>
@@ -11881,7 +11881,7 @@ SLIM TOUCH - Programme de Transformation 360°`);
               
               {/* Détail par praticienne */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
-                {employees.filter(e => !e.isDirector).map(emp => {
+                {employees.map(emp => {
                   const obj = objectives.find(o => String(o.employeeId) === String(emp.id)) || {};
                   const colors = EMPLOYEE_COLORS[String(emp.id)] || getEmployeeColor(emp.id);
                   
@@ -13095,8 +13095,8 @@ SLIM TOUCH - Programme de Transformation 360°`);
                     onChange={(e) => setNewClientForm(prev => ({ ...prev, assignedTo: e.target.value }))}
                   >
                     <option value="">-- Sélectionner --</option>
-                    {employees.filter(e => !e.isDirector).map(emp => (
-                      <option key={emp.id} value={emp.id}>{emp.nom}</option>
+                    {employees.map(emp => (
+                      <option key={emp.id} value={emp.id}>{emp.nom} {emp.isDirector ? '(Directrice)' : ''}</option>
                     ))}
                   </select>
                 </div>
@@ -13252,8 +13252,8 @@ SLIM TOUCH - Programme de Transformation 360°`);
                       onChange={(e) => setNewClientForm(prev => ({ ...prev, assignedTo: e.target.value }))}
                     >
                       <option value="">-- Sélectionner --</option>
-                      {employees.filter(e => !e.isDirector).map(emp => (
-                        <option key={emp.id} value={emp.id}>{emp.nom}</option>
+                      {employees.map(emp => (
+                        <option key={emp.id} value={emp.id}>{emp.nom} {emp.isDirector ? '(Directrice)' : ''}</option>
                       ))}
                     </select>
                   </div>
@@ -13391,8 +13391,8 @@ SLIM TOUCH - Programme de Transformation 360°`);
                 <div className="form-group">
                   <label className="form-label">Praticienne</label>
                   <select className="form-input">
-                    {employees.filter(e => !e.isDirector).map(emp => (
-                      <option key={emp.id} value={emp.id}>{emp.nom}</option>
+                    {employees.map(emp => (
+                      <option key={emp.id} value={emp.id}>{emp.nom} {emp.isDirector ? '(Directrice)' : ''}</option>
                     ))}
                   </select>
                 </div>
@@ -13614,7 +13614,7 @@ SLIM TOUCH - Programme de Transformation 360°`);
                 Définissez les objectifs et primes pour chaque praticienne pour {new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}.
               </p>
               
-              {employees.filter(e => !e.isDirector).map(emp => {
+              {employees.map(emp => {
                 const existingObj = objectives.find(o => String(o.employeeId) === String(emp.id)) || {};
                 const colors = EMPLOYEE_COLORS[String(emp.id)] || getEmployeeColor(emp.id);
                 
@@ -14724,8 +14724,8 @@ SLIM TOUCH - Programme de Transformation 360°`);
                     onChange={(e) => setPlanningRdvForm(prev => ({ ...prev, employeeId: e.target.value }))}
                   >
                     <option value="">Sélectionner une praticienne</option>
-                    {employees.filter(e => !e.isDirector).map(emp => (
-                      <option key={emp.id} value={emp.id}>{emp.nom}</option>
+                    {employees.map(emp => (
+                      <option key={emp.id} value={emp.id}>{emp.nom} {emp.isDirector ? '(Directrice)' : ''}</option>
                     ))}
                   </select>
                 </div>
