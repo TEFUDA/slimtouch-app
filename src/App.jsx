@@ -5751,35 +5751,51 @@ RÈGLES: Variété totale, différent des semaines 1-2, ${caloriesRecommandees} 
       // ============================================
       // ENVOI EMAIL AUTOMATIQUE
       // ============================================
+      console.log('📧 Vérification email client:', client.email);
+      
       if (client.email) {
         try {
+          console.log('📧 Tentative envoi email à:', client.email);
           addNotification({ type: 'info', message: `📧 Envoi du programme par email à ${client.email}...` });
+          
+          const emailPayload = {
+            client: {
+              nom: client.nom,
+              prenom: prenom,
+              email: client.email,
+              poids: poids,
+              objectif: objectifPoids
+            },
+            programme: programme
+          };
+          console.log('📧 Payload envoyé:', JSON.stringify(emailPayload).substring(0, 500) + '...');
           
           const emailResponse = await fetch('https://n8n.srv819641.hstgr.cloud/webhook/send-programme-email', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              client: {
-                nom: client.nom,
-                prenom: prenom,
-                email: client.email,
-                poids: poids,
-                objectif: objectifPoids
-              },
-              programme: programme
-            })
+            body: JSON.stringify(emailPayload)
           });
+          
+          console.log('📧 Réponse status:', emailResponse.status);
           
           if (emailResponse.ok) {
             const emailResult = await emailResponse.json();
+            console.log('📧 Réponse JSON:', emailResult);
             if (emailResult.success) {
               addNotification({ type: 'success', message: `📧 Programme envoyé par email à ${client.email} !` });
+            } else {
+              console.warn('📧 Email non envoyé - réponse:', emailResult);
             }
+          } else {
+            const errorText = await emailResponse.text();
+            console.error('📧 Erreur HTTP:', emailResponse.status, errorText);
           }
         } catch (emailError) {
-          console.warn('Email non envoyé:', emailError);
+          console.error('📧 Exception:', emailError);
           addNotification({ type: 'warning', message: `Programme généré mais email non envoyé` });
         }
+      } else {
+        console.log('📧 Pas d\'email configuré pour ce client');
       }
       
     } catch (error) {
@@ -12271,6 +12287,51 @@ SLIM TOUCH - Programme de Transformation 360°`);
                                 </div>
                               </div>
                             </div>
+                            {/* Sélecteur Praticienne */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }} onClick={(e) => e.stopPropagation()}>
+                              <User size={14} style={{ color: 'var(--text-muted)' }} />
+                              <select
+                                value={rdv.employeeId || ''}
+                                onChange={async (e) => {
+                                  const newEmployeeId = e.target.value;
+                                  const selectedEmployee = employees.find(emp => String(emp.id) === String(newEmployeeId) || emp.airtable_id === newEmployeeId);
+                                  
+                                  // Mettre à jour localement
+                                  setRdvs(prev => prev.map(r => r.id === rdv.id ? { ...r, employeeId: newEmployeeId } : r));
+                                  
+                                  // Sauvegarder dans Airtable
+                                  if (rdv.airtable_id && selectedEmployee) {
+                                    try {
+                                      const employeeAirtableId = selectedEmployee.airtable_id || selectedEmployee.id;
+                                      await apiUpdateRdv(rdv.airtable_id, { 
+                                        Employe: [employeeAirtableId]
+                                      });
+                                      addNotification({ type: 'schedule', message: `RDV ${client?.nom} attribué à ${selectedEmployee.nom}`, forEmployee: null });
+                                    } catch (error) {
+                                      console.error('Erreur attribution praticienne:', error);
+                                    }
+                                  }
+                                }}
+                                style={{
+                                  flex: 1,
+                                  padding: '0.4rem 0.6rem',
+                                  borderRadius: '8px',
+                                  border: '1px solid var(--border)',
+                                  background: 'var(--bg)',
+                                  fontSize: '0.8rem',
+                                  color: 'var(--text)',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                <option value="">-- Attribuer praticienne --</option>
+                                {employees.filter(e => !e.isDirector).map(emp => (
+                                  <option key={emp.id} value={emp.airtable_id || emp.id}>
+                                    {emp.nom}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            
                             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }} onClick={(e) => e.stopPropagation()}>
                               <button 
                                 className="btn btn-secondary btn-sm"
@@ -12294,10 +12355,10 @@ SLIM TOUCH - Programme de Transformation 360°`);
                                 onClick={() => {
                                   // Sauvegarder dans Airtable
                                   if (rdv.airtable_id) {
-                                    apiUpdateRdv(rdv.airtable_id, { statut: 'Realise' }).catch(console.error);
+                                    apiUpdateRdv(rdv.airtable_id, { Statut_RDV: 'Realise' }).catch(console.error);
                                   }
                                   setRdvs(prev => prev.map(r => r.id === rdv.id ? { ...r, statut: 'confirmé' } : r));
-                                  addNotification({ type: 'success', message: `RDV confirmé : ${client?.nom}`, forEmployee: null });
+                                  addNotification({ type: 'schedule', message: `RDV confirmé : ${client?.nom}`, forEmployee: null });
                                 }}
                                 title="Confirmer"
                               >
