@@ -5758,6 +5758,9 @@ RÈGLES: Variété totale, différent des semaines 1-2, ${caloriesRecommandees} 
           console.log('📧 Tentative envoi email à:', client.email);
           addNotification({ type: 'info', message: `📧 Envoi du programme par email à ${client.email}...` });
           
+          // Générer le HTML complet du PDF (le même que pour le téléchargement)
+          const pdfHtml = generateProgrammeHtml(programme, client);
+          
           const emailPayload = {
             client: {
               nom: client.nom,
@@ -5766,9 +5769,10 @@ RÈGLES: Variété totale, différent des semaines 1-2, ${caloriesRecommandees} 
               poids: poids,
               objectif: objectifPoids
             },
-            programme: programme
+            programme: programme,
+            pdfHtml: pdfHtml  // HTML complet pour conversion en PDF
           };
-          console.log('📧 Payload envoyé:', JSON.stringify(emailPayload).substring(0, 500) + '...');
+          console.log('📧 Payload avec HTML PDF, taille:', pdfHtml.length, 'caractères');
           
           const emailResponse = await fetch('https://n8n.srv819641.hstgr.cloud/webhook/send-programme-email', {
             method: 'POST',
@@ -5782,7 +5786,7 @@ RÈGLES: Variété totale, différent des semaines 1-2, ${caloriesRecommandees} 
             const emailResult = await emailResponse.json();
             console.log('📧 Réponse JSON:', emailResult);
             if (emailResult.success) {
-              addNotification({ type: 'success', message: `📧 Programme envoyé par email à ${client.email} !` });
+              addNotification({ type: 'schedule', message: `📧 Programme envoyé par email à ${client.email} !` });
             } else {
               console.warn('📧 Email non envoyé - réponse:', emailResult);
             }
@@ -5806,6 +5810,22 @@ RÈGLES: Variété totale, différent des semaines 1-2, ${caloriesRecommandees} 
     }
   };
   
+  // Génère le HTML complet du programme (réutilisable pour PDF et email)
+  const generateProgrammeHtml = (programme, client) => {
+    if (!programme || programme.error) return '';
+    
+    const prenom = programme.metadata?.prenom || client.nom?.split(' ')[0] || 'Cliente';
+    const poids = programme.metadata?.poidsDepart || client.poidsActuel || 70;
+    const objectif = programme.metadata?.poidsObjectif || client.objectif || 65;
+    const duree = programme.metadata?.duree || 4;
+    const taille = programme.metadata?.taille || 165;
+    const age = programme.metadata?.age || 35;
+    const calories = programme.resume?.caloriesJour || programme.metadata?.caloriesJour || 1400;
+    const eau = programme.metadata?.eau || 2.3;
+    
+    return generateProgrammeHtmlContent(programme, client, prenom, poids, objectif, duree, taille, age, calories, eau);
+  };
+  
   // Export PDF du programme nutrition
 
   // Export PDF du programme SLIM TOUCH 360° COMPLET
@@ -5821,7 +5841,19 @@ RÈGLES: Variété totale, différent des semaines 1-2, ${caloriesRecommandees} 
     const calories = programme.resume?.caloriesJour || programme.metadata?.caloriesJour || 1400;
     const eau = programme.metadata?.eau || 2.3;
     
-    const content = `
+    const content = generateProgrammeHtmlContent(programme, client, prenom, poids, objectif, duree, taille, age, calories, eau);
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(content);
+    printWindow.document.close();
+    printWindow.onload = () => {
+      printWindow.print();
+    };
+  };
+  
+  // Fonction interne qui génère le HTML du programme
+  const generateProgrammeHtmlContent = (programme, client, prenom, poids, objectif, duree, taille, age, calories, eau) => {
+    return `
 <!DOCTYPE html>
 <html>
 <head>
@@ -6633,13 +6665,6 @@ RÈGLES: Variété totale, différent des semaines 1-2, ${caloriesRecommandees} 
   </div>
 </body>
 </html>`;
-
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(content);
-    printWindow.document.close();
-    printWindow.onload = () => {
-      printWindow.print();
-    };
   };
   
   // Générer une facture PDF
